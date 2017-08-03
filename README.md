@@ -2,7 +2,7 @@
 
 ### Program Requirements
 - bbmap (>= 37.23) installed and present on your $PATH
-- jellyfish (>= 37.23) installed and on your $PATH
+- jellyfish (>= 2.2.6) installed and on your $PATH
 - Python 2.7
 
 ### Python Package Requirements
