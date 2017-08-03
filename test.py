@@ -3,8 +3,11 @@ import shutil
 import os
 import pysam
 import genome_size
+import gzip
+import bz2
 
 
+# TODO: Get os.system calls changed to subprocess calls.
 class ContamDetect:
 
     def parse_fastq_directory(self):
@@ -12,6 +15,7 @@ class ContamDetect:
         Should be the first thing called on a ContamDetect object.
         :return: List of fastqpairs in nested array [[forward1, reverse1], [forward2, reverse2]]
         """
+        # TODO: Make this handle single reads as well as paired.
         import glob
         # Get a list of all fastq files. For some reason, having/not having the slash doesn't seem to matter on the
         # fastqfolder argument. These should be all the common extensions
@@ -34,21 +38,32 @@ class ContamDetect:
         :param fastq: An array with forward reads at index 0 and reverse reads at index 1.
         :return: integer num_mers, which is number of kmers in the reads at that kmer size.
         """
+        # Send files to check if they're compressed. If they are, create uncompressed version that jellyfish can handle.
+        for j in range(len(fastq)):
+            uncompressed = ContamDetect.uncompress_file(fastq[j])
+            fastq[j] = fastq[j].replace('.bz2', '')
+            fastq[j] = fastq[j].replace('.gz', '')
         print('Running jellyfish...')
+        # Run jellyfish!
         cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t 12 -C -F 2 ' + fastq[0] \
-               + ' ' + fastq[1]
+              + ' ' + fastq[1]
         os.system(cmd)
+        # If we had to uncompress files, remove the uncompressed versions.
+        if uncompressed:
+            for f in fastq:
+                os.remove(f)
 
+        # TODO: Make this faster (somewhat done). Also, probably make into a separate method.
         mf = jellyfish.ReadMerFile('mer_counts.jf')
         print('Writing mer sequences to file...')
-        outstr = ""
+        outstr = list()
         i = 1
         for mer, count in mf:
-            outstr += '>mer' + str(i) + '_' + str(count) + '\n'
-            outstr += str(mer) + '\n'
+            outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
+            outstr.append(str(mer) + '\n')
             i += 1
         f = open('mer_sequences.fasta', 'w')
-        f.write(outstr)
+        f.write(''.join(outstr))
         f.close()
         num_mers = i
         return num_mers
@@ -59,10 +74,30 @@ class ContamDetect:
         Runs bbmap on mer_sequences.fasta, against mer_sequences.fasta, outputting to test.sam. Important to set
         ambig=all so kmers don't just match with themselves.
         """
+        # TODO: Try to figure out how to make this samfile smaller by excluding useless info so parsing is faster.
         if os.path.isdir('ref'):
             shutil.rmtree('ref')
-        cmd = 'bbmap.sh ref=mer_sequences.fasta in=mer_sequences.fasta ambig=all outm=tmp/' + pair[0].split('/')[-1] + '.sam subfilter=2'
+        cmd = 'bbmap.sh ref=mer_sequences.fasta in=mer_sequences.fasta ambig=all ' \
+              'outm=tmp/' + pair[0].split('/')[-1] + '.sam idfilter=0.96 minid=0.95'
         os.system(cmd)
+
+    @staticmethod
+    def uncompress_file(filename):
+        uncompressed = False
+        if ".gz" in filename:
+            in_gz = gzip.open(filename, 'rb')
+            out = open(filename.replace('.gz', ''), 'w')
+            out.write(in_gz.read())
+            out.close()
+            uncompressed = True
+        elif ".bz2" in filename:
+            in_bz2 = bz2.BZ2File(filename, 'rb')
+            out = open(filename.replace('.bz2', ''), 'w')
+            out.write(in_bz2.read())
+            out.close()
+            uncompressed = True
+        return uncompressed
+
 
     def read_samfile(self, num_mers, fastq):
         i = 1
@@ -92,8 +127,13 @@ class ContamDetect:
                         i += 1
         # Try to get estimated genome size.
         print('Estimating genome size...')
+        # Make jellyfish run a histogram.
         genome_size.run_jellyfish_histo()
+        # Find total number of mers and peak coverage value so estimated genome size can be calculated.
         peak, total_mers = genome_size.get_peak_kmers('histogram.txt')
+        # Calculate the estimated size
+        # TODO (maybe): If estimated genome size is very large (indicating cross-species contam), figure out which
+        # species the contamination is coming from.
         estimated_size = genome_size.get_genome_size(total_mers, peak)
         f = open(self.output_file, 'a+')
         # Calculate how often we have potentially contaminating kmers.

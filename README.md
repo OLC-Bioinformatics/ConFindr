@@ -10,7 +10,7 @@
 - pysam >= 0.11.2.2
 
 ### Usage
-- Program takes uncompressed, paired fastq files as input (support for compressed and single ended coming soon)
+- Program takes a folder with paired fastq files as input. Files can be uncompressed, or compressed with gzip/bzip2.
 - outputs results to a csv file which you name when calling the script.
 - Currently runs through test.py
 
