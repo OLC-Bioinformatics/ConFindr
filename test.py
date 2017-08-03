@@ -2,6 +2,7 @@ import jellyfish
 import shutil
 import os
 import pysam
+import genome_size
 
 
 class ContamDetect:
@@ -34,7 +35,7 @@ class ContamDetect:
         :return: integer num_mers, which is number of kmers in the reads at that kmer size.
         """
         print('Running jellyfish...')
-        cmd = '~/Downloads/jellyfish-2.2.6/bin/jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t 12 -C -F 2 ' + fastq[0] \
+        cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t 12 -C -F 2 ' + fastq[0] \
                + ' ' + fastq[1]
         os.system(cmd)
 
@@ -67,6 +68,7 @@ class ContamDetect:
         i = 1
         print('Reading sam result file...')
         # Open up the alignment file.
+        # tot_ratio = 0.0
         samfile = pysam.AlignmentFile('tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
         for match in samfile:
             # We're interested in full-length matches with one mismatch. This gets us that.
@@ -78,16 +80,27 @@ class ContamDetect:
                 if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
                     query_kcount = float(query.split('_')[-1])
                     ref_kcount = float(reference.split('_')[-1])
-                    # print(query, reference)
                     # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
                     # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
                     if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
+                        # if query_kcount < ref_kcount:
+                        #     ratio = str(query_kcount/ref_kcount)
+                        # else:
+                        #     ratio = str(ref_kcount/query_kcount)
+                        # tot_ratio += float(ratio)
+                        # print(query, reference, ratio)
                         i += 1
+        # Try to get estimated genome size.
+        print('Estimating genome size...')
+        genome_size.run_jellyfish_histo()
+        peak, total_mers = genome_size.get_peak_kmers('histogram.txt')
+        estimated_size = genome_size.get_genome_size(total_mers, peak)
         f = open(self.output_file, 'a+')
         # Calculate how often we have potentially contaminating kmers.
         percentage = (100.0 * float(i)/float(num_mers))
-        f.write(fastq[0] + ',' + str(percentage) + ',' + str(num_mers) + '\n')
+        f.write(fastq[0] + ',' + str(percentage) + ',' + str(num_mers) + ',' + str(estimated_size) + '\n')
         f.close()
+        # print(tot_ratio/float(i))
         # print(i)
 
     def __init__(self, args):
@@ -98,7 +111,7 @@ class ContamDetect:
         if not os.path.isdir('tmp'):
             os.makedirs('tmp')
         f = open(self.output_file, 'w')
-        f.write('File,Percentage,NumKmers\n')
+        f.write('File,Percentage,NumUniqueKmers,EstimatedGenomeSize\n')
         f.close()
 
 
@@ -112,7 +125,7 @@ if __name__ == '__main__':
     start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument("fastq_folder", help="Folder that contains fastq files you want to check for contamination. "
-                                            "Will find any fastq file that contains .fq or .fastq in the filename.")
+                                             "Will find any fastq file that contains .fq or .fastq in the filename.")
     parser.add_argument("output_file", help="Base name of the output csv you want to create. (.csv extension is added"
                                             "by the program).")
     parser.add_argument("-k", "--kmer_size", type=int, default=31, help="Size of kmer to use. Experimental feature."
@@ -124,7 +137,7 @@ if __name__ == '__main__':
     fastq_files = ContamDetect.parse_fastq_directory(detector)
     for pair in fastq_files:
         print(pair)
-        # num_mers = 6000000
+        # num_mers = 3500000
         num_mers = ContamDetect.run_jellyfish(detector, pair)
         ContamDetect.run_bbmap(pair)
         ContamDetect.read_samfile(detector, num_mers, pair)
