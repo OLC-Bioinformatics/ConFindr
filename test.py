@@ -6,8 +6,9 @@ import genome_size
 import gzip
 import bz2
 import subprocess
+# from Bio.SeqUtils import GC
 
-# TODO: Get os.system calls changed to subprocess calls.
+
 class ContamDetect:
 
     def parse_fastq_directory(self):
@@ -55,7 +56,8 @@ class ContamDetect:
         # Run jellyfish!
         cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t ' + str(threads) + ' -C -F 2 ' +\
               to_use[0] + ' ' + to_use[1]
-        os.system(cmd)
+        # os.system(cmd)
+        subprocess.call(cmd, shell=True)
         # If we had to uncompress files, remove the uncompressed versions.
         if uncompressed:
             for f in to_remove:
@@ -78,6 +80,8 @@ class ContamDetect:
         outstr = list()
         i = 1
         for mer, count in mf:
+            # gc_percent = GC(str(mer))
+            # if 25 < gc_percent < 80: GC filtering doesn't appear to be a great idea.
             outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
             outstr.append(str(mer) + '\n')
             i += 1
@@ -94,13 +98,16 @@ class ContamDetect:
         ambig=all so kmers don't just match with themselves.
         """
         # TODO: Try to figure out how to make this samfile smaller by excluding useless info so parsing is faster.
+        # Also, use subprocess on this and then redirect stderr to somewhere so it isn't all cluttering up the screen.
         if os.path.isdir('ref'):
             shutil.rmtree('ref')
         cmd = 'bbmap.sh ref=mer_sequences.fasta in=mer_sequences.fasta ambig=all ' \
               'outm=tmp/' + pair[0].split('/')[-1] + '.sam idfilter=0.96 minid=0.95 subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
-        os.system(cmd)
-        # subprocess.call(cmd.split(), shell=True)
+        # os.system(cmd)
+        print('Running bbmap...')
+        with open('tmp/junk.txt', 'w') as outjunk:
+            subprocess.call(cmd, shell=True, stderr=outjunk)
 
     @staticmethod
     def uncompress_file(filename):
@@ -175,6 +182,13 @@ class ContamDetect:
 
     @staticmethod
     def estimate_coverage(estimated_size, pair):
+        """
+        :param estimated_size: Estimated size of genome, in basepairs. Found using genome_size.get_genome_size
+        :param pair: Array with structure [path_to_forward_reads, path_to_reverse_reads].
+        :return: Estimated coverage depth of genome, as an integer.
+        """
+        # Use some shell magic to find how many basepairs in forward fastq file - cat it into paste, which lets cut take
+        # only the second column (which has the sequence), and then count the number of characters.
         if ".gz" in pair[0]:
             cmd = 'zcat ' + pair[0] + ' | paste - - - - | cut -f 2 | wc -c'
         elif ".bz2" in pair[0]:
@@ -182,6 +196,7 @@ class ContamDetect:
         else:
             cmd = 'cat ' + pair[0] + ' | paste - - - - | cut -f 2 | wc -c'
         number_bp = int(subprocess.check_output(cmd, shell=True))
+        # Multiply by two, since reverse reads are present.
         number_bp *= 2
         return number_bp/estimated_size
 
@@ -217,17 +232,24 @@ if __name__ == '__main__':
     arguments = parser.parse_args()
     detector = ContamDetect(arguments)
     paired_files = ContamDetect.parse_fastq_directory(detector)
+    sample_num = 1
     for pair in paired_files:
-        print(pair)
+        samplestart = time.time()
+        print('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files)))
         # num_mers = 3500000
         ContamDetect.run_jellyfish(detector, pair, arguments.threads)
         num_mers = ContamDetect.write_mer_file('mer_counts.jf')
         ContamDetect.run_bbmap(pair, arguments.threads)
         # TODO: Get the samfile reading done in parallel maybe?
         ContamDetect.read_samfile(detector, num_mers, pair)
+        sampleend = time.time()
+        m, s = divmod(sampleend - samplestart, 60)
+        h, m = divmod(m, 60)
+        print("Finished contamination detection on sample %d in %d:%02d:%02d " % (sample_num, h, m, s))
+        sample_num += 1
+    shutil.rmtree('tmp')
     end = time.time()
-    # TODO: Delete the tmp folder once you're done with everything.
     m, s = divmod(end - start, 60)
     h, m = divmod(m, 60)
-    print("Finished contamination detection in %d:%02d:%02d " % (h, m, s))
+    print("Finished contamination detection on %d samples in %d:%02d:%02d " % (len(paired_files), h, m, s))
 
