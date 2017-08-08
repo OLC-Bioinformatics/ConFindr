@@ -3,6 +3,11 @@ import os
 
 
 def get_peak_kmers(histo_file):
+    """
+    :param histo_file: Histogram file created by jellyfish histo
+    :return: peak_depth: Coverage depth that had the most kmers (int)
+             total_kmers: Total number of kmers (int)
+    """
     most_kmers = 0
     total_kmers = 0
     peak_depth = 0
@@ -15,7 +20,7 @@ def get_peak_kmers(histo_file):
             if kmer_depth != 1 and num_kmers > most_kmers:
                 most_kmers = num_kmers
                 peak_depth = kmer_depth
-
+    # This is a simplistic way of getting peak depth, but it works well for my purposes.
     return peak_depth, total_kmers
 
 

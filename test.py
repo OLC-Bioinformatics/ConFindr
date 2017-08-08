@@ -6,9 +6,13 @@ import genome_size
 import gzip
 import bz2
 import subprocess
+import run_clark
 # from Bio.SeqUtils import GC
 
 
+# TODO: Add option to try to remove reads that have bad kmers in them - maybe not necessary, but could be useful.
+# TODO #2: Currently can't have more than one instance of this running at a time, since all files are kept in the same
+# folder. Should probably make it possible to have more than one instance running.
 class ContamDetect:
 
     def parse_fastq_directory(self):
@@ -52,7 +56,7 @@ class ContamDetect:
                 to_remove.append(fastq[j].replace('.gz', ''))
             else:
                 to_use.append(fastq[j])
-        print('Running jellyfish...')
+        # print('Running jellyfish...')
         # Run jellyfish!
         cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t ' + str(threads) + ' -C -F 2 ' +\
               to_use[0] + ' ' + to_use[1]
@@ -76,7 +80,7 @@ class ContamDetect:
         :return: The number of unique kmers in said file.
         """
         mf = jellyfish.ReadMerFile(jf_file)
-        print('Writing mer sequences to file...')
+        # print('Writing mer sequences to file...')
         outstr = list()
         i = 1
         for mer, count in mf:
@@ -98,14 +102,13 @@ class ContamDetect:
         ambig=all so kmers don't just match with themselves.
         """
         # TODO: Try to figure out how to make this samfile smaller by excluding useless info so parsing is faster.
-        # Also, use subprocess on this and then redirect stderr to somewhere so it isn't all cluttering up the screen.
         if os.path.isdir('ref'):
             shutil.rmtree('ref')
         cmd = 'bbmap.sh ref=mer_sequences.fasta in=mer_sequences.fasta ambig=all ' \
               'outm=tmp/' + pair[0].split('/')[-1] + '.sam idfilter=0.96 minid=0.95 subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
         # os.system(cmd)
-        print('Running bbmap...')
+        # print('Running bbmap...')
         with open('tmp/junk.txt', 'w') as outjunk:
             subprocess.call(cmd, shell=True, stderr=outjunk)
 
@@ -140,7 +143,7 @@ class ContamDetect:
         Writes results to user-specified output file.
         """
         i = 1
-        print('Reading sam result file...')
+        # print('Reading sam result file...')
         # Open up the alignment file.
         # tot_ratio = 0.0
         samfile = pysam.AlignmentFile('tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
@@ -159,23 +162,29 @@ class ContamDetect:
                     if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
                         i += 1
         # Try to get estimated genome size.
-        print('Estimating genome size...')
+        # print('Estimating genome size...')
         # Make jellyfish run a histogram.
         genome_size.run_jellyfish_histo()
         # Find total number of mers and peak coverage value so estimated genome size can be calculated.
         peak, total_mers = genome_size.get_peak_kmers('histogram.txt')
         # Calculate the estimated size
         # TODO (maybe): If estimated genome size is very large (indicating cross-species contam), figure out which
-        # species the contamination is coming from.
+        # species the contamination is coming from. Figure out how to get CLARK working with this.
         estimated_size = genome_size.get_genome_size(total_mers, peak)
-        print('Estimating coverage...')
+        if estimated_size > 10000000 and self.classify:
+            printtime('Cross contamination suspected! Running CLARK for classification.')
+            run_clark.classify_metagenome('bacteria/', fastq, self.threads)
+            clark_results = run_clark.read_clark_output('abundance.csv')
+            # Add in CLARK-l running stuff here.
+        else:
+            clark_results = 'NA'
+        # print('Estimating coverage...')
         estimated_coverage = ContamDetect.estimate_coverage(estimated_size, fastq)
-        # TODO: Use estimated coverage to choose cutoff for contamination - lower coverage should mean lower cutoff
         f = open(self.output_file, 'a+')
         # Calculate how often we have potentially contaminating kmers.
         percentage = (100.0 * float(i)/float(num_mers))
         f.write(fastq[0] + ',' + str(percentage) + ',' + str(num_mers) + ',' + str(estimated_size) + ',' +
-                str(estimated_coverage) + '\n')
+                str(estimated_coverage) + ',' + clark_results + '\n')
         f.close()
         # print(tot_ratio/float(i))
         # print(i)
@@ -205,10 +214,11 @@ class ContamDetect:
         self.output_file = args.output_file
         self.threads = args.threads
         self.kmer_size = args.kmer_size
+        self.classify = args.classify
         if not os.path.isdir('tmp'):
             os.makedirs('tmp')
         f = open(self.output_file, 'w')
-        f.write('File,Percentage,NumUniqueKmers,EstimatedGenomeSize,EstimatedCoverage\n')
+        f.write('File,Percentage,NumUniqueKmers,EstimatedGenomeSize,EstimatedCoverage,CrossContamination\n')
         f.close()
 
 
@@ -216,6 +226,7 @@ if __name__ == '__main__':
     import argparse
     import time
     import multiprocessing
+    from accessoryFunctions.accessoryFunctions import printtime
 
     # Check the number of CPUs available on the system to be used by bbmap.
     cpu_count = multiprocessing.cpu_count()
@@ -229,27 +240,29 @@ if __name__ == '__main__':
                                                                         "Probably don't mess with it.")
     parser.add_argument("-t", "--threads", type=int, default=cpu_count, help="Number of CPUs to run analysis on."
                                                                              " Defaults to number of CPUs on the system.")
+    parser.add_argument("-c", "--classify", default=False, action='store_true', help='If cross-contamination is suspected, '
+                                                                                     'try to classify using CLARK-l. '
+                                                                                     'Off by default.')
     arguments = parser.parse_args()
     detector = ContamDetect(arguments)
     paired_files = ContamDetect.parse_fastq_directory(detector)
     sample_num = 1
     for pair in paired_files:
-        samplestart = time.time()
-        print('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files)))
+        printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files)), start)
         # num_mers = 3500000
+        printtime('Running jellyfish...', start)
         ContamDetect.run_jellyfish(detector, pair, arguments.threads)
+        printtime('Writing mers to file...', start)
         num_mers = ContamDetect.write_mer_file('mer_counts.jf')
+        printtime('Finding mismatching mers...', start)
         ContamDetect.run_bbmap(pair, arguments.threads)
         # TODO: Get the samfile reading done in parallel maybe?
+        printtime('Generating contamination statistics...', start)
         ContamDetect.read_samfile(detector, num_mers, pair)
-        sampleend = time.time()
-        m, s = divmod(sampleend - samplestart, 60)
-        h, m = divmod(m, 60)
-        print("Finished contamination detection on sample %d in %d:%02d:%02d " % (sample_num, h, m, s))
         sample_num += 1
     shutil.rmtree('tmp')
     end = time.time()
     m, s = divmod(end - start, 60)
     h, m = divmod(m, 60)
-    print("Finished contamination detection on %d samples in %d:%02d:%02d " % (len(paired_files), h, m, s))
+    printtime("Finished contamination detection!", start)
 
