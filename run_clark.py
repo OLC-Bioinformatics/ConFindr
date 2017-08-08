@@ -12,9 +12,9 @@ def classify_metagenome(dir_db, fastq_files, cpus):
     os.chdir(clark_dir)
     with open(cwd + '/junk.txt', 'w') as outjunk:
         cmd = './set_targets.sh ' + dir_db + ' bacteria'
-        subprocess.call(cmd, shell=True, stderr=outjunk)
+        subprocess.call(cmd, shell=True, stderr=outjunk, stdout=outjunk)
         cmd = './classify_metagenome.sh -P ' + fastq_files[0] + ' ' + fastq_files[1] + ' -R results -n ' + str(cpus) + ' --light'
-        subprocess.call(cmd, shell=True, stderr=outjunk)
+        subprocess.call(cmd, shell=True, stderr=outjunk, stdout=outjunk)
         cmd = './estimate_abundance.sh -F results.csv -D ' + dir_db + ' > abundance.csv'
         subprocess.call(cmd, shell=True, stderr=outjunk)
     os.rename('abundance.csv', cwd + '/abundance.csv')

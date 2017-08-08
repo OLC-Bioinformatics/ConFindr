@@ -144,7 +144,9 @@ class ContamDetect:
         # print('Reading sam result file...')
         # Open up the alignment file.
         # tot_ratio = 0.0
+        # os.system('grep -v "31=" ' + self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam > test.sam')
         samfile = pysam.AlignmentFile(self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
+        # samfile = pysam.AlignmentFile('test.sam', 'r')
         for match in samfile:
             # We're interested in full-length matches with one mismatch. This gets us that.
             if "1X" in match.cigarstring and match.query_alignment_length == self.kmer_size:
