@@ -62,6 +62,7 @@ class ContamDetect:
               to_use[0] + ' ' + to_use[1]
         # os.system(cmd)
         subprocess.call(cmd, shell=True)
+        os.rename('mer_counts.jf', self.output_file + 'tmp/mer_counts.jf')
         # If we had to uncompress files, remove the uncompressed versions.
         if uncompressed:
             for f in to_remove:
@@ -71,10 +72,9 @@ class ContamDetect:
                 except:# Needed in case the file has already been removed - figure out the specific error soon.
                     pass
 
-    @staticmethod
     # TODO: Consider changing this to just calling jellyfish dump, since then you wouldn't have to get the python
     # jellyfish thing installed (and then you could use python3!).
-    def write_mer_file(jf_file):
+    def write_mer_file(self, jf_file):
         """
         :param jf_file: .jf file created by jellyfish to be made into a fasta file
         :return: The number of unique kmers in said file.
@@ -84,19 +84,17 @@ class ContamDetect:
         outstr = list()
         i = 1
         for mer, count in mf:
-            # gc_percent = GC(str(mer))
-            # if 25 < gc_percent < 80: GC filtering doesn't appear to be a great idea.
-            outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
-            outstr.append(str(mer) + '\n')
+            if count > 2:
+                outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
+                outstr.append(str(mer) + '\n')
             i += 1
-        f = open('mer_sequences.fasta', 'w')
+        f = open(self.output_file + 'tmp/mer_sequences.fasta', 'w')
         f.write(''.join(outstr))
         f.close()
         num_mers = i
         return num_mers
 
-    @staticmethod
-    def run_bbmap(pair, threads):
+    def run_bbmap(self, pair, threads):
         """
         Runs bbmap on mer_sequences.fasta, against mer_sequences.fasta, outputting to test.sam. Important to set
         ambig=all so kmers don't just match with themselves.
@@ -104,12 +102,12 @@ class ContamDetect:
         # TODO: Try to figure out how to make this samfile smaller by excluding useless info so parsing is faster.
         if os.path.isdir('ref'):
             shutil.rmtree('ref')
-        cmd = 'bbmap.sh ref=mer_sequences.fasta in=mer_sequences.fasta ambig=all ' \
-              'outm=tmp/' + pair[0].split('/')[-1] + '.sam idfilter=0.96 minid=0.95 subfilter=1 insfilter=0 ' \
+        cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_sequences.fasta in=' + self.output_file + 'tmp/mer_sequences.fasta ambig=all ' \
+              'outm=' + self.output_file + 'tmp/' + pair[0].split('/')[-1] + '.sam idfilter=0.96 minid=0.95 subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
         # os.system(cmd)
         # print('Running bbmap...')
-        with open('tmp/junk.txt', 'w') as outjunk:
+        with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
             subprocess.call(cmd, shell=True, stderr=outjunk)
 
     @staticmethod
@@ -146,7 +144,7 @@ class ContamDetect:
         # print('Reading sam result file...')
         # Open up the alignment file.
         # tot_ratio = 0.0
-        samfile = pysam.AlignmentFile('tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
+        samfile = pysam.AlignmentFile(self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
         for match in samfile:
             # We're interested in full-length matches with one mismatch. This gets us that.
             if "1X" in match.cigarstring and match.query_alignment_length == self.kmer_size:
@@ -154,25 +152,25 @@ class ContamDetect:
                 reference = samfile.getrname(match.reference_id)
                 # If either the query or reference are singletons, chuck them, because those are (probably) just sequencing
                 # error noise.
-                if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
-                    query_kcount = float(query.split('_')[-1])
-                    ref_kcount = float(reference.split('_')[-1])
-                    # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
-                    # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
-                    if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
-                        i += 1
+                #if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
+                query_kcount = float(query.split('_')[-1])
+                ref_kcount = float(reference.split('_')[-1])
+                # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
+                # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
+                if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
+                    i += 1
         # Try to get estimated genome size.
         # print('Estimating genome size...')
         # Make jellyfish run a histogram.
-        genome_size.run_jellyfish_histo()
+        genome_size.run_jellyfish_histo(self.output_file)
         # Find total number of mers and peak coverage value so estimated genome size can be calculated.
-        peak, total_mers = genome_size.get_peak_kmers('histogram.txt')
+        peak, total_mers = genome_size.get_peak_kmers(self.output_file + 'tmp/histogram.txt')
         # Calculate the estimated size
-        # TODO (maybe): If estimated genome size is very large (indicating cross-species contam), figure out which
-        # species the contamination is coming from. Figure out how to get CLARK working with this.
         estimated_size = genome_size.get_genome_size(total_mers, peak)
+        # Large estimated size means cross species contamination is likely. Run CLARK-light to figure out which species
+        # are likely present
         if estimated_size > 10000000 and self.classify:
-            printtime('Cross contamination suspected! Running CLARK for classification.')
+            printtime('Cross contamination suspected! Running CLARK for classification.', self.start)
             run_clark.classify_metagenome('bacteria/', fastq, self.threads)
             clark_results = run_clark.read_clark_output('abundance.csv')
             # Add in CLARK-l running stuff here.
@@ -209,14 +207,15 @@ class ContamDetect:
         number_bp *= 2
         return number_bp/estimated_size
 
-    def __init__(self, args):
+    def __init__(self, args, start):
         self.fastq_folder = args.fastq_folder
         self.output_file = args.output_file
         self.threads = args.threads
         self.kmer_size = args.kmer_size
         self.classify = args.classify
-        if not os.path.isdir('tmp'):
-            os.makedirs('tmp')
+        self.start = start
+        if not os.path.isdir(self.output_file + 'tmp'):
+            os.makedirs(self.output_file + 'tmp')
         f = open(self.output_file, 'w')
         f.write('File,Percentage,NumUniqueKmers,EstimatedGenomeSize,EstimatedCoverage,CrossContamination\n')
         f.close()
@@ -236,7 +235,7 @@ if __name__ == '__main__':
                                              "Will find any fastq file that contains .fq or .fastq in the filename.")
     parser.add_argument("output_file", help="Base name of the output csv you want to create. (.csv extension is added"
                                             "by the program).")
-    parser.add_argument("-k", "--kmer_size", type=int, default=31, help="Size of kmer to use. Experimental feature."
+    parser.add_argument("-k", "--kmer_size", type=int, default=31, help="Size of kmer to use. Experimental feature. "
                                                                         "Probably don't mess with it.")
     parser.add_argument("-t", "--threads", type=int, default=cpu_count, help="Number of CPUs to run analysis on."
                                                                              " Defaults to number of CPUs on the system.")
@@ -244,25 +243,27 @@ if __name__ == '__main__':
                                                                                      'try to classify using CLARK-l. '
                                                                                      'Off by default.')
     arguments = parser.parse_args()
-    detector = ContamDetect(arguments)
+    detector = ContamDetect(arguments, start)
     paired_files = ContamDetect.parse_fastq_directory(detector)
     sample_num = 1
     for pair in paired_files:
+        for i in range(len(pair)):
+            pair[i] = os.path.abspath(pair[i])
         printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files)), start)
         # num_mers = 3500000
         printtime('Running jellyfish...', start)
         ContamDetect.run_jellyfish(detector, pair, arguments.threads)
         printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file('mer_counts.jf')
+        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf')
         printtime('Finding mismatching mers...', start)
-        ContamDetect.run_bbmap(pair, arguments.threads)
+        ContamDetect.run_bbmap(detector, pair, arguments.threads)
         # TODO: Get the samfile reading done in parallel maybe?
         printtime('Generating contamination statistics...', start)
         ContamDetect.read_samfile(detector, num_mers, pair)
         sample_num += 1
-    shutil.rmtree('tmp')
     end = time.time()
     m, s = divmod(end - start, 60)
     h, m = divmod(m, 60)
+    shutil.rmtree(arguments.output_file + 'tmp')
     printtime("Finished contamination detection!", start)
 

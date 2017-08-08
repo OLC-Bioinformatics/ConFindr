@@ -28,7 +28,7 @@ def get_genome_size(total_kmers, peak_depth):
     return total_kmers/peak_depth
 
 
-def run_jellyfish_histo():
-    cmd = 'jellyfish histo mer_counts.jf > histogram.txt'
+def run_jellyfish_histo(outfile):
+    cmd = 'jellyfish histo ' + outfile + 'tmp/mer_counts.jf > ' + outfile + 'tmp/histogram.txt'
     os.system(cmd)
 
