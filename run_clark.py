@@ -14,11 +14,13 @@ def classify_metagenome(dir_db, fastq_files, cpus):
         cmd = './set_targets.sh ' + dir_db + ' bacteria'
         subprocess.call(cmd, shell=True, stderr=outjunk, stdout=outjunk)
         cmd = './classify_metagenome.sh -P ' + fastq_files[0] + ' ' + fastq_files[1] + ' -R results -n ' + str(cpus) + ' --light'
+        if '.gz' in fastq_files[0]:
+            cmd += ' --gzipped'
         subprocess.call(cmd, shell=True, stderr=outjunk, stdout=outjunk)
         cmd = './estimate_abundance.sh -F results.csv -D ' + dir_db + ' > abundance.csv'
         subprocess.call(cmd, shell=True, stderr=outjunk)
     os.rename('abundance.csv', cwd + '/abundance.csv')
-    os.remove(cwd + '/junk.txt')
+    # os.remove(cwd + '/junk.txt')
     os.chdir(cwd)
 
 

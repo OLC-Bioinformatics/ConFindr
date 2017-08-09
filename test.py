@@ -154,13 +154,13 @@ class ContamDetect:
                 reference = samfile.getrname(match.reference_id)
                 # If either the query or reference are singletons, chuck them, because those are (probably) just sequencing
                 # error noise.
-                #if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
-                query_kcount = float(query.split('_')[-1])
-                ref_kcount = float(reference.split('_')[-1])
-                # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
-                # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
-                if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
-                    i += 1
+                if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
+                    query_kcount = float(query.split('_')[-1])
+                    ref_kcount = float(reference.split('_')[-1])
+                    # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
+                    # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
+                    if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
+                        i += 1
         # Try to get estimated genome size.
         # print('Estimating genome size...')
         # Make jellyfish run a histogram.
@@ -172,10 +172,9 @@ class ContamDetect:
         # Large estimated size means cross species contamination is likely. Run CLARK-light to figure out which species
         # are likely present
         if estimated_size > 10000000 and self.classify:
-            printtime('Cross contamination suspected! Running CLARK for classification.', self.start)
+            printtime('Cross-species contamination suspected! Running CLARK for classification.', self.start)
             run_clark.classify_metagenome('bacteria/', fastq, self.threads)
             clark_results = run_clark.read_clark_output('abundance.csv')
-            # Add in CLARK-l running stuff here.
         else:
             clark_results = 'NA'
         # print('Estimating coverage...')
