@@ -17,7 +17,7 @@ def get_peak_kmers(histo_file):
             kmer_depth = int(data[0])
             num_kmers = int(data[1])
             total_kmers += num_kmers * kmer_depth
-            if kmer_depth != 1 and num_kmers > most_kmers:
+            if kmer_depth > 5 and num_kmers > most_kmers:
                 most_kmers = num_kmers
                 peak_depth = kmer_depth
     # This is a simplistic way of getting peak depth, but it works well for my purposes.

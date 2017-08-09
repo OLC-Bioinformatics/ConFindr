@@ -11,8 +11,6 @@ import run_clark
 
 
 # TODO: Add option to try to remove reads that have bad kmers in them - maybe not necessary, but could be useful.
-# TODO #2: Currently can't have more than one instance of this running at a time, since all files are kept in the same
-# folder. Should probably make it possible to have more than one instance running.
 class ContamDetect:
 
     def parse_fastq_directory(self):
@@ -84,10 +82,10 @@ class ContamDetect:
         outstr = list()
         i = 1
         for mer, count in mf:
-            if count > 2:
+            if count > 5:
                 outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
                 outstr.append(str(mer) + '\n')
-            i += 1
+                i += 1
         f = open(self.output_file + 'tmp/mer_sequences.fasta', 'w')
         f.write(''.join(outstr))
         f.close()
@@ -154,6 +152,7 @@ class ContamDetect:
                 reference = samfile.getrname(match.reference_id)
                 # If either the query or reference are singletons, chuck them, because those are (probably) just sequencing
                 # error noise.
+                # TODO: Try adjusting this cutoff - looks to be (potentially) too low.
                 if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
                     query_kcount = float(query.split('_')[-1])
                     ref_kcount = float(reference.split('_')[-1])
