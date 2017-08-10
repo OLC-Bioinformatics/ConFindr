@@ -29,8 +29,8 @@ class ContamDetect:
         for name in fastq_files:
             # If forward and reverse reads are present, put them in a list of paired files.
             # May need to add support for other naming conventions too. Supports both _R1 and _1 type conventions.
-            if "R1" in name and os.path.isfile(name.replace("R1", "R2")):
-                fastq_pairs.append([name, name.replace("R1", "R2")])
+            if "_R1" in name and os.path.isfile(name.replace("_R1", "_R2")):
+                fastq_pairs.append([name, name.replace("_R1", "_R2")])
             # Other naming convention support.
             elif "_1" in name and os.path.isfile(name.replace("_1", "_2")):
                 fastq_pairs.append([name, name.replace("_1", "_2")])
@@ -290,6 +290,6 @@ if __name__ == '__main__':
     end = time.time()
     m, s = divmod(end - start, 60)
     h, m = divmod(m, 60)
-    shutil.rmtree(arguments.output_file + 'tmp')
+    # shutil.rmtree(arguments.output_file + 'tmp')
     printtime("Finished contamination detection!", start)
 
