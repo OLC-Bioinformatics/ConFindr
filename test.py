@@ -13,7 +13,8 @@ import run_clark
 # TODO: Add option to try to remove reads that have bad kmers in them - maybe not necessary, but could be useful.
 class ContamDetect:
 
-    def parse_fastq_directory(self):
+    @staticmethod
+    def parse_fastq_directory(fastq_folder):
         """
         Should be the first thing called on a ContamDetect object.
         :return: List of fastqpairs in nested array [[forward1, reverse1], [forward2, reverse2]]
@@ -22,8 +23,8 @@ class ContamDetect:
         import glob
         # Get a list of all fastq files. For some reason, having/not having the slash doesn't seem to matter on the
         # fastqfolder argument. These should be all the common extensions
-        fastq_files = glob.glob(self.fastq_folder + "/*.fastq*")
-        fastq_files += glob.glob(self.fastq_folder + "/*.fq*")
+        fastq_files = glob.glob(fastq_folder + "/*.fastq*")
+        fastq_files += glob.glob(fastq_folder + "/*.fq*")
         fastq_pairs = list()
         for name in fastq_files:
             # If forward and reverse reads are present, put them in a list of paired files.
@@ -34,6 +35,20 @@ class ContamDetect:
             elif "_1" in name and os.path.isfile(name.replace("_1", "_2")):
                 fastq_pairs.append([name, name.replace("_1", "_2")])
         return fastq_pairs
+
+    def trim_fastqs(self, fastq_files):
+        for pair in fastq_files:
+            # TODO: Get the adapters.fa to be not hardcoded.
+            out_forward = self.output_file + 'tmp/' + pair[0].split('/')[-1].replace('R1', 'trimmed_R1')
+            out_reverse = self.output_file + 'tmp/' + pair[1].split('/')[-1].replace('R2', 'trimmed_R2')
+            cmd = 'bbduk.sh in1={} in2={} out1={} out2={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
+                  ' ref=~/Downloads/bbmap/resources/adapters.fa hdist=1 tpe tbo'.format(pair[0], pair[1],
+                                                                                        out_forward, out_reverse)
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                subprocess.call(cmd, shell=True, stderr=outjunk)
+
+
+
 
     def run_jellyfish(self, fastq, threads):
         """
@@ -82,10 +97,10 @@ class ContamDetect:
         outstr = list()
         i = 1
         for mer, count in mf:
-            if count > 5:
+            if count > 2:
                 outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
                 outstr.append(str(mer) + '\n')
-                i += 1
+            i += 1
         f = open(self.output_file + 'tmp/mer_sequences.fasta', 'w')
         f.write(''.join(outstr))
         f.close()
@@ -153,12 +168,12 @@ class ContamDetect:
                 # If either the query or reference are singletons, chuck them, because those are (probably) just sequencing
                 # error noise.
                 # TODO: Try adjusting this cutoff - looks to be (potentially) too low.
-                if '_1' not in query and '_1' not in reference and '_2' not in query and '_2' not in reference:
-                    query_kcount = float(query.split('_')[-1])
-                    ref_kcount = float(reference.split('_')[-1])
-                    # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
-                    # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
-                    if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
+                query_kcount = float(query.split('_')[-1])
+                ref_kcount = float(reference.split('_')[-1])
+                # Assuming that the contamination isn't terrible (aka 50/50 or something), we can chuck everything
+                # that has relatively equal ratios of kmers, as we're only interested in low-ratio stuff.
+                if query_kcount/ref_kcount < 0.5 or ref_kcount/query_kcount < 0.5:
+                        # print(query, reference)
                         i += 1
         # Try to get estimated genome size.
         # print('Estimating genome size...')
@@ -181,7 +196,7 @@ class ContamDetect:
         f = open(self.output_file, 'a+')
         # Calculate how often we have potentially contaminating kmers.
         percentage = (100.0 * float(i)/float(num_mers))
-        f.write(fastq[0] + ',' + str(percentage) + ',' + str(num_mers) + ',' + str(estimated_size) + ',' +
+        f.write(fastq[0].split('/')[-1] + ',' + str(percentage) + ',' + str(num_mers) + ',' + str(estimated_size) + ',' +
                 str(estimated_coverage) + ',' + clark_results + '\n')
         f.close()
         # print(tot_ratio/float(i))
@@ -242,15 +257,26 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--classify", default=False, action='store_true', help='If cross-contamination is suspected, '
                                                                                      'try to classify using CLARK-l. '
                                                                                      'Off by default.')
+    parser.add_argument('-tr', '--trim_reads', default=False, action='store_true', help='If enabled, trims reads to'
+                                                                                        'remove low quality bases '
+                                                                                        'before kmer-izing. Off by '
+                                                                                        'default, but highly recommended.')
     arguments = parser.parse_args()
     detector = ContamDetect(arguments, start)
-    paired_files = ContamDetect.parse_fastq_directory(detector)
+    paired_files = ContamDetect.parse_fastq_directory(arguments.fastq_folder)
     sample_num = 1
+    if arguments.trim_reads:
+        printtime('Trimming input fastq files...', start)
+        for pair in paired_files:
+            for i in range(len(pair)):
+                pair[i] = os.path.abspath(pair[i])
+            ContamDetect.trim_fastqs(detector, paired_files)
+        paired_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
     for pair in paired_files:
         for i in range(len(pair)):
             pair[i] = os.path.abspath(pair[i])
         printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files)), start)
-        # num_mers = 3500000
+        # num_mers = 5000000
         printtime('Running jellyfish...', start)
         ContamDetect.run_jellyfish(detector, pair, arguments.threads)
         printtime('Writing mers to file...', start)
