@@ -19,7 +19,7 @@
 #### Options
 - Classify (-c): If the -c flag is added, when suspected cross-species contamination is found CLARK will be run (light version) to try to identify which species are present. Default=False.
 - Threads (-t): Number of threads to run analysis on. Default is number of cores on your system.
-- Trim_fastq (-tr): Performs quality trimming using bbduk. Won't work unless you're me since I hardcoded the path to adapters (but that'll get fixed soon).
+- Trim_fastq (-tr): Performs quality trimming using bbduk. Off by default, but should probably almost always be turned on.
 
 #### Example
 python test.py Fastq_Folder outputname.csv
