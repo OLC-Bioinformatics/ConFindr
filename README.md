@@ -3,16 +3,15 @@
 ### Program Requirements
 - bbmap (>= 37.23) installed and present on your $PATH
 - jellyfish (>= 2.2.6) installed and on your $PATH
-- Python 2.7
+- Python 3.5 (2.7 should also work - not fully tested)
 - CLARK (>=1.2.3) installed and on your $PATH
 
 ### Python Package Requirements
-- jellyfish (see https://github.com/gmarcais/Jellyfish for installation instructions)
 - pysam >= 0.11.2.2
 - OLCTools >= 0.1.16
 
 ### Usage
-- Program takes a folder with paired fastq files as input. Files can be uncompressed, or compressed with gzip/bzip2.
+- Program takes a folder with paired or single-ended fastq files as input. Files can be uncompressed, or compressed with gzip/bzip2.
 - outputs results to a csv file which you name when calling the script.
 - Currently runs through Detector.py
 
@@ -22,4 +21,4 @@
 - Trim_fastq (-tr): Performs quality trimming using bbduk. Off by default, but should probably almost always be turned on.
 
 #### Example
-python Detector.py Fastq_Folder outputname.csv
+python3 Detector.py Fastq_Folder outputname.csv

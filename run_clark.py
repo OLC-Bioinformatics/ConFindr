@@ -6,7 +6,7 @@ import subprocess
 def classify_metagenome(dir_db, fastq_files, cpus):
     cwd = os.getcwd()
     cmd = 'which set_targets.sh'
-    clark_dir = subprocess.check_output(cmd.split())
+    clark_dir = subprocess.check_output(cmd.split()).decode('utf-8')
     clark_dir = clark_dir.split('/')[:-1]
     clark_dir = '/'.join(clark_dir)
     os.chdir(clark_dir)

@@ -1,5 +1,5 @@
 from accessoryFunctions.accessoryFunctions import printtime
-import jellyfish
+# import jellyfish
 import shutil
 import os
 import pysam
@@ -50,7 +50,7 @@ class ContamDetect:
         """
         # Figure out where bbduk is so that we can use the adapter file.
         cmd = 'which bbduk.sh'
-        bbduk_dir = subprocess.check_output(cmd.split())
+        bbduk_dir = subprocess.check_output(cmd.split()).decode('utf-8')
         bbduk_dir = bbduk_dir.split('/')[:-1]
         bbduk_dir = '/'.join(bbduk_dir)
         # Iterate through pairs, running bbduk and writing the trimmed output to the tmp folder for this run.
@@ -113,26 +113,29 @@ class ContamDetect:
                 except:# Needed in case the file has already been removed - figure out the specific error soon.
                     pass
 
-    # TODO: Consider changing this to just calling jellyfish dump, since then you wouldn't have to get the python
-    # jellyfish thing installed (and then you could use python3!).
     def write_mer_file(self, jf_file):
         """
         :param jf_file: .jf file created by jellyfish to be made into a fasta file
         :return: The number of unique kmers in said file.
         """
-        mf = jellyfish.ReadMerFile(jf_file)
-        # print('Writing mer sequences to file...')
+        # Dump the kmers into a fasta file.
+        cmd = 'jellyfish dump {} > {}tmp/mer_sequences.fasta'.format(jf_file, self.output_file)
+        subprocess.call(cmd, shell=True)
+        # Read in the fasta file so we can assign a unique name to each kmer, otherwise things downstream will complain.
+        f = open('{}tmp/mer_sequences.fasta'.format(self.output_file))
+        fastas = f.readlines()
+        f.close()
         outstr = list()
-        i = 1
-        for mer, count in mf:
-            if count > 3:
-                outstr.append('>mer' + str(i) + '_' + str(count) + '\n')
-                outstr.append(str(mer) + '\n')
-            i += 1
+        num_mers = 0
+        # Iterate through fasta, renaming sequences that have our minimum kmer count.
+        for i in range(len(fastas)):
+            if '>' in fastas[i]:
+                num_mers += 1
+                if int(fastas[i].replace('>', '')) > 3:
+                    outstr.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
         f = open(self.output_file + 'tmp/mer_sequences.fasta', 'w')
         f.write(''.join(outstr))
         f.close()
-        num_mers = i
         return num_mers
 
     def run_bbmap(self, pair, threads):
@@ -162,13 +165,13 @@ class ContamDetect:
         uncompressed = False
         if ".gz" in filename:
             in_gz = gzip.open(filename, 'rb')
-            out = open(filename.replace('.gz', ''), 'w')
+            out = open(filename.replace('.gz', ''), 'wb')
             out.write(in_gz.read())
             out.close()
             uncompressed = True
         elif ".bz2" in filename:
             in_bz2 = bz2.BZ2File(filename, 'rb')
-            out = open(filename.replace('.bz2', ''), 'w')
+            out = open(filename.replace('.bz2', ''), 'wb')
             out.write(in_bz2.read())
             out.close()
             uncompressed = True
@@ -192,8 +195,10 @@ class ContamDetect:
             if "1X" in match.cigarstring and match.query_alignment_length == self.kmer_size:
                 query = match.query_name
                 reference = samfile.getrname(match.reference_id)
-                query_kcount = float(query.split('_')[-1])
-                ref_kcount = float(reference.split('_')[-1])
+                # query_kcount = float(query.split('_')[-1])
+                # ref_kcount = float(reference.split('_')[-1])
+                query_kcount = float(query.split('_')[0])
+                ref_kcount = float(reference.split('_')[0])
                 if query_kcount > ref_kcount:
                     high = query_kcount
                     low = ref_kcount
@@ -222,12 +227,27 @@ class ContamDetect:
             clark_results = 'NA'
         # Estimate coverage with some shell magic.
         estimated_coverage = ContamDetect.estimate_coverage(estimated_size, fastq)
-        f = open(self.output_file, 'a+')
-        # Calculate how often we have potentially contaminating kmers.
+        # Calculate how often we have potentially contaminating kmers and output results.
+        outstr = fastq[0].split('/')[-1] + ',{:.7f},' + str(num_mers) + ',{:.0f},{:.0f},' + clark_results + '\n'
         percentage = (100.0 * float(i)/float(num_mers))
-        f.write(fastq[0].split('/')[-1] + ',' + str(percentage) + ',' + str(num_mers) + ',' + str(estimated_size) + ',' +
-                str(estimated_coverage) + ',' + clark_results + '\n')
+        f = open(self.output_file, 'a+')
+        f.write(outstr.format(percentage, estimated_size, estimated_coverage))
         f.close()
+
+    @staticmethod
+    def discard_bad_kmers(fastq, bad_kmers):
+        # TODO: Test this out eventually, see if it improves assembly quality at all.
+        """
+        :param bad_kmers: path to fasta file containing kmers that we think are contaminants.
+        The plan here is to make a fasta file of not-good kmers (when reading the samfile?) and then run bbduk with that
+        file as the reference, discarding the reads that contain exact matches to those kmers.
+        :return:
+        """
+        if len(fastq) == 2:
+            cmd = 'bbduk.sh in1={} in2={} out1=clean1.fq out2=clean2.fq ref={} maskmiddle=f'.format(fastq[0],
+                                                                                                    fastq[1], bad_kmers)
+        else:
+            cmd = 'bbduk.sh in={} out=clean1.fq ref={} maskmiddle=f'.format(fastq[0], bad_kmers)
 
     @staticmethod
     def estimate_coverage(estimated_size, pair):
@@ -263,89 +283,4 @@ class ContamDetect:
         f.close()
 
 
-"""
-if __name__ == '__main__':
-    import argparse
-    import time
-    import multiprocessing
-    from accessoryFunctions.accessoryFunctions import printtime
 
-    # Check the number of CPUs available on the system to be used by bbmap.
-    cpu_count = multiprocessing.cpu_count()
-    start = time.time()
-    parser = argparse.ArgumentParser()
-    parser.add_argument("fastq_folder", help="Folder that contains fastq files you want to check for contamination. "
-                                             "Will find any fastq file that contains .fq or .fastq in the filename.")
-    parser.add_argument("output_file", help="Base name of the output csv you want to create. (.csv extension is added"
-                                            "by the program).")
-    parser.add_argument("-k", "--kmer_size", type=int, default=31, help="Size of kmer to use. Experimental feature. "
-                                                                        "Probably don't mess with it.")
-    parser.add_argument("-t", "--threads", type=int, default=cpu_count, help="Number of CPUs to run analysis on."
-                                                                             " Defaults to number of CPUs on the system.")
-    parser.add_argument("-c", "--classify", default=False, action='store_true', help='If cross-contamination is suspected, '
-                                                                                     'try to classify using CLARK-l. '
-                                                                                     'Off by default.')
-    parser.add_argument('-tr', '--trim_reads', default=False, action='store_true', help='If enabled, trims reads to'
-                                                                                        'remove low quality bases '
-                                                                                        'before kmer-izing. Off by '
-                                                                                        'default, but highly recommended.')
-    arguments = parser.parse_args()
-    # Get our contamination detector object going.
-    detector = ContamDetect(arguments, start)
-    # Get lists of single and paired files.
-    paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.fastq_folder)
-    # If we're trimming reads, do that for each file and put the trimmed reads into a tmp folder.
-    # Then, parse the tmp folder to get new lists of filenames to do work on.
-    if arguments.trim_reads:
-        printtime('Trimming input fastq files...', start)
-        for pair in paired_files:
-            for i in range(len(pair)):
-                pair[i] = os.path.abspath(pair[i])
-        for single in single_files:
-            single = os.path.abspath(single)
-        ContamDetect.trim_fastqs(detector, paired_files, single_files)
-        paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
-    # Get a counter started so that we can tell the user how far along we are.
-    sample_num = 1
-    # Do contamination detection on paired files first.
-    for pair in paired_files:
-        # Make sure paths are absolute, otherwise bad stuff tends to happen.
-        for i in range(len(pair)):
-            pair[i] = os.path.abspath(pair[i])
-        printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files) + len(single_files)), start)
-        # Run jellyfish to split into mers.
-        printtime('Running jellyfish...', start)
-        ContamDetect.run_jellyfish(detector, pair, arguments.threads)
-        # Write the mers to a file that can be used by bbmap.
-        printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf')
-        # Run bbmap on the output mer file
-        printtime('Finding mismatching mers...', start)
-        ContamDetect.run_bbmap(detector, pair, arguments.threads)
-        # Read through bbmap's samfile output to generate our statistics.
-        printtime('Generating contamination statistics...', start)
-        ContamDetect.read_samfile(detector, num_mers, pair)
-        sample_num += 1
-    # Essentially the exact same as our paired file parsing.
-    for single in single_files:
-        # Make sure paths are absolute, otherwise bad stuff tends to happen.
-        single = os.path.abspath(single)
-        printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files) + len(single_files)), start)
-        # Split reads into mers.
-        printtime('Running jellyfish...', start)
-        ContamDetect.run_jellyfish(detector, [single], arguments.threads)
-        # Write mers to fasta file
-        printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf')
-        # Run bbmap on fasta file.
-        printtime('Finding mismatching mers...', start)
-        ContamDetect.run_bbmap(detector, [single], arguments.threads)
-        # Read samfile to generate statistics.
-        printtime('Generating contamination statistics...', start)
-        ContamDetect.read_samfile(detector, num_mers, [single])
-        sample_num += 1
-
-    end = time.time()
-    shutil.rmtree(arguments.output_file + 'tmp')
-    printtime("Finished contamination detection!", start)
-"""
