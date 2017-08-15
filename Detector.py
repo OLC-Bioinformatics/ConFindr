@@ -8,7 +8,7 @@ import shutil
 
 if __name__ == '__main__':
 
-    # Check the number of CPUs available on the system to be used by bbmap.
+    # Check the number of CPUs available on the system to be used by bbmap/other multithreaded things.
     cpu_count = multiprocessing.cpu_count()
     start = time.time()
     parser = argparse.ArgumentParser()
@@ -27,6 +27,10 @@ if __name__ == '__main__':
                                                                                         'remove low quality bases '
                                                                                         'before kmer-izing. Off by '
                                                                                         'default, but highly recommended.')
+    parser.add_argument('-x', '--remove_bad_reads', default=False, action='store_true', help='Create cleaned up fastq'
+                                                                                             'files with contaminants'
+                                                                                             'removed. Still a work'
+                                                                                             'in progress.')
     arguments = parser.parse_args()
     # Get our contamination detector object going.
     detector = ContamDetect(arguments, start)
@@ -62,7 +66,10 @@ if __name__ == '__main__':
         ContamDetect.run_bbmap(detector, pair, arguments.threads)
         # Read through bbmap's samfile output to generate our statistics.
         printtime('Generating contamination statistics...', start)
-        ContamDetect.read_samfile(detector, num_mers, pair)
+        bad_kmers = ContamDetect.read_samfile(detector, num_mers, pair)
+        if arguments.remove_bad_reads:
+            printtime('Removing bad reads...', start)
+            ContamDetect.discard_bad_kmers(detector, pair, bad_kmers)
         sample_num += 1
     # Essentially the exact same as our paired file parsing.
     for single in single_files:

@@ -19,6 +19,11 @@
 - Classify (-c): If the -c flag is added, when suspected cross-species contamination is found CLARK will be run (light version) to try to identify which species are present. Default=False.
 - Threads (-t): Number of threads to run analysis on. Default is number of cores on your system.
 - Trim_fastq (-tr): Performs quality trimming using bbduk. Off by default, but should probably almost always be turned on.
+- Remove\_bad_reads (-x): Removes reads which have contaminating kmers in them. Still highly experimental.
 
 #### Example
 python3 Detector.py Fastq_Folder outputname.csv
+
+## Using Docker
+- A docker image has also been created for ease of use. It can be downloaded at (insert here eventually where you'll put it).
+- Add in instructions on mounting the files you want and running the docker image here.
