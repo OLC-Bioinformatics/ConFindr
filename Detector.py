@@ -87,7 +87,10 @@ if __name__ == '__main__':
         ContamDetect.run_bbmap(detector, [single], arguments.threads)
         # Read samfile to generate statistics.
         printtime('Generating contamination statistics...', start)
-        ContamDetect.read_samfile(detector, num_mers, [single])
+        bad_kmers = ContamDetect.read_samfile(detector, num_mers, [single])
+        if arguments.remove_bad_reads:
+            printtime('Removing bad reads...', start)
+            ContamDetect.discard_bad_kmers(detector, [single], bad_kmers)
         sample_num += 1
 
     end = time.time()

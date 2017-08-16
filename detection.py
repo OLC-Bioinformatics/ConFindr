@@ -1,5 +1,4 @@
 from accessoryFunctions.accessoryFunctions import printtime
-# import jellyfish
 import shutil
 import os
 import pysam
@@ -76,7 +75,7 @@ class ContamDetect:
 
     def run_jellyfish(self, fastq, threads):
         """
-        Runs jellyfish at kmer length of self.kmer_size. Writes kmer sequences to mer_sequences.fasta
+        Runs jellyfish at kmer length of self.kmer_size.
         :param fastq: An array with forward reads at index 0 and reverse reads at index 1. Can also handle single reads,
         just input an array of length 1.
         :return: integer num_mers, which is number of kmers in the reads at that kmer size.
@@ -97,14 +96,14 @@ class ContamDetect:
         # Run jellyfish! Slightly different commands for single vs paired-end reads.
         if len(to_use) > 1:
             cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t ' + str(threads) + ' -C -F 2 ' +\
-                  to_use[0] + ' ' + to_use[1]
+                  to_use[0] + ' ' + to_use[1] + ' -o ' + self.output_file + 'tmp/mer_counts.jf'
         else:
             cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t ' + str(threads) + ' -C -F 1 ' + \
-                  to_use[0]
+                  to_use[0] + ' -o ' + self.output_file + 'tmp/mer_counts.jf'
         # os.system(cmd)
         subprocess.call(cmd, shell=True)
         # Get the mer_counts file put into the tmp folder that ends up being deleted.
-        os.rename('mer_counts.jf', self.output_file + 'tmp/mer_counts.jf')
+        # os.rename('mer_counts.jf', self.output_file + 'tmp/mer_counts.jf')
         # If we had to uncompress files, remove the uncompressed versions.
         if uncompressed:
             for f in to_remove:
@@ -126,16 +125,22 @@ class ContamDetect:
         f = open('{}tmp/mer_sequences.fasta'.format(self.output_file))
         fastas = f.readlines()
         f.close()
-        outstr = list()
+        out_solid = list()
+        out_sketchy = list()
         num_mers = 0
         # Iterate through fasta, renaming sequences that have our minimum kmer count.
         for i in range(len(fastas)):
             if '>' in fastas[i]:
                 num_mers += 1
-                if int(fastas[i].replace('>', '')) > 3:
-                    outstr.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
-        f = open(self.output_file + 'tmp/mer_sequences.fasta', 'w')
-        f.write(''.join(outstr))
+                if int(fastas[i].replace('>', '')) > 20:
+                    out_solid.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
+                elif int(fastas[i].replace('>', '')) > 3:
+                    out_sketchy.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
+        f = open(self.output_file + 'tmp/mer_solid.fasta', 'w')
+        f.write(''.join(out_solid))
+        f.close()
+        f = open(self.output_file + 'tmp/mer_sketchy.fasta', 'w')
+        f.write(''.join(out_sketchy))
         f.close()
         return num_mers
 
@@ -146,9 +151,10 @@ class ContamDetect:
         reads at index 0 and reverse at index 1. If you want to pass single-end reads, just need to give it an array of
         length 1.
         """
+        # Should be able to remove this since nodisk is added as an option to the bbmap call
         if os.path.isdir('ref'):
             shutil.rmtree('ref')
-        cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_sequences.fasta in=' + self.output_file + 'tmp/mer_sequences.fasta ambig=all ' \
+        cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_solid.fasta in=' + self.output_file + 'tmp/mer_sketchy.fasta ambig=all ' \
               'outm=' + self.output_file + 'tmp/' + pair[0].split('/')[-1] + '.sam subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
         # os.system(cmd)
@@ -179,6 +185,8 @@ class ContamDetect:
         return uncompressed
 
     def read_samfile(self, num_mers, fastq):
+        # TODO: This has become larger than intended. Maybe split into two methods since this does a lot more than just
+        # samfile reading now.
         """
         :param num_mers: Number of unique kmers for the sample be looked at. Found by write_mer_file.
         :param fastq: Array with forward read filepath at index 0, reverse read filepath at index 1. Alternatively, name
@@ -273,12 +281,17 @@ class ContamDetect:
         f.write(''.join(bad_mer_list))
         f.close()
         if len(fastq) == 2:
-            cmd = 'bbduk.sh k=31 in1={} in2={} out1=clean_R1.fastq.gz out2=clean_R2.fastq.gz ref={} maskmiddle=f'.format(fastq[0],
-                                                                                                    fastq[1], self.output_file + 'tmp/bad_kmers.fasta')
+            cmd = 'bbduk.sh k=31 in1={} in2={} out1={} out2={} ref={} maskmiddle=f'.format(fastq[0], fastq[1], 'clean'
+                                                                                           + fastq[0], 'clean' +
+                                                                                           fastq[1], self.output_file
+                                                                                           + 'tmp/bad_kmers.fasta')
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
                 subprocess.call(cmd, shell=True, stderr=outjunk)
         else:
-            cmd = 'bbduk.sh in={} out=clean1.fq ref={} maskmiddle=f'.format(fastq[0], bad_kmers)
+            cmd = 'bbduk.sh in={} out={} ref={} maskmiddle=f'.format(fastq[0], 'clean' + fastq[0], self.output_file +
+                                                                     'tmp/bad_kmers.fasta')
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                subprocess.call(cmd, shell=True, stderr=outjunk)
 
     @staticmethod
     def estimate_coverage(estimated_size, pair):

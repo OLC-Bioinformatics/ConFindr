@@ -3,7 +3,7 @@
 ### Program Requirements
 - bbmap (>= 37.23) installed and present on your $PATH
 - jellyfish (>= 2.2.6) installed and on your $PATH
-- Python 3.5 (2.7 should also work - not fully tested)
+- Python 3.5 (2.7 should also work, though that isn't tested.)
 - CLARK (>=1.2.3) installed and on your $PATH
 
 ### Python Package Requirements
@@ -19,10 +19,22 @@
 - Classify (-c): If the -c flag is added, when suspected cross-species contamination is found CLARK will be run (light version) to try to identify which species are present. Default=False.
 - Threads (-t): Number of threads to run analysis on. Default is number of cores on your system.
 - Trim_fastq (-tr): Performs quality trimming using bbduk. Off by default, but should probably almost always be turned on.
-- Remove\_bad_reads (-x): Removes reads which have contaminating kmers in them. Still highly experimental.
+- Remove\_bad_reads (-x): Removes reads which have contaminating kmers in them. Still highly experimental, not sure if it
+actually improves downstream assemblies at all.
 
-#### Example
-python3 Detector.py Fastq_Folder outputname.csv
+#### Example Usages
+
+Detect contamination on any fastq files within fastq folder, output results to outputname.csv
+
+`python3 Detector.py Fastq_Folder outputname.csv`
+
+Before detecting contamination, quality trim reads (highly recommended!)
+
+`python3 Detector.py Fastq_Folder outputname.csv -tr`
+
+Use CLARK to try and classify reads in samples that are suspected to have multiple species.
+
+`python3 Detector.py Fastq_Folder outputname.csv -c`
 
 ## Using Docker
 - A docker image has also been created for ease of use. It can be downloaded at (insert here eventually where you'll put it).
