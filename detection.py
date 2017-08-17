@@ -62,7 +62,13 @@ class ContamDetect:
                                                                                     out_reverse, bbduk_dir,
                                                                                     str(self.threads))
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
-                subprocess.call(cmd, shell=True, stderr=outjunk)
+                try:  # This should give bbduk more than enough time to run, unless user's computer is super slow.
+                    # Maybe adjust the value later.
+                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+                except subprocess.TimeoutExpired:
+                    printtime(pair[0] + ' appears to be making BBDUK run forever. Killing...', self.start)
+                    os.remove(self.output_file + 'tmp/' + pair[0].split('/')[-1])
+                    os.remove(self.output_file + 'tmp/' + pair[1].split('/')[-1])
 
         # Go through single reads, and run bbduk on them too.
         for single in fastq_singles:
@@ -70,8 +76,11 @@ class ContamDetect:
             cmd = 'bbduk.sh in={} out={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
                   ' ref={}/resources/adapters.fa hdist=1 tpe tbo threads={}'.format(single, out_name,
                                                                                     bbduk_dir, str(self.threads))
-            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
-                subprocess.call(cmd, shell=True, stderr=outjunk)
+            try:
+                subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+            except subprocess.TimeoutExpired:
+                printtime(single + ' appears to be making BBDUK run forever. Killing...', self.start)
+                os.remove(self.output_file + 'tmp/' + single.split('/')[-1])
 
     def run_jellyfish(self, fastq, threads):
         """
