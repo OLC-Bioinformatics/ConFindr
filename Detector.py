@@ -38,6 +38,9 @@ if __name__ == '__main__':
     paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.fastq_folder)
     # If we're trimming reads, do that for each file and put the trimmed reads into a tmp folder.
     # Then, parse the tmp folder to get new lists of filenames to do work on.
+    printtime('Extracting rMLST reads...', start)
+    ContamDetect.extract_rmlst_reads(detector, paired_files)
+    paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'rmlsttmp/')
     if arguments.trim_reads:
         printtime('Trimming input fastq files...', start)
         for pair in paired_files:
@@ -46,6 +49,10 @@ if __name__ == '__main__':
         for single in single_files:
             single = os.path.abspath(single)
         ContamDetect.trim_fastqs(detector, paired_files, single_files)
+        paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
+    else:
+        shutil.rmtree(arguments.output_file + 'tmp/')
+        shutil.copytree(arguments.output_file + 'rmlsttmp/', arguments.output_file + 'tmp')
         paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
     # Get a counter started so that we can tell the user how far along we are.
     sample_num = 1
@@ -95,4 +102,5 @@ if __name__ == '__main__':
 
     end = time.time()
     shutil.rmtree(arguments.output_file + 'tmp')
+    shutil.rmtree(arguments.output_file + 'rmlsttmp')
     printtime("Finished contamination detection!", start)

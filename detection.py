@@ -1,4 +1,5 @@
 from accessoryFunctions.accessoryFunctions import printtime
+from Bio.Blast.Applications import NcbiblastnCommandline
 import shutil
 import os
 import pysam
@@ -42,6 +43,20 @@ class ContamDetect:
 
         return fastq_pairs, fastq_singles
 
+    def extract_rmlst_reads(self, fastq_pairs):
+        for pair in fastq_pairs:
+            cmd = 'bbduk.sh ref=database.fasta in1={} in2={} outm={}' \
+              ' outm2={}'.format(pair[0], pair[1], self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1],
+                                 self.output_file + 'rmlsttmp/' + pair[1].split('/')[-1])
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                try:  # This should give bbduk more than enough time to run, unless user's computer is super slow.
+                    # Maybe adjust the value later.
+                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+                except subprocess.TimeoutExpired:
+                    printtime(pair[0] + ' appears to be making BBDUK run forever. Killing...', self.start)
+                    os.remove(self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1])
+                    os.remove(self.output_file + 'rmlsttmp/' + pair[1].split('/')[-1])
+
     def trim_fastqs(self, fastq_pairs, fastq_singles):
         """
         For each pair of fastqs in list passed, uses bbduk to trim those file, and puts them in a tmp directory.
@@ -58,7 +73,7 @@ class ContamDetect:
             out_forward = self.output_file + 'tmp/' + pair[0].split('/')[-1]
             out_reverse = self.output_file + 'tmp/' + pair[1].split('/')[-1]
             cmd = 'bbduk.sh in1={} in2={} out1={} out2={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
-                  ' ref={}/resources/adapters.fa hdist=1 tpe tbo threads={}'.format(pair[0], pair[1], out_forward,
+                  ' ref={}/resources/adapters.fa hdist=1 tpe tbo threads={} '.format(pair[0], pair[1], out_forward,
                                                                                     out_reverse, bbduk_dir,
                                                                                     str(self.threads))
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
@@ -140,11 +155,12 @@ class ContamDetect:
         # Iterate through fasta, renaming sequences that have our minimum kmer count.
         for i in range(len(fastas)):
             if '>' in fastas[i]:
-                num_mers += 1
-                if int(fastas[i].replace('>', '')) > 20:
+                # num_mers += 1
+                if int(fastas[i].replace('>', '')) > 3:
+                    num_mers += 1
                     out_solid.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
-                elif int(fastas[i].replace('>', '')) > 3:
-                    out_sketchy.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
+                # elif int(fastas[i].replace('>', '')) > 3:
+                #    out_sketchy.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
         f = open(self.output_file + 'tmp/mer_solid.fasta', 'w')
         f.write(''.join(out_solid))
         f.close()
@@ -163,7 +179,7 @@ class ContamDetect:
         # Should be able to remove this since nodisk is added as an option to the bbmap call
         if os.path.isdir('ref'):
             shutil.rmtree('ref')
-        cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_solid.fasta in=' + self.output_file + 'tmp/mer_sketchy.fasta ambig=all ' \
+        cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_solid.fasta in=' + self.output_file + 'tmp/mer_solid.fasta ambig=all ' \
               'outm=' + self.output_file + 'tmp/' + pair[0].split('/')[-1] + '.sam subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
         # os.system(cmd)
@@ -193,6 +209,17 @@ class ContamDetect:
             uncompressed = True
         return uncompressed
 
+    @staticmethod
+    def present_in_db(query_sequence):
+        # print(query_sequence)
+        blastn = NcbiblastnCommandline(db='database.fasta',
+                                       outfmt=6)
+        stdout, stderr = blastn(stdin=query_sequence)
+        if stdout:
+            return True
+        else:
+            return False
+
     def read_samfile(self, num_mers, fastq):
         # TODO: This has become larger than intended. Maybe split into two methods since this does a lot more than just
         # samfile reading now.
@@ -204,14 +231,23 @@ class ContamDetect:
         Also calls methods from genome_size.py in order to estimate genome size (good for finding cross-species contam).
         Writes results to user-specified output file.
         """
-        i = 1
+        f = open(self.output_file + 'tmp/mer_solid.fasta')
+        mers = f.readlines()
+        f.close()
+        # Now actually goes at an acceptable speed. Yay.
+        mer_dict = dict()
+        for i in range(0, len(mers), 2):
+            key = mers[i].replace('>', '')
+            key = key.replace('\n', '')
+            mer_dict[key] = mers[i + 1]
+        i = 0
         # Open up the alignment file for parsing.
         samfile = pysam.AlignmentFile(self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
         bad_kmers = list()
         # samfile = pysam.AlignmentFile('test.sam', 'r')
         for match in samfile:
             # We're interested in full-length matches with one mismatch. This gets us that.
-            if "1X" in match.cigarstring and match.query_alignment_length == self.kmer_size:
+            if "1X" in match.cigarstring and '30=' in match.cigarstring:
                 query = match.query_name
                 reference = samfile.getrname(match.reference_id)
                 # query_kcount = float(query.split('_')[-1])
@@ -222,15 +258,17 @@ class ContamDetect:
                     # print(reference, query)
                     high = query_kcount
                     low = ref_kcount
-                    if 0.01 < low/high < 0.3:
-                        i += 1
+                    if 0.01 < low/high < 0.7:
+                        if ContamDetect.present_in_db(mer_dict[reference]):
+                            i += 1
                         bad_kmers.append(reference)
                 else:
                     # print(query, reference)
                     low = query_kcount
                     high = ref_kcount
-                    if 0.01 < low/high < 0.3:
-                        i += 1
+                    if 0.01 < low/high < 0.7:
+                        if ContamDetect.present_in_db(mer_dict[reference]):
+                            i += 1
                         bad_kmers.append(query)
                 # Ratios that are very low are likely sequencing errors, and high ratios are likely multiple similar
                 # genes within a genome (looking at you, E. coli!)
@@ -255,6 +293,7 @@ class ContamDetect:
         # Calculate how often we have potentially contaminating kmers and output results.
         outstr = fastq[0].split('/')[-1] + ',{:.7f},' + str(num_mers) + ',{:.0f},{:.0f},' + clark_results + '\n'
         percentage = (100.0 * float(i)/float(num_mers))
+
         f = open(self.output_file, 'a+')
         f.write(outstr.format(percentage, estimated_size, estimated_coverage))
         f.close()
@@ -274,7 +313,7 @@ class ContamDetect:
         :return:
         """
         # First up, read through mer_sequences.fasta and retrieve the bad kmers.
-        f = open(self.output_file + 'tmp/mer_sequences.fasta')
+        f = open(self.output_file + 'tmp/mer_solid.fasta')
         mers = f.readlines()
         f.close()
         bad_mer_list = list()
@@ -326,11 +365,13 @@ class ContamDetect:
         self.fastq_folder = args.fastq_folder
         self.output_file = args.output_file
         self.threads = args.threads
-        self.kmer_size = args.kmer_size
+        self.kmer_size = 31
         self.classify = args.classify
         self.start = start
         if not os.path.isdir(self.output_file + 'tmp'):
             os.makedirs(self.output_file + 'tmp')
+        if not os.path.isdir(self.output_file + 'rmlsttmp'):
+            os.makedirs(self.output_file + 'rmlsttmp')
         f = open(self.output_file, 'w')
         f.write('File,Percentage,NumUniqueKmers,EstimatedGenomeSize,EstimatedCoverage,CrossContamination\n')
         f.close()
