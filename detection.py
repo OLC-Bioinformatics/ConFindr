@@ -1,15 +1,11 @@
 from accessoryFunctions.accessoryFunctions import printtime
 from Bio.Blast.Applications import NcbiblastnCommandline
-import shutil
 import os
 import pysam
-import genome_size
 import gzip
 import bz2
 import subprocess
 import glob
-import run_clark
-# from Bio.SeqUtils import GC
 
 
 # TODO: Add option to try to remove reads that have bad kmers in them - maybe not necessary, but could be useful.
@@ -43,7 +39,7 @@ class ContamDetect:
 
         return fastq_pairs, fastq_singles
 
-    def extract_rmlst_reads(self, fastq_pairs):
+    def extract_rmlst_reads(self, fastq_pairs, fastq_singles):
         for pair in fastq_pairs:
             cmd = 'bbduk.sh ref=database.fasta in1={} in2={} outm={}' \
               ' outm2={}'.format(pair[0], pair[1], self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1],
@@ -56,6 +52,17 @@ class ContamDetect:
                     printtime(pair[0] + ' appears to be making BBDUK run forever. Killing...', self.start)
                     os.remove(self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1])
                     os.remove(self.output_file + 'rmlsttmp/' + pair[1].split('/')[-1])
+
+        for single in fastq_singles:
+            cmd = 'bbduk.sh ref=database.fasta in={} outm={}' \
+              ''.format(single, self.output_file + 'rmlsttmp/' + single.split('/')[-1])
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                try:  # This should give bbduk more than enough time to run, unless user's computer is super slow.
+                    # Maybe adjust the value later.
+                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+                except subprocess.TimeoutExpired:
+                    printtime(pair[0] + ' appears to be making BBDUK run forever. Killing...', self.start)
+                    os.remove(self.output_file + 'rmlsttmp/' + single.split('/')[-1])
 
     def trim_fastqs(self, fastq_pairs, fastq_singles):
         """
@@ -124,20 +131,16 @@ class ContamDetect:
         else:
             cmd = 'jellyfish count -m ' + str(self.kmer_size) + ' -s 100M --bf-size 100M -t ' + str(threads) + ' -C -F 1 ' + \
                   to_use[0] + ' -o ' + self.output_file + 'tmp/mer_counts.jf'
-        # os.system(cmd)
         subprocess.call(cmd, shell=True)
-        # Get the mer_counts file put into the tmp folder that ends up being deleted.
-        # os.rename('mer_counts.jf', self.output_file + 'tmp/mer_counts.jf')
         # If we had to uncompress files, remove the uncompressed versions.
         if uncompressed:
             for f in to_remove:
                 try:
-                    # print(f)
                     os.remove(f)
                 except:# Needed in case the file has already been removed - figure out the specific error soon.
                     pass
 
-    def write_mer_file(self, jf_file):
+    def write_mer_file(self, jf_file, fastq):
         """
         :param jf_file: .jf file created by jellyfish to be made into a fasta file
         :return: The number of unique kmers in said file.
@@ -150,22 +153,25 @@ class ContamDetect:
         fastas = f.readlines()
         f.close()
         out_solid = list()
-        out_sketchy = list()
         num_mers = 0
-        # Iterate through fasta, renaming sequences that have our minimum kmer count.
+        # Try to figure out what coverage we have over the rMLST genes. This affects what cutoff we use to classify
+        # a kmer as trustworthy. With more coverage, we need a higher cutoff.
+        coverage = ContamDetect.estimate_coverage(35000, fastq)
+        if coverage < 100:
+            cutoff = 3
+        elif coverage < 200:
+            cutoff = 4
+        else:
+            cutoff = 5
+        # Iterate through our kmer file, picking out kmers we've decided are trustworthy.
         for i in range(len(fastas)):
             if '>' in fastas[i]:
-                # num_mers += 1
-                if int(fastas[i].replace('>', '')) > 3:
+                if int(fastas[i].replace('>', '')) > cutoff:
                     num_mers += 1
                     out_solid.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
-                # elif int(fastas[i].replace('>', '')) > 3:
-                #    out_sketchy.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
+        # Write out our solid kmers to file to be used later.
         f = open(self.output_file + 'tmp/mer_solid.fasta', 'w')
         f.write(''.join(out_solid))
-        f.close()
-        f = open(self.output_file + 'tmp/mer_sketchy.fasta', 'w')
-        f.write(''.join(out_sketchy))
         f.close()
         return num_mers
 
@@ -176,14 +182,11 @@ class ContamDetect:
         reads at index 0 and reverse at index 1. If you want to pass single-end reads, just need to give it an array of
         length 1.
         """
-        # Should be able to remove this since nodisk is added as an option to the bbmap call
-        if os.path.isdir('ref'):
-            shutil.rmtree('ref')
+        # Align our mer sequences against themselves. This will let us find mers with a mismatch or two between them
+        # that are indicative of multiple alleles of the same gene being present.
         cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_solid.fasta in=' + self.output_file + 'tmp/mer_solid.fasta ambig=all ' \
               'outm=' + self.output_file + 'tmp/' + pair[0].split('/')[-1] + '.sam subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
-        # os.system(cmd)
-        # print('Running bbmap...')
         with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
             subprocess.call(cmd, shell=True, stderr=outjunk)
 
@@ -211,10 +214,17 @@ class ContamDetect:
 
     @staticmethod
     def present_in_db(query_sequence):
-        # print(query_sequence)
-        blastn = NcbiblastnCommandline(db='database.fasta',
+        """
+        Checks if a sequence is present in our rMLST database, as some overhangs on reads can be in repetitive regions
+        that could cause false positives and should therfore be screened out.
+        :param query_sequence: nucleotide sequence, as a string.
+        :return: True if sequence is found in rMLST database, False if it isn't.
+        """
+        # Blast the sequence against our database.
+        blastn = NcbiblastnCommandline(db='database.fasta',  # TODO: Make me be not hardcoded.
                                        outfmt=6)
         stdout, stderr = blastn(stdin=query_sequence)
+        # If there's any result, the sequence is present. No result means not present.
         if stdout:
             return True
         else:
@@ -242,70 +252,63 @@ class ContamDetect:
             mer_dict[key] = mers[i + 1]
         i = 0
         # Open up the alignment file for parsing.
-        samfile = pysam.AlignmentFile(self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
         bad_kmers = list()
-        # samfile = pysam.AlignmentFile('test.sam', 'r')
-        for match in samfile:
-            # We're interested in full-length matches with one mismatch. This gets us that.
-            if "1X" in match.cigarstring and '30=' in match.cigarstring:
-                query = match.query_name
-                reference = samfile.getrname(match.reference_id)
-                # query_kcount = float(query.split('_')[-1])
-                # ref_kcount = float(reference.split('_')[-1])
-                query_kcount = float(query.split('_')[0])
-                ref_kcount = float(reference.split('_')[0])
-                if query_kcount > ref_kcount:
-                    # print(reference, query)
-                    high = query_kcount
-                    low = ref_kcount
-                    if 0.01 < low/high < 0.7:
-                        if ContamDetect.present_in_db(mer_dict[reference]):
-                            i += 1
-                        bad_kmers.append(reference)
-                else:
-                    # print(query, reference)
-                    low = query_kcount
-                    high = ref_kcount
-                    if 0.01 < low/high < 0.7:
-                        if ContamDetect.present_in_db(mer_dict[reference]):
-                            i += 1
-                        bad_kmers.append(query)
-                # Ratios that are very low are likely sequencing errors, and high ratios are likely multiple similar
-                # genes within a genome (looking at you, E. coli!)
-        # Try to get estimated genome size.
-        # Make jellyfish run a histogram.
-        genome_size.run_jellyfish_histo(self.output_file)
-        # Find total number of mers and peak coverage value so estimated genome size can be calculated.
-        peak, total_mers = genome_size.get_peak_kmers(self.output_file + 'tmp/histogram.txt')
-        # Calculate the estimated size
-        estimated_size = genome_size.get_genome_size(total_mers, peak)
-        # Large estimated size means cross species contamination is likely. Run CLARK-light to figure out which species
-        # are likely present
-        if estimated_size > 10000000 and self.classify:
-            printtime('Cross-species contamination suspected! Running CLARK for classification.', self.start)
-            run_clark.classify_metagenome('bacteria/', fastq, self.threads)
-            clark_results = run_clark.read_clark_output('abundance.csv')
-            os.remove('abundance.csv')
-        else:
-            clark_results = 'NA'
-        # Estimate coverage with some shell magic.
-        estimated_coverage = ContamDetect.estimate_coverage(estimated_size, fastq)
-        # Calculate how often we have potentially contaminating kmers and output results.
-        outstr = fastq[0].split('/')[-1] + ',{:.7f},' + str(num_mers) + ',{:.0f},{:.0f},' + clark_results + '\n'
-        percentage = (100.0 * float(i)/float(num_mers))
-
-        f = open(self.output_file, 'a+')
-        f.write(outstr.format(percentage, estimated_size, estimated_coverage))
-        f.close()
-        # Should get tmp files cleaned up here so disk space doesn't get overwhelmed if running many samples.
-        files = glob.glob(self.output_file + 'tmp/*.sam')
-        for f in files:
-            os.remove(f)
+        try:  # In the event no rmlst genes are present, this will skip over the sample.
+            samfile = pysam.AlignmentFile(self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
+            bad_kmers = list()
+            # samfile = pysam.AlignmentFile('test.sam', 'r')
+            for match in samfile:
+                # We're interested in full-length matches with one mismatch. This gets us that.
+                # Well, not quite actually. You end up with the possibility of multiple single substitutions,
+                # but that actually seems to improve sensitivity a fair bit while not impacting specificity. Huzzah.
+                if "1X" in match.cigarstring and match.query_alignment_length == self.kmer_size:
+                    query = match.query_name
+                    reference = samfile.getrname(match.reference_id)
+                    # query_kcount = float(query.split('_')[-1])
+                    # ref_kcount = float(reference.split('_')[-1])
+                    query_kcount = float(query.split('_')[0])
+                    ref_kcount = float(reference.split('_')[0])
+                    if query_kcount > ref_kcount:
+                        # print(reference, query)
+                        high = query_kcount
+                        low = ref_kcount
+                        if 0.01 < low/high < 0.7:
+                            if ContamDetect.present_in_db(mer_dict[reference]):
+                                i += 1
+                            bad_kmers.append(reference)
+                    else:
+                        # print(query, reference)
+                        low = query_kcount
+                        high = ref_kcount
+                        if 0.01 < low/high < 0.7:
+                            if ContamDetect.present_in_db(mer_dict[reference]):
+                                i += 1
+                            bad_kmers.append(query)
+                    # Ratios that are very low are likely sequencing errors, and high ratios are likely multiple similar
+                    # genes within a genome (looking at you, E. coli!)
+            # See if we meet our contamination requirements - at least 1 high confidence multiple allele SNV, or
+            # enough unique kmers that we almost certainly have multiple species contributing to the rMLST genes.
+            if i >= 1 or num_mers > 50000:
+                contaminated = True
+            else:
+                contaminated = False
+            # Get our output ready.
+            outstr = fastq[0].split('/')[-1] + ',' + str(i) + ',' + str(num_mers) + ',' + str(contaminated) + '\n'
+            # Append to the results file.
+            f = open(self.output_file, 'a+')
+            f.write(outstr)
+            f.close()
+            # Should get tmp files cleaned up here so disk space doesn't get overwhelmed if running many samples.
+            files = glob.glob(self.output_file + 'tmp/*.sam')
+            for f in files:
+                os.remove(f)
+        except OSError:  # This happens if there are no rMLST genes at all in the sample and so we end up with an empty
+            # input. There might be a more elegant way to handle this.
+            pass
         return bad_kmers
 
+    # This is entirely useless in this iteration of the code. Probably remove at some point soon.
     def discard_bad_kmers(self, fastq, bad_kmers):
-        # TODO: Test this out eventually, see if it improves assembly quality at all. Finish making single-end support
-        # work if this is a good idea.
         """
         :param bad_kmers: List of kmers we think are bad, generated by read_samfile
         The plan here is to make a fasta file of not-good kmers (when reading the samfile?) and then run bbduk with that
@@ -344,7 +347,7 @@ class ContamDetect:
     @staticmethod
     def estimate_coverage(estimated_size, pair):
         """
-        :param estimated_size: Estimated size of genome, in basepairs. Found using genome_size.get_genome_size
+        :param estimated_size: Estimated size of genome, in basepairs. Using rMLST genes, assume ~35000
         :param pair: Array with structure [path_to_forward_reads, path_to_reverse_reads].
         :return: Estimated coverage depth of genome, as an integer.
         """
@@ -373,7 +376,7 @@ class ContamDetect:
         if not os.path.isdir(self.output_file + 'rmlsttmp'):
             os.makedirs(self.output_file + 'rmlsttmp')
         f = open(self.output_file, 'w')
-        f.write('File,Percentage,NumUniqueKmers,EstimatedGenomeSize,EstimatedCoverage,CrossContamination\n')
+        f.write('File,rMLSTContamSNVs,NumUniqueKmers,Contaminated\n')
         f.close()
 
 

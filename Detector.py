@@ -31,6 +31,10 @@ if __name__ == '__main__':
                                                                                              'files with contaminants'
                                                                                              'removed. Still a work'
                                                                                              'in progress.')
+    parser.add_argument('-d', '--database', default='database.fasta', type=str, help='rMLST database, minus BACT000014,'
+                                                                                       'BACT000060, and BACT000065, which'
+                                                                                       'tend to have multiple copies in'
+                                                                                       'some species.')
     arguments = parser.parse_args()
     # Get our contamination detector object going.
     detector = ContamDetect(arguments, start)
@@ -39,7 +43,7 @@ if __name__ == '__main__':
     # If we're trimming reads, do that for each file and put the trimmed reads into a tmp folder.
     # Then, parse the tmp folder to get new lists of filenames to do work on.
     printtime('Extracting rMLST reads...', start)
-    ContamDetect.extract_rmlst_reads(detector, paired_files)
+    ContamDetect.extract_rmlst_reads(detector, paired_files, single_files)
     paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'rmlsttmp/')
     if arguments.trim_reads:
         printtime('Trimming input fastq files...', start)
@@ -67,7 +71,7 @@ if __name__ == '__main__':
         ContamDetect.run_jellyfish(detector, pair, arguments.threads)
         # Write the mers to a file that can be used by bbmap.
         printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf')
+        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf', pair)
         # Run bbmap on the output mer file
         printtime('Finding mismatching mers...', start)
         ContamDetect.run_bbmap(detector, pair, arguments.threads)
@@ -88,7 +92,7 @@ if __name__ == '__main__':
         ContamDetect.run_jellyfish(detector, [single], arguments.threads)
         # Write mers to fasta file
         printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf')
+        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf', [single])
         # Run bbmap on fasta file.
         printtime('Finding mismatching mers...', start)
         ContamDetect.run_bbmap(detector, [single], arguments.threads)
