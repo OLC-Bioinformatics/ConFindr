@@ -58,6 +58,11 @@ if __name__ == '__main__':
         shutil.rmtree(arguments.output_file + 'tmp/')
         shutil.copytree(arguments.output_file + 'rmlsttmp/', arguments.output_file + 'tmp')
         paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
+
+    # Subsample reads to desired coverage level (20X or so, hopefully).
+    printtime('Subsampling reads...', start)
+    ContamDetect.subsample_reads(detector, paired_files, single_files)
+    paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
     # Get a counter started so that we can tell the user how far along we are.
     sample_num = 1
     # Do contamination detection on paired files first.
@@ -77,10 +82,7 @@ if __name__ == '__main__':
         ContamDetect.run_bbmap(detector, pair, arguments.threads)
         # Read through bbmap's samfile output to generate our statistics.
         printtime('Generating contamination statistics...', start)
-        bad_kmers = ContamDetect.read_samfile(detector, num_mers, pair)
-        if arguments.remove_bad_reads:
-            printtime('Removing bad reads...', start)
-            ContamDetect.discard_bad_kmers(detector, pair, bad_kmers)
+        ContamDetect.read_samfile(detector, num_mers, pair)
         sample_num += 1
     # Essentially the exact same as our paired file parsing.
     for single in single_files:
@@ -98,10 +100,7 @@ if __name__ == '__main__':
         ContamDetect.run_bbmap(detector, [single], arguments.threads)
         # Read samfile to generate statistics.
         printtime('Generating contamination statistics...', start)
-        bad_kmers = ContamDetect.read_samfile(detector, num_mers, [single])
-        if arguments.remove_bad_reads:
-            printtime('Removing bad reads...', start)
-            ContamDetect.discard_bad_kmers(detector, [single], bad_kmers)
+        ContamDetect.read_samfile(detector, num_mers, [single])
         sample_num += 1
 
     end = time.time()

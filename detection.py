@@ -8,8 +8,6 @@ import subprocess
 import glob
 
 
-# TODO: Add option to try to remove reads that have bad kmers in them - maybe not necessary, but could be useful.
-# Currently implemented, but horrendously slow.
 class ContamDetect:
 
     @staticmethod
@@ -40,9 +38,15 @@ class ContamDetect:
         return fastq_pairs, fastq_singles
 
     def extract_rmlst_reads(self, fastq_pairs, fastq_singles):
+        """
+        Extracts rmlst reads and puts them in a folder.
+        :param fastq_pairs: List of fastqpairs in nested array [[forward1, reverse1], [forward2, reverse2]]
+        :param fastq_singles: List of fastq singles.
+        :return: Zip, zilch, nada.
+        """
         for pair in fastq_pairs:
-            cmd = 'bbduk.sh ref=database.fasta in1={} in2={} outm={}' \
-              ' outm2={}'.format(pair[0], pair[1], self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1],
+            cmd = 'bbduk.sh ref={} in1={} in2={} outm={}' \
+              ' outm2={}'.format(self.database, pair[0], pair[1], self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1],
                                  self.output_file + 'rmlsttmp/' + pair[1].split('/')[-1])
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
                 try:  # This should give bbduk more than enough time to run, unless user's computer is super slow.
@@ -98,11 +102,49 @@ class ContamDetect:
             cmd = 'bbduk.sh in={} out={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
                   ' ref={}/resources/adapters.fa hdist=1 tpe tbo threads={}'.format(single, out_name,
                                                                                     bbduk_dir, str(self.threads))
-            try:
-                subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
-            except subprocess.TimeoutExpired:
-                printtime(single + ' appears to be making BBDUK run forever. Killing...', self.start)
-                os.remove(self.output_file + 'tmp/' + single.split('/')[-1])
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                try:
+                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+                except subprocess.TimeoutExpired:
+                    printtime(single + ' appears to be making BBDUK run forever. Killing...', self.start)
+                    os.remove(self.output_file + 'tmp/' + single.split('/')[-1])
+
+    def subsample_reads(self, fastq_pairs, fastq_singles):
+        """
+        Will subsample reads to approximately 20X coverage, which then means that we can (hopefully) manage to detect
+        things better, and without false positives.
+        :param fastq_pairs: List of pairs of fastqs.
+        :param fastq_singles: List of single lonely fastqs
+        :return:
+        """
+        for pair in fastq_pairs:
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                if '.gz' in pair[0]:
+                    out1 = 'reads_R1.fastq.gz'
+                    out2 = 'reads_R2.fastq.gz'
+                elif '.bz2' in pair[0]:
+                    out1 = 'reads_R1.fastq.bz2'
+                    out2 = 'reads_R2.fastq.bz2'
+                else:
+                    out1 = 'reads_R1.fastq'
+                    out2 = 'reads_R2.fastq'
+                cmd = 'reformat.sh in1={} in2={} out1={} out2={} samplebasestarget=700000'.format(pair[0], pair[1],
+                                                                                                  out1, out2)
+                subprocess.call(cmd, shell=True, stderr=outjunk)
+            os.rename(out1, pair[0])
+            os.rename(out2, pair[1])
+
+        for single in fastq_singles:
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
+                if '.gz' in single:
+                    out = 'reads.fastq.gz'
+                elif '.bz2' in single:
+                    out = 'reads.fastq.bz2'
+                else:
+                    out = 'reads.fastq'
+                cmd = 'reformat.sh in={} out={} samplebasestarget=700000'.format(single, out)
+                subprocess.call(cmd, shell=True, stderr=outjunk)
+            os.rename(out, single)
 
     def run_jellyfish(self, fastq, threads):
         """
@@ -157,7 +199,9 @@ class ContamDetect:
         # Try to figure out what coverage we have over the rMLST genes. This affects what cutoff we use to classify
         # a kmer as trustworthy. With more coverage, we need a higher cutoff.
         coverage = ContamDetect.estimate_coverage(35000, fastq)
-        if coverage < 100:
+        if coverage < 30:
+            cutoff = 1
+        elif coverage < 100:
             cutoff = 3
         elif coverage < 200:
             cutoff = 4
@@ -212,17 +256,29 @@ class ContamDetect:
             uncompressed = True
         return uncompressed
 
-    @staticmethod
-    def present_in_db(query_sequence):
+    def make_db(self):
+        db_files = ['.nhr', '.nin', '.nsq']
+        db_present = True
+        for db_file in db_files:
+            if not os.path.isfile(self.database + db_file):
+                db_present = False
+        if not db_present:
+            print('Making database!')
+            cmd = 'makeblastdb -dbtype nucl -in ' + self.database
+            with open(self.output_file + 'tmp/junk.txt', 'w') as outfile:
+                subprocess.call(cmd, shell=True, stderr=outfile, stdout=outfile)
+
+    def present_in_db(self, query_sequence):
         """
         Checks if a sequence is present in our rMLST database, as some overhangs on reads can be in repetitive regions
         that could cause false positives and should therfore be screened out.
         :param query_sequence: nucleotide sequence, as a string.
         :return: True if sequence is found in rMLST database, False if it isn't.
         """
+        # Check if the db is there, and if not, make it.
+        self.make_db()
         # Blast the sequence against our database.
-        blastn = NcbiblastnCommandline(db='database.fasta',  # TODO: Make me be not hardcoded.
-                                       outfmt=6)
+        blastn = NcbiblastnCommandline(db=self.database, outfmt=6)
         stdout, stderr = blastn(stdin=query_sequence)
         # If there's any result, the sequence is present. No result means not present.
         if stdout:
@@ -252,10 +308,8 @@ class ContamDetect:
             mer_dict[key] = mers[i + 1]
         i = 0
         # Open up the alignment file for parsing.
-        bad_kmers = list()
         try:  # In the event no rmlst genes are present, this will skip over the sample.
             samfile = pysam.AlignmentFile(self.output_file + 'tmp/' + fastq[0].split('/')[-1] + '.sam', 'r')
-            bad_kmers = list()
             # samfile = pysam.AlignmentFile('test.sam', 'r')
             for match in samfile:
                 # We're interested in full-length matches with one mismatch. This gets us that.
@@ -273,29 +327,27 @@ class ContamDetect:
                         high = query_kcount
                         low = ref_kcount
                         if 0.01 < low/high < 0.7:
-                            if ContamDetect.present_in_db(mer_dict[reference]):
+                            if self.present_in_db(mer_dict[reference]):  # TODO: Maybe multithread this one day, since it isn't particularly quick.
                                 i += 1
-                            bad_kmers.append(reference)
                     else:
                         # print(query, reference)
                         low = query_kcount
                         high = ref_kcount
                         if 0.01 < low/high < 0.7:
-                            if ContamDetect.present_in_db(mer_dict[reference]):
+                            if self.present_in_db(mer_dict[reference]):
                                 i += 1
-                            bad_kmers.append(query)
                     # Ratios that are very low are likely sequencing errors, and high ratios are likely multiple similar
                     # genes within a genome (looking at you, E. coli!)
             # See if we meet our contamination requirements - at least 1 high confidence multiple allele SNV, or
             # enough unique kmers that we almost certainly have multiple species contributing to the rMLST genes.
-            if i >= 1 or num_mers > 50000:
+            if i > 1 or num_mers > 50000:
                 contaminated = True
             else:
                 contaminated = False
             # Get our output ready.
             outstr = fastq[0].split('/')[-1] + ',' + str(i) + ',' + str(num_mers) + ',' + str(contaminated) + '\n'
             # Append to the results file.
-            f = open(self.output_file, 'a+')
+            f = open(self.output_file + '.csv', 'a+')
             f.write(outstr)
             f.close()
             # Should get tmp files cleaned up here so disk space doesn't get overwhelmed if running many samples.
@@ -305,44 +357,6 @@ class ContamDetect:
         except OSError:  # This happens if there are no rMLST genes at all in the sample and so we end up with an empty
             # input. There might be a more elegant way to handle this.
             pass
-        return bad_kmers
-
-    # This is entirely useless in this iteration of the code. Probably remove at some point soon.
-    def discard_bad_kmers(self, fastq, bad_kmers):
-        """
-        :param bad_kmers: List of kmers we think are bad, generated by read_samfile
-        The plan here is to make a fasta file of not-good kmers (when reading the samfile?) and then run bbduk with that
-        file as the reference, discarding the reads that contain exact matches to those kmers.
-        :return:
-        """
-        # First up, read through mer_sequences.fasta and retrieve the bad kmers.
-        f = open(self.output_file + 'tmp/mer_solid.fasta')
-        mers = f.readlines()
-        f.close()
-        bad_mer_list = list()
-        # Now actually goes at an acceptable speed. Yay.
-        mer_dict = dict()
-        for i in range(0, len(mers), 2):
-            key = mers[i].replace('>', '')
-            key = key.replace('\n', '')
-            mer_dict[key] = mers[i + 1]
-        for bad_mer in bad_kmers:
-            bad_mer_list.append('>' + bad_mer + '\n' + mer_dict[bad_mer])
-        f = open(self.output_file + 'tmp/bad_kmers.fasta', 'w')
-        f.write(''.join(bad_mer_list))
-        f.close()
-        if len(fastq) == 2:
-            cmd = 'bbduk.sh k=31 in1={} in2={} out1={} out2={} ref={} maskmiddle=f'.format(fastq[0], fastq[1], 'clean'
-                                                                                           + fastq[0], 'clean' +
-                                                                                           fastq[1], self.output_file
-                                                                                           + 'tmp/bad_kmers.fasta')
-            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
-                subprocess.call(cmd, shell=True, stderr=outjunk)
-        else:
-            cmd = 'bbduk.sh in={} out={} ref={} maskmiddle=f'.format(fastq[0], 'clean' + fastq[0], self.output_file +
-                                                                     'tmp/bad_kmers.fasta')
-            with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
-                subprocess.call(cmd, shell=True, stderr=outjunk)
 
     @staticmethod
     def estimate_coverage(estimated_size, pair):
@@ -368,6 +382,7 @@ class ContamDetect:
         self.fastq_folder = args.fastq_folder
         self.output_file = args.output_file
         self.threads = args.threads
+        self.database = args.database
         self.kmer_size = 31
         self.classify = args.classify
         self.start = start
@@ -375,7 +390,7 @@ class ContamDetect:
             os.makedirs(self.output_file + 'tmp')
         if not os.path.isdir(self.output_file + 'rmlsttmp'):
             os.makedirs(self.output_file + 'rmlsttmp')
-        f = open(self.output_file, 'w')
+        f = open(self.output_file + '.csv', 'w')
         f.write('File,rMLSTContamSNVs,NumUniqueKmers,Contaminated\n')
         f.close()
 
