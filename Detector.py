@@ -1,4 +1,5 @@
 from detection import ContamDetect
+import csv
 import argparse
 import time
 import multiprocessing
@@ -44,65 +45,88 @@ if __name__ == '__main__':
     # Then, parse the tmp folder to get new lists of filenames to do work on.
     printtime('Extracting rMLST reads...', start)
     ContamDetect.extract_rmlst_reads(detector, paired_files, single_files)
-    paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'rmlsttmp/')
-    if arguments.trim_reads:
-        printtime('Trimming input fastq files...', start)
+    for j in range(1, 6):
+        paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'rmlsttmp/')
+        if arguments.trim_reads:
+            printtime('Trimming input fastq files...', start)
+            for pair in paired_files:
+                for i in range(len(pair)):
+                    pair[i] = os.path.abspath(pair[i])
+            for single in single_files:
+                single = os.path.abspath(single)
+            ContamDetect.trim_fastqs(detector, paired_files, single_files)
+            paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
+        else:
+            shutil.rmtree(arguments.output_file + 'tmp/')
+            shutil.copytree(arguments.output_file + 'rmlsttmp/', arguments.output_file + 'tmp')
+            paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
+
+        # Subsample reads to desired coverage level (20X or so, hopefully).
+        printtime('Subsampling reads...', start)
+        ContamDetect.subsample_reads(detector, paired_files, single_files)
+        paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
+        # Get a counter started so that we can tell the user how far along we are.
+        sample_num = 1
+        # Do contamination detection on paired files first.
         for pair in paired_files:
+            # Make sure paths are absolute, otherwise bad stuff tends to happen.
             for i in range(len(pair)):
                 pair[i] = os.path.abspath(pair[i])
+            printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files) + len(single_files)), start)
+            # Run jellyfish to split into mers.
+            printtime('Running jellyfish...', start)
+            ContamDetect.run_jellyfish(detector, pair, arguments.threads)
+            # Write the mers to a file that can be used by bbmap.
+            printtime('Writing mers to file...', start)
+            num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf', pair)
+            # Run bbmap on the output mer file
+            printtime('Finding mismatching mers...', start)
+            ContamDetect.run_bbmap(detector, pair, arguments.threads)
+            # Read through bbmap's samfile output to generate our statistics.
+            printtime('Generating contamination statistics...', start)
+            ContamDetect.read_samfile(detector, num_mers, pair)
+            sample_num += 1
+        # Essentially the exact same as our paired file parsing.
         for single in single_files:
+            # Make sure paths are absolute, otherwise bad stuff tends to happen.
             single = os.path.abspath(single)
-        ContamDetect.trim_fastqs(detector, paired_files, single_files)
-        paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
-    else:
-        shutil.rmtree(arguments.output_file + 'tmp/')
-        shutil.copytree(arguments.output_file + 'rmlsttmp/', arguments.output_file + 'tmp')
-        paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
+            printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files) + len(single_files)), start)
+            # Split reads into mers.
+            printtime('Running jellyfish...', start)
+            ContamDetect.run_jellyfish(detector, [single], arguments.threads)
+            # Write mers to fasta file
+            printtime('Writing mers to file...', start)
+            num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf', [single])
+            # Run bbmap on fasta file.
+            printtime('Finding mismatching mers...', start)
+            ContamDetect.run_bbmap(detector, [single], arguments.threads)
+            # Read samfile to generate statistics.
+            printtime('Generating contamination statistics...', start)
+            ContamDetect.read_samfile(detector, num_mers, [single])
+            sample_num += 1
 
-    # Subsample reads to desired coverage level (20X or so, hopefully).
-    printtime('Subsampling reads...', start)
-    ContamDetect.subsample_reads(detector, paired_files, single_files)
-    paired_files, single_files = ContamDetect.parse_fastq_directory(arguments.output_file + 'tmp/')
-    # Get a counter started so that we can tell the user how far along we are.
-    sample_num = 1
-    # Do contamination detection on paired files first.
-    for pair in paired_files:
-        # Make sure paths are absolute, otherwise bad stuff tends to happen.
-        for i in range(len(pair)):
-            pair[i] = os.path.abspath(pair[i])
-        printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files) + len(single_files)), start)
-        # Run jellyfish to split into mers.
-        printtime('Running jellyfish...', start)
-        ContamDetect.run_jellyfish(detector, pair, arguments.threads)
-        # Write the mers to a file that can be used by bbmap.
-        printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf', pair)
-        # Run bbmap on the output mer file
-        printtime('Finding mismatching mers...', start)
-        ContamDetect.run_bbmap(detector, pair, arguments.threads)
-        # Read through bbmap's samfile output to generate our statistics.
-        printtime('Generating contamination statistics...', start)
-        ContamDetect.read_samfile(detector, num_mers, pair)
-        sample_num += 1
-    # Essentially the exact same as our paired file parsing.
-    for single in single_files:
-        # Make sure paths are absolute, otherwise bad stuff tends to happen.
-        single = os.path.abspath(single)
-        printtime('Working on sample ' + str(sample_num) + ' of ' + str(len(paired_files) + len(single_files)), start)
-        # Split reads into mers.
-        printtime('Running jellyfish...', start)
-        ContamDetect.run_jellyfish(detector, [single], arguments.threads)
-        # Write mers to fasta file
-        printtime('Writing mers to file...', start)
-        num_mers = ContamDetect.write_mer_file(detector, arguments.output_file + 'tmp/mer_counts.jf', [single])
-        # Run bbmap on fasta file.
-        printtime('Finding mismatching mers...', start)
-        ContamDetect.run_bbmap(detector, [single], arguments.threads)
-        # Read samfile to generate statistics.
-        printtime('Generating contamination statistics...', start)
-        ContamDetect.read_samfile(detector, num_mers, [single])
-        sample_num += 1
+    # Parse through the result file to find the 'most contaminated' replicate, and report on that.
+    # TODO: Figure out a better way to do this - also get output streamlined.
+    most_contam = dict()
+    to_output = dict()
+    with open(arguments.output_file + '.csv') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if row['File'] not in most_contam:
+                most_contam[row['File']] = int(row['rMLSTContamSNVs'])
+                to_output[row['File']] = row
+            else:
+                if int(row['rMLSTContamSNVs']) > most_contam[row['File']]:
+                    most_contam[row['File']] = int(row['rMLSTContamSNVs'])
+                    to_output[row['File']] = row
 
+    f = open(arguments.output_file + '.csv', 'w')
+    f.write('File,rMLSTContamSNVs,NumUniqueKmers,Contaminated\n')
+    for sample in to_output:
+        outstr = to_output[sample]['File'] + ',' + to_output[sample]['rMLSTContamSNVs'] + ',' + to_output[sample]['NumUniqueKmers']\
+                 + ',' + to_output[sample]['Contaminated'] + '\n'
+        f.write(outstr)
+    f.close()
     end = time.time()
     shutil.rmtree(arguments.output_file + 'tmp')
     shutil.rmtree(arguments.output_file + 'rmlsttmp')

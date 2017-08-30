@@ -84,7 +84,7 @@ class ContamDetect:
             out_forward = self.output_file + 'tmp/' + pair[0].split('/')[-1]
             out_reverse = self.output_file + 'tmp/' + pair[1].split('/')[-1]
             cmd = 'bbduk.sh in1={} in2={} out1={} out2={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
-                  ' ref={}/resources/adapters.fa hdist=1 tpe tbo threads={} '.format(pair[0], pair[1], out_forward,
+                  ' ref={}/resources/adapters.fa overwrite hdist=1 tpe tbo threads={} '.format(pair[0], pair[1], out_forward,
                                                                                     out_reverse, bbduk_dir,
                                                                                     str(self.threads))
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
@@ -128,7 +128,7 @@ class ContamDetect:
                 else:
                     out1 = 'reads_R1.fastq'
                     out2 = 'reads_R2.fastq'
-                cmd = 'reformat.sh in1={} in2={} out1={} out2={} samplebasestarget=700000'.format(pair[0], pair[1],
+                cmd = 'reformat.sh in1={} in2={} out1={} out2={} overwrite samplebasestarget=700000'.format(pair[0], pair[1],
                                                                                                   out1, out2)
                 subprocess.call(cmd, shell=True, stderr=outjunk)
             os.rename(out1, pair[0])
@@ -229,7 +229,7 @@ class ContamDetect:
         # Align our mer sequences against themselves. This will let us find mers with a mismatch or two between them
         # that are indicative of multiple alleles of the same gene being present.
         cmd = 'bbmap.sh ref=' + self.output_file + 'tmp/mer_solid.fasta in=' + self.output_file + 'tmp/mer_solid.fasta ambig=all ' \
-              'outm=' + self.output_file + 'tmp/' + pair[0].split('/')[-1] + '.sam subfilter=1 insfilter=0 ' \
+              'outm=' + self.output_file + 'tmp/' + pair[0].split('/')[-1] + '.sam overwrite subfilter=1 insfilter=0 ' \
                                                      'delfilter=0 indelfilter=0 nodisk threads=' + str(threads)
         with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
             subprocess.call(cmd, shell=True, stderr=outjunk)
