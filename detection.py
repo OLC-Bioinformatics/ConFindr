@@ -51,7 +51,7 @@ class ContamDetect:
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
                 try:  # This should give bbduk more than enough time to run, unless user's computer is super slow.
                     # Maybe adjust the value later.
-                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=3600)
                 except subprocess.TimeoutExpired:
                     printtime(pair[0] + ' appears to be making BBDUK run forever. Killing...', self.start)
                     os.remove(self.output_file + 'rmlsttmp/' + pair[0].split('/')[-1])
@@ -63,7 +63,7 @@ class ContamDetect:
             with open(self.output_file + 'tmp/junk.txt', 'w') as outjunk:
                 try:  # This should give bbduk more than enough time to run, unless user's computer is super slow.
                     # Maybe adjust the value later.
-                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=300)
+                    subprocess.call(cmd, shell=True, stderr=outjunk, timeout=3600)
                 except subprocess.TimeoutExpired:
                     printtime(pair[0] + ' appears to be making BBDUK run forever. Killing...', self.start)
                     os.remove(self.output_file + 'rmlsttmp/' + single.split('/')[-1])
@@ -328,6 +328,8 @@ class ContamDetect:
                         low = ref_kcount
                         if 0.01 < low/high < 0.7:
                             if self.present_in_db(mer_dict[reference]):  # TODO: Maybe multithread this one day, since it isn't particularly quick.
+                                print(reference, query)
+                                print(mer_dict[reference], mer_dict[query])
                                 i += 1
                     else:
                         # print(query, reference)
@@ -335,6 +337,8 @@ class ContamDetect:
                         high = ref_kcount
                         if 0.01 < low/high < 0.7:
                             if self.present_in_db(mer_dict[reference]):
+                                print(reference, query)
+                                print(mer_dict[reference], mer_dict[query])
                                 i += 1
                     # Ratios that are very low are likely sequencing errors, and high ratios are likely multiple similar
                     # genes within a genome (looking at you, E. coli!)
