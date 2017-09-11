@@ -61,8 +61,13 @@ class Detector(object):
                       ' ref={}/resources/adapters.fa overwrite hdist=1 tpe tbo threads={}'.format(self.samples[sample].forward_rmlst_reads,
                                                                                        self.samples[sample].trimmed_forward_reads,
                                                                                        bbduk_dir, str(self.threads))
-            with open(self.logfile, 'a+') as logfile:
-                subprocess.call(cmd, shell=True, stderr=logfile)
+            # For some reason bbduk will occasionally hang and run forever, so we need to handle that.
+            try:
+                with open(self.logfile, 'a+') as logfile:
+                    subprocess.call(cmd, shell=True, stderr=logfile, timeout=600)
+            except subprocess.TimeoutExpired:
+                # Probably add an error/warning message here at some point.
+                del self.samples[sample]
 
     def extract_rmlst_reads(self):
         for sample in self.samples:
@@ -81,8 +86,12 @@ class Detector(object):
                                                               self.samples[sample].forward_reads,
                                                               self.samples[sample].forward_rmlst_reads,
                                                                         str(self.threads))
-            with open(self.logfile, 'a+') as logfile:
-                subprocess.call(cmd, shell=True, stderr=logfile)
+            # Again, sometimes bbduk hangs forever, so that needs to be handled. Give it a very generous timeout.
+            try:
+                with open(self.logfile, 'a+') as logfile:
+                    subprocess.call(cmd, shell=True, stderr=logfile, timeout=1000)
+            except subprocess.TimeoutExpired:
+                del self.samples[sample]
 
     def subsample_reads(self):
         for sample in self.samples:
@@ -103,7 +112,6 @@ class Detector(object):
     def run_jellyfish(self):
         for sample in self.samples:
             self.samples[sample].jellyfish_file = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_jellyfish'
-            # TODO: Add in threading options. Accomodate non-paired reads.
             if self.samples[sample].subsampled_reverse != 'NA':
                 cmd = 'jellyfish count -m 31 -s 100M --bf-size 100M -C -F 2 {} {} -o {} -t {}'.format(self.samples[sample].subsampled_forward,
                                                                                                       self.samples[sample].subsampled_reverse,
@@ -228,6 +236,7 @@ if __name__ == '__main__':
     parser.add_argument('rmlst_database', help='rMLST database, in fasta format.')
     cpu_count = multiprocessing.cpu_count()
     parser.add_argument('-t', '--threads', type=int, default=cpu_count, help='Number of threads to run analysis with.')
+    parser.add_argument('-n', '--number_subsamples', type=int, default=5, help='Number of time to subsample.')
     arguments = parser.parse_args()
     detector = Detector(arguments)
     Detector.parse_fastq_directory(detector)
@@ -235,8 +244,8 @@ if __name__ == '__main__':
     Detector.extract_rmlst_reads(detector)
     printtime('Quality trimming reads...', start)
     Detector.quality_trim_reads(detector)
-    for i in range(5):
-        printtime('Working on subsampling {} of 5'.format(str(i + 1)), start)
+    for i in range(arguments.number_subsamples):
+        printtime('Working on subsampling {} of {}'.format(str(i + 1), arguments.number_subsamples), start)
         Detector.subsample_reads(detector)
         Detector.run_jellyfish(detector)
         Detector.write_mer_file(detector)
