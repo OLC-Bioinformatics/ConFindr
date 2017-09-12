@@ -11,6 +11,8 @@ import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 
 
+# Need to add error checking of some sort on input data.
+
 class Detector(object):
     def __init__(self, args):
         self.fastq_directory = args.fastq_directory
@@ -50,7 +52,7 @@ class Detector(object):
                 self.samples[sample].trimmed_forward_reads = self.samples[sample].forward_rmlst_reads + '_trimmed'
                 self.samples[sample].trimmed_reverse_reads = self.samples[sample].reverse_rmlst_reads + '_trimmed'
                 cmd = 'bbduk.sh in1={} in2={} out1={} out2={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
-                  ' ref={}/resources/adapters.fa overwrite hdist=1 tpe tbo threads={}'.format(self.samples[sample].forward_rmlst_reads,
+                    ' ref={}/resources/adapters.fa overwrite hdist=1 tpe tbo threads={}'.format(self.samples[sample].forward_rmlst_reads,
                                                                                    self.samples[sample].reverse_rmlst_reads,
                                                                                    self.samples[sample].trimmed_forward_reads,
                                                                                    self.samples[sample].trimmed_reverse_reads,
@@ -83,8 +85,8 @@ class Detector(object):
             else:
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 cmd = 'bbduk.sh ref={} in={} outm={} threads={}'.format(self.database,
-                                                              self.samples[sample].forward_reads,
-                                                              self.samples[sample].forward_rmlst_reads,
+                                                                        self.samples[sample].forward_reads,
+                                                                        self.samples[sample].forward_rmlst_reads,
                                                                         str(self.threads))
             # Again, sometimes bbduk hangs forever, so that needs to be handled. Give it a very generous timeout.
             try:
@@ -159,7 +161,9 @@ class Detector(object):
                 subprocess.call(cmd, shell=True, stderr=logfile)
 
     def read_samfile(self):
+        self.make_db()
         for sample in self.samples:
+            to_blast = list()
             f = open(self.samples[sample].mer_fasta)
             mers = f.readlines()
             f.close()
@@ -174,8 +178,14 @@ class Detector(object):
                 for match in samfile:
                     if "1X" in match.cigarstring and match.query_alignment_length == 31:
                         reference = samfile.getrname(match.reference_id)
-                        if self.present_in_db(mer_dict[reference]):
-                            i += 1
+                        to_blast.append(mer_dict[reference])
+                pool = multiprocessing.Pool(processes=self.threads)
+                results = pool.map(self.present_in_db, to_blast)
+                pool.close()
+                pool.join()
+                for item in results:
+                    if item:
+                        i += 1
                 if self.samples[sample].snv_count < i:
                     self.samples[sample].snv_count = i
             except OSError:
@@ -201,9 +211,8 @@ class Detector(object):
         :return: True if sequence is found in rMLST database, False if it isn't.
         """
         # Check if the db is there, and if not, make it.
-        self.make_db()
         # Blast the sequence against our database.
-        blastn = NcbiblastnCommandline(db=self.database, outfmt=6)
+        blastn = NcbiblastnCommandline(db=self.database, outfmt=6) # This should probably get parallelized.
         stdout, stderr = blastn(stdin=query_sequence)
         # If there's any result, the sequence is present. No result means not present.
         if stdout:
