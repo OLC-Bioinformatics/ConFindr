@@ -1,4 +1,4 @@
-from contam_object import ContamObject
+import statistics
 from accessoryFunctions.accessoryFunctions import printtime
 import time
 import multiprocessing
@@ -10,6 +10,21 @@ import glob
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 
+class ContamObject:
+    def __init__(self, forward_reads):
+        self.forward_reads = forward_reads
+        self.reverse_reads = 'NA'
+        self.unique_kmers = -1
+        self.snv_count = list()
+        self.trimmed_forward_reads = 'NA'
+        self.trimmed_reverse_reads = 'NA'
+        self.forward_rmlst_reads = 'NA'
+        self.reverse_rmlst_reads = 'NA'
+        self.subsampled_forward = 'NA'
+        self.subsampled_reverse = 'NA'
+        self.jellyfish_file = 'NA'
+        self.mer_fasta = 'NA'
+        self.samfile = 'NA'
 
 # Need to add error checking of some sort on input data.
 
@@ -186,8 +201,7 @@ class Detector(object):
                 for item in results:
                     if item:
                         i += 1
-                if self.samples[sample].snv_count < i:
-                    self.samples[sample].snv_count = i
+                self.samples[sample].snv_count.append(i)
             except OSError:
                 pass
 
@@ -212,7 +226,7 @@ class Detector(object):
         """
         # Check if the db is there, and if not, make it.
         # Blast the sequence against our database.
-        blastn = NcbiblastnCommandline(db=self.database, outfmt=6) # This should probably get parallelized.
+        blastn = NcbiblastnCommandline(db=self.database, outfmt=6)
         stdout, stderr = blastn(stdin=query_sequence)
         # If there's any result, the sequence is present. No result means not present.
         if stdout:
@@ -224,11 +238,11 @@ class Detector(object):
         f = open(self.outfile, 'w')
         f.write('Sample,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
         for sample in self.samples:
-            if self.samples[sample].snv_count > 1 or self.samples[sample].unique_kmers > 50000:
+            if statistics.median(self.samples[sample].snv_count) > 0 or self.samples[sample].unique_kmers > 50000:
                 contam_status = 'Contaminated'
             else:
                 contam_status = 'Clean'
-            f.write('{},{},{},{}\n'.format(sample.split('/')[-1], str(self.samples[sample].snv_count), str(self.samples[sample].unique_kmers),
+            f.write('{},{},{},{}\n'.format(sample.split('/')[-1], str(statistics.median(self.samples[sample].snv_count)), str(self.samples[sample].unique_kmers),
                                                                       contam_status))
         f.close()
 
