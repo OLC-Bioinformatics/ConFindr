@@ -10,7 +10,13 @@ import glob
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 
+
 class ContamObject:
+    """
+    Object that keeps track of everything related to contamination detection for a sample.
+    Created by telling it the name of a path which contains forward reads (or, if single ended sequence, the only
+    set of reads)"
+    """
     def __init__(self, forward_reads):
         self.forward_reads = forward_reads
         self.reverse_reads = 'NA'
@@ -26,7 +32,8 @@ class ContamObject:
         self.mer_fasta = 'NA'
         self.samfile = 'NA'
 
-# Need to add error checking of some sort on input data.
+#  Would be nice to do error checking of some sort on input data to make sure they're properly formatted fastqs.
+
 
 class Detector(object):
     def __init__(self, args):
@@ -41,6 +48,11 @@ class Detector(object):
         self.threads = args.threads
 
     def parse_fastq_directory(self):
+        """
+        Parses the fastq directory specified in self.fastq_directory (which is passed in to the object by the
+        argparser). Creates ContamObjects for each sample it finds, which are put into the self.samples dict.
+        Keys for the dictionary are the paths to forward reads.
+        """
         fastq_files = glob.glob(self.fastq_directory + '/*.f*q*')
         for name in fastq_files:
             name = os.path.abspath(name)
@@ -56,6 +68,11 @@ class Detector(object):
                 self.samples[name] = ContamObject(name)
 
     def quality_trim_reads(self):
+        """
+        To be called after extraction of rMLST sequences. Will quality trim the reads, which is necessary before
+        subsampling occurs. Uses bbduk (tested with version 37.23, although others should work) to trim reads, which
+        helps with excluding false positives quire a bit.
+        """
         # Figure out where bbduk is so that we can use the adapter file.
         cmd = 'which bbduk.sh'
         bbduk_dir = subprocess.check_output(cmd.split()).decode('utf-8')
@@ -73,6 +90,7 @@ class Detector(object):
                                                                                    self.samples[sample].trimmed_reverse_reads,
                                                                                    bbduk_dir, str(self.threads))
             else:
+                # Unpaired reads.
                 self.samples[sample].trimmed_forward_reads = self.samples[sample].forward_rmlst_reads + '_trimmed'
                 cmd = 'bbduk.sh in={} out={} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
                       ' ref={}/resources/adapters.fa overwrite hdist=1 tpe tbo threads={}'.format(self.samples[sample].forward_rmlst_reads,
@@ -83,11 +101,16 @@ class Detector(object):
                 with open(self.logfile, 'a+') as logfile:
                     subprocess.call(cmd, shell=True, stderr=logfile, timeout=600)
             except subprocess.TimeoutExpired:
-                # Probably add an error/warning message here at some point.
+                # If BBDUK does hang forever, remove sample from further analysis.
+                print('ERROR: Sample {} was not able to be quality trimmed. Excluding from further analyses...'.format(sample))
                 del self.samples[sample]
 
     def extract_rmlst_reads(self):
+        """
+        rMLST read extraction. Should be the first thing called after parsing the fastq directory.
+        """
         for sample in self.samples:
+            # For paired reads.
             if self.samples[sample].reverse_reads != 'NA':
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 self.samples[sample].reverse_rmlst_reads = self.tmpdir + self.samples[sample].reverse_reads.split('/')[-1] + '_rmlst'
@@ -98,6 +121,7 @@ class Detector(object):
                                                                               self.samples[sample].reverse_rmlst_reads,
                                                                                          str(self.threads))
             else:
+                # Unpaired reads.
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 cmd = 'bbduk.sh ref={} in={} outm={} threads={}'.format(self.database,
                                                                         self.samples[sample].forward_reads,
@@ -108,9 +132,15 @@ class Detector(object):
                 with open(self.logfile, 'a+') as logfile:
                     subprocess.call(cmd, shell=True, stderr=logfile, timeout=1000)
             except subprocess.TimeoutExpired:
+                # If BBDUK does hang forever, remove sample from further analysis.
+                print('ERROR: Could not extract rMLST reads from sample {}. Excluding from further analyses...'.format(sample))
                 del self.samples[sample]
 
     def subsample_reads(self):
+        """
+        Subsampling of reads to 20X coverage of rMLST genes (roughly).
+        To be called after rMLST extraction and read trimming, in that order.
+        """
         for sample in self.samples:
             if self.samples[sample].trimmed_reverse_reads != 'NA':
                 self.samples[sample].subsampled_forward = self.samples[sample].trimmed_forward_reads + '_subsampled'
@@ -127,6 +157,10 @@ class Detector(object):
                 subprocess.call(cmd, shell=True, stderr=logfile)
 
     def run_jellyfish(self):
+        """
+        Runs jellyfish to split subsample reads into kmers. Runs kmers through a bloom filter to get rid of singletons
+        that are likely just sequencing errors. Should be run after subsampling reads.
+        """
         for sample in self.samples:
             self.samples[sample].jellyfish_file = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_jellyfish'
             if self.samples[sample].subsampled_reverse != 'NA':
@@ -142,6 +176,10 @@ class Detector(object):
                 subprocess.call(cmd, shell=True, stderr=logfile)
 
     def write_mer_file(self):
+        """
+        Writes the mer file created by jellyfish to a fasta format to be used by other things downstream.
+        Only writes kmers that have been seen at least twice to attempt to get rid of sequencing erros.
+        """
         for sample in self.samples:
             self.samples[sample].mer_fasta = self.samples[sample].jellyfish_file + '.fasta'
             cmd = 'jellyfish dump {} > {}'.format(self.samples[sample].jellyfish_file,
@@ -167,6 +205,11 @@ class Detector(object):
                 self.samples[sample].unique_kmers = num_mers
 
     def run_bbmap(self):
+        """
+        Runs bbmap on kmer fasta file, against kmer fasta file to generate a samfile which can then be parsed to find
+        low frequency kmers that have one mismatch to high frequency kmers, indicating that they're from contaminating
+        alleles.
+        """
         for sample in self.samples:
             self.samples[sample].samfile = self.samples[sample].mer_fasta.replace('.fasta', '.sam')
             cmd = 'bbmap.sh ref={} in={} outm={} overwrite ambig=all ' \
@@ -176,7 +219,14 @@ class Detector(object):
                 subprocess.call(cmd, shell=True, stderr=logfile)
 
     def read_samfile(self):
+        """
+        Reads the samfile generated by run_bbmap to find low frequency kmers that are mismatches of high frequency kmers
+        BLASTS the kmers found against the rMLST database in order to ensure that the kmers come from rMLST genes,
+        and weren't overhangs from rMLST genes into other stuff from the original reads.
+        """
+        # Make sure the blast database is setup. If it's already there, this won't do anything.
         self.make_db()
+        # Make a dict for all or our mer sequences so we know what sequence goes with which header.
         for sample in self.samples:
             to_blast = list()
             f = open(self.samples[sample].mer_fasta)
@@ -189,23 +239,35 @@ class Detector(object):
                 mer_dict[key] = mers[i + 1]
             i = 0
             try:
+                # Read in the sam file.
                 samfile = pysam.AlignmentFile(self.samples[sample].samfile, 'r')
                 for match in samfile:
+                    # Every time we get a match, put the sequence into a list of things we're going to BLAST to
+                    # make sure they actually come from rMLST genes.
                     if "1X" in match.cigarstring and match.query_alignment_length == 31:
                         reference = samfile.getrname(match.reference_id)
                         to_blast.append(mer_dict[reference])
+                # BLAST our potentially contaminating sequences in parallel to speed things up because BLASTing
+                # is painfully slow.
                 pool = multiprocessing.Pool(processes=self.threads)
                 results = pool.map(self.present_in_db, to_blast)
                 pool.close()
                 pool.join()
+                # Every time BLAST verifies that the potential contaminant is indeed part of our rMLST dataset,
+                # increment our contamination counter.
                 for item in results:
                     if item:
                         i += 1
+                # Append the result to our snv_count list. We'll take the median of the list later.
                 self.samples[sample].snv_count.append(i)
             except OSError:
-                pass
+                # If our samfile is empty because there were no rMLST genes, just say that nothing was found.
+                self.samples[sample].snv_count.append(0)
 
     def make_db(self):
+        """
+        Makes the blast database if it isn't present. Doesn't do anything if we already have database files.
+        """
         db_files = ['.nhr', '.nin', '.nsq']
         db_present = True
         for db_file in db_files:
@@ -224,7 +286,6 @@ class Detector(object):
         :param query_sequence: nucleotide sequence, as a string.
         :return: True if sequence is found in rMLST database, False if it isn't.
         """
-        # Check if the db is there, and if not, make it.
         # Blast the sequence against our database.
         blastn = NcbiblastnCommandline(db=self.database, outfmt=6)
         stdout, stderr = blastn(stdin=query_sequence)
@@ -235,6 +296,10 @@ class Detector(object):
             return False
 
     def write_output(self):
+        """
+        Writes our output. Takes the median number of contaminating SNVs across our subsample reps, and the highest
+        number of unique kmers.
+        """
         f = open(self.outfile, 'w')
         f.write('Sample,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
         for sample in self.samples:
@@ -247,6 +312,9 @@ class Detector(object):
         f.close()
 
     def cleanup(self):
+        """
+        Gets rid of our tmp directory and all its files.
+        """
         shutil.rmtree(self.tmpdir)
 
 
