@@ -303,7 +303,11 @@ class Detector(object):
         f = open(self.outfile, 'w')
         f.write('Sample,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
         for sample in self.samples:
-            if statistics.median(self.samples[sample].snv_count) > 0 or self.samples[sample].unique_kmers > 50000:
+            try:
+                snv_median = statistics.median(self.samples[sample].snv_count)
+            except statistics.StatisticsError:
+                snv_median = 0
+            if snv_median > 0 or self.samples[sample].unique_kmers > 50000:
                 contam_status = 'Contaminated'
             else:
                 contam_status = 'Clean'
