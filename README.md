@@ -18,7 +18,8 @@
 
 #### Options
 - Threads (-t): Number of threads to run analysis on. Default is number of cores on your system.
-
+- Number subsamples (-n): Number of times to subsample. More is generally better, although more time-consuming. Default is 5.
+- Kmer size (-k): Kmer size to use. Default is 31. Other values may make results extremely unreliable. USE WITH CAUTION.
 #### Example Usages
 
 Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses database.fasta

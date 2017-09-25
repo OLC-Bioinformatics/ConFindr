@@ -46,6 +46,7 @@ class Detector(object):
         if not os.path.exists(self.tmpdir):
             os.makedirs(self.tmpdir)
         self.threads = args.threads
+        self.kmer_size = args.kmer_size
 
     def parse_fastq_directory(self):
         """
@@ -164,12 +165,12 @@ class Detector(object):
         for sample in self.samples:
             self.samples[sample].jellyfish_file = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_jellyfish'
             if self.samples[sample].subsampled_reverse != 'NA':
-                cmd = 'jellyfish count -m 31 -s 100M --bf-size 100M -C -F 2 {} {} -o {} -t {}'.format(self.samples[sample].subsampled_forward,
+                cmd = 'jellyfish count -m {} -s 100M --bf-size 100M -C -F 2 {} {} -o {} -t {}'.format(str(self.kmer_size), self.samples[sample].subsampled_forward,
                                                                                                       self.samples[sample].subsampled_reverse,
                                                                                                       self.samples[sample].jellyfish_file,
                                                                                                       str(self.threads))
             else:
-                cmd = 'jellyfish count -m 31 -s 100M --bf-size 100M -C -F 1 {} -o {} -t {}'.format(self.samples[sample].subsampled_forward,
+                cmd = 'jellyfish count -m {} -s 100M --bf-size 100M -C -F 1 {} -o {} -t {}'.format(str(self.kmer_size), self.samples[sample].subsampled_forward,
                                                                                                    self.samples[sample].jellyfish_file,
                                                                                                    str(self.threads))
             with open(self.logfile, 'a+') as logfile:
@@ -244,7 +245,7 @@ class Detector(object):
                 for match in samfile:
                     # Every time we get a match, put the sequence into a list of things we're going to BLAST to
                     # make sure they actually come from rMLST genes.
-                    if "1X" in match.cigarstring and match.query_alignment_length == 31:
+                    if "1X" in match.cigarstring and match.query_alignment_length == self.kmer_size:
                         reference = samfile.getrname(match.reference_id)
                         to_blast.append(mer_dict[reference])
                 # BLAST our potentially contaminating sequences in parallel to speed things up because BLASTing
@@ -271,7 +272,7 @@ class Detector(object):
         db_files = ['.nhr', '.nin', '.nsq']
         db_present = True
         for db_file in db_files:
-            if not os.path.isfile(self.database + db_file):
+            if len(glob.glob(self.database + '*' + db_file)) == 0:
                 db_present = False
         if not db_present:
             print('Making database!')
@@ -303,7 +304,7 @@ class Detector(object):
         f = open(self.outfile, 'w')
         f.write('Sample,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
         for sample in self.samples:
-            try:
+            try:  # This try/except shouldn't be necessary, but it's good insurance I guess.
                 snv_median = statistics.median(self.samples[sample].snv_count)
             except statistics.StatisticsError:
                 snv_median = 0
@@ -313,6 +314,8 @@ class Detector(object):
                 contam_status = 'Clean'
             f.write('{},{},{},{}\n'.format(sample.split('/')[-1], str(statistics.median(self.samples[sample].snv_count)), str(self.samples[sample].unique_kmers),
                                                                       contam_status))
+            # Should also write more detailed statistics somewhere - namely, number of SNVs per subsample in addition
+            # to the median.
         f.close()
 
     def cleanup(self):
@@ -332,6 +335,7 @@ if __name__ == '__main__':
     cpu_count = multiprocessing.cpu_count()
     parser.add_argument('-t', '--threads', type=int, default=cpu_count, help='Number of threads to run analysis with.')
     parser.add_argument('-n', '--number_subsamples', type=int, default=5, help='Number of time to subsample.')
+    parser.add_argument('-k', '--kmer-size', type=int, default=31, help='Kmer size to use for contamination detection.')
     arguments = parser.parse_args()
     detector = Detector(arguments)
     Detector.parse_fastq_directory(detector)
