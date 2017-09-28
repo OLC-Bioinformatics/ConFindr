@@ -1,6 +1,5 @@
 import statistics
 import csv
-import sys
 from accessoryFunctions.accessoryFunctions import printtime
 import time
 import multiprocessing
@@ -12,9 +11,6 @@ import glob
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio import SeqIO
-
-# TODO: Get genus-specific database testing setup.
-# Exclude BACT000014 for Listeria, BACT000060 and BACT000065 for E. coli, and others (need to make a list).
 
 
 class ContamObject:
@@ -38,6 +34,7 @@ class ContamObject:
         self.mer_fasta = 'NA'
         self.samfile = 'NA'
         self.genus = 'NA'
+        self.genus_database = 'NA'
 
 #  Would be nice to do error checking of some sort on input data to make sure they're properly formatted fastqs.
 
@@ -106,11 +103,22 @@ class Detector(object):
 
     def prepare_genusspecific_databases(self):
         databases_to_create = list()
-        # This dict will grow at some point. I can't think of a better way to do this than hardcoding right now :(
-        genes_to_exclude = {'Escherichia': ['BACT000060', 'BACT000065'], 'Listeria': ['BACT000014']}
+        genes_to_exclude = dict()
+        # Read in the profiles file.
+        f = open('databases/profiles.txt')  # This should probably also get un-hardcoded.
+        lines = f.readlines()
+        f.close()
+        # Parse the profiles file to know what genes to exclude for every genus.
+        for line in lines:
+            line = line.rstrip()
+            data = line.split(':')
+            genus = data[0]
+            genes = data[1].split(',')
+            genes_to_exclude[genus] = genes
         # Figure out which databases you need to create, and put them into a list.
         for sample in self.samples:
-            if self.samples[sample].genus not in databases_to_create and self.samples[sample].genus != 'NA':
+            if self.samples[sample].genus not in databases_to_create and self.samples[sample].genus != 'NA'\
+                    and self.samples[sample].genus in genes_to_exclude:
                 databases_to_create.append(self.samples[sample].genus)
         # Now create the db with the aid of SeqIO.
         for db in databases_to_create:
@@ -124,6 +132,10 @@ class Detector(object):
                         f.write('>' + item.id + '\n')
                         f.write(str(item.seq) + '\n')
                 f.close()
+        for sample in self.samples:
+            genus_database = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
+            if os.path.isfile(genus_database):
+                self.samples[sample].genus_database = genus_database
 
     def quality_trim_reads(self):
         """
@@ -172,10 +184,10 @@ class Detector(object):
             if self.samples[sample].reverse_reads != 'NA':
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 self.samples[sample].reverse_rmlst_reads = self.tmpdir + self.samples[sample].reverse_reads.split('/')[-1] + '_rmlst'
-                if self.samples[sample].genus == 'NA':
+                if self.samples[sample].genus_database == 'NA':
                     db = self.database
                 else:
-                    db = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
+                    db = self.samples[sample].genus_database
                 cmd = 'bbduk.sh ref={} in1={} in2={} outm={} outm2={} threads={}'.format(db,
                                                                               self.samples[sample].forward_reads,
                                                                               self.samples[sample].reverse_reads,
@@ -292,10 +304,10 @@ class Detector(object):
         self.make_db()
         # Make a dict for all or our mer sequences so we know what sequence goes with which header.
         for sample in self.samples:
-            if self.samples[sample].genus == 'NA':
+            if self.samples[sample].genus_database == 'NA':
                 db = self.database
             else:
-                db = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
+                db = self.samples[sample].genus_database
             to_blast = list()
             f = open(self.samples[sample].mer_fasta)
             mers = f.readlines()
@@ -338,10 +350,10 @@ class Detector(object):
         Makes the blast database if it isn't present. Doesn't do anything if we already have database files.
         """
         for sample in self.samples:
-            if self.samples[sample].genus == 'NA':
+            if self.samples[sample].genus_database == 'NA':
                 db = self.database
             else:
-                db = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
+                db = self.samples[sample].genus_database
             db_files = ['.nhr', '.nin', '.nsq']
             db_present = True
             for db_file in db_files:
@@ -376,7 +388,7 @@ class Detector(object):
         number of unique kmers.
         """
         f = open(self.outfile, 'w')
-        f.write('Sample,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
+        f.write('Sample,Genus,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
         for sample in self.samples:
             try:  # This try/except shouldn't be necessary, but it's good insurance I guess.
                 snv_median = statistics.median(self.samples[sample].snv_count)
@@ -386,8 +398,9 @@ class Detector(object):
                 contam_status = 'Contaminated'
             else:
                 contam_status = 'Clean'
-            f.write('{},{},{},{}\n'.format(sample.split('/')[-1], str(statistics.median(self.samples[sample].snv_count)), str(self.samples[sample].unique_kmers),
-                                                                      contam_status))
+            f.write('{},{},{},{},{}\n'.format(sample.split('/')[-1], self.samples[sample].genus, str(statistics.median(self.samples[sample].snv_count)),
+                                                str(self.samples[sample].unique_kmers),
+                                                contam_status))
             # Should also write more detailed statistics somewhere - namely, number of SNVs per subsample in addition
             # to the median.
         f.close()
