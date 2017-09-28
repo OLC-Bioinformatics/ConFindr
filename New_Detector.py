@@ -1,4 +1,6 @@
 import statistics
+import csv
+import sys
 from accessoryFunctions.accessoryFunctions import printtime
 import time
 import multiprocessing
@@ -9,6 +11,10 @@ import argparse
 import glob
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
+from Bio import SeqIO
+
+# TODO: Get genus-specific database testing setup.
+# Exclude BACT000014 for Listeria, BACT000060 and BACT000065 for E. coli, and others (need to make a list).
 
 
 class ContamObject:
@@ -31,6 +37,7 @@ class ContamObject:
         self.jellyfish_file = 'NA'
         self.mer_fasta = 'NA'
         self.samfile = 'NA'
+        self.genus = 'NA'
 
 #  Would be nice to do error checking of some sort on input data to make sure they're properly formatted fastqs.
 
@@ -47,6 +54,7 @@ class Detector(object):
             os.makedirs(self.tmpdir)
         self.threads = args.threads
         self.kmer_size = args.kmer_size
+        self.subsample_depth = args.subsample_depth
 
     def parse_fastq_directory(self):
         """
@@ -67,6 +75,55 @@ class Detector(object):
             # Assume that if we can't find a mate reads are single ended, and add them to the appropriate list.
             elif '_R2' not in name and '_2' not in name:
                 self.samples[name] = ContamObject(name)
+
+    def determine_genus(self):
+        """
+        Figure out which genus each sample is in using MASH, so genus-specific rMLST databases can be used.
+        Hopefully makes sensitivity even higher than before.
+        :return:
+        """
+        # Step 0.1: Link the fastq files in each sample to the tmp directory.
+        fastq_files = glob.glob(self.fastq_directory + '/*.f*q*')
+        for name in fastq_files:
+            os.link(name, self.tmpdir + name.split('/')[-1])
+        # Step 1: Run the mashsippr to determine genus. This should create a mash.csv file in self.tmpdir/reports
+        # TODO: Un-hardcode the targets argument once this gets more fully up and running.
+        cmd = 'python3 mashsippr.py -s {} -t databases/ {}'.format(self.tmpdir,
+                                                                                                         self.tmpdir)
+        with open(self.logfile, 'a+') as logfile:
+            subprocess.call(cmd, shell=True, stdout=logfile, stderr=logfile)
+
+        # Now read through the csv, and assign a genus to each sample.
+        try:
+            with open(self.tmpdir + '/reports/mash.csv') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    for sample in self.samples:
+                        if row['Strain'] in self.samples[sample].forward_reads:
+                            self.samples[sample].genus = row['ReferenceGenus']
+        except FileNotFoundError:
+            print('WARNING: Could not find the MASH result file...')
+
+    def prepare_genusspecific_databases(self):
+        databases_to_create = list()
+        # This dict will grow at some point. I can't think of a better way to do this than hardcoding right now :(
+        genes_to_exclude = {'Escherichia': ['BACT000060', 'BACT000065'], 'Listeria': ['BACT000014']}
+        # Figure out which databases you need to create, and put them into a list.
+        for sample in self.samples:
+            if self.samples[sample].genus not in databases_to_create and self.samples[sample].genus != 'NA':
+                databases_to_create.append(self.samples[sample].genus)
+        # Now create the db with the aid of SeqIO.
+        for db in databases_to_create:
+            genus_database = 'databases/{}_db.fasta'.format(db)
+            if not os.path.exists(genus_database):
+                print('Creating database for {}...'.format(db))
+                f = open(genus_database, 'w')
+                sequences = SeqIO.parse(self.database, 'fasta')
+                for item in sequences:
+                    if item.id.split('_')[0] not in genes_to_exclude[db]:
+                        f.write('>' + item.id + '\n')
+                        f.write(str(item.seq) + '\n')
+                f.close()
 
     def quality_trim_reads(self):
         """
@@ -115,7 +172,11 @@ class Detector(object):
             if self.samples[sample].reverse_reads != 'NA':
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 self.samples[sample].reverse_rmlst_reads = self.tmpdir + self.samples[sample].reverse_reads.split('/')[-1] + '_rmlst'
-                cmd = 'bbduk.sh ref={} in1={} in2={} outm={} outm2={} threads={}'.format(self.database,
+                if self.samples[sample].genus == 'NA':
+                    db = self.database
+                else:
+                    db = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
+                cmd = 'bbduk.sh ref={} in1={} in2={} outm={} outm2={} threads={}'.format(db,
                                                                               self.samples[sample].forward_reads,
                                                                               self.samples[sample].reverse_reads,
                                                                               self.samples[sample].forward_rmlst_reads,
@@ -124,7 +185,7 @@ class Detector(object):
             else:
                 # Unpaired reads.
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
-                cmd = 'bbduk.sh ref={} in={} outm={} threads={}'.format(self.database,
+                cmd = 'bbduk.sh ref={} in={} outm={} threads={}'.format(db,
                                                                         self.samples[sample].forward_reads,
                                                                         self.samples[sample].forward_rmlst_reads,
                                                                         str(self.threads))
@@ -146,14 +207,16 @@ class Detector(object):
             if self.samples[sample].trimmed_reverse_reads != 'NA':
                 self.samples[sample].subsampled_forward = self.samples[sample].trimmed_forward_reads + '_subsampled'
                 self.samples[sample].subsampled_reverse = self.samples[sample].trimmed_reverse_reads + '_subsampled'
-                cmd = 'reformat.sh in1={} in2={} out1={} out2={} overwrite samplebasestarget=700000'.format(self.samples[sample].trimmed_forward_reads,
-                                                                                                            self.samples[sample].trimmed_reverse_reads,
-                                                                                                            self.samples[sample].subsampled_forward,
-                                                                                                            self.samples[sample].subsampled_reverse)
+                cmd = 'reformat.sh in1={} in2={} out1={} out2={} overwrite samplebasestarget={}'.format(self.samples[sample].trimmed_forward_reads,
+                                                                                                        self.samples[sample].trimmed_reverse_reads,
+                                                                                                        self.samples[sample].subsampled_forward,
+                                                                                                        self.samples[sample].subsampled_reverse,
+                                                                                                        str(self.subsample_depth * 35000))
             else:
                 self.samples[sample].subsampled_forward = self.samples[sample].trimmed_forward_reads + '_subsampled'
-                cmd = 'reformat.sh in={} out={} overwrite samplebasestarget=700000'.format(self.samples[sample].trimmed_forward_reads,
-                                                                                           self.samples[sample].subsampled_forward)
+                cmd = 'reformat.sh in={} out={} overwrite samplebasestarget={}'.format(self.samples[sample].trimmed_forward_reads,
+                                                                                       self.samples[sample].subsampled_forward,
+                                                                                       str(self.subsample_depth * 35000))
             with open(self.logfile, 'a+') as logfile:
                 subprocess.call(cmd, shell=True, stderr=logfile)
 
@@ -229,6 +292,10 @@ class Detector(object):
         self.make_db()
         # Make a dict for all or our mer sequences so we know what sequence goes with which header.
         for sample in self.samples:
+            if self.samples[sample].genus == 'NA':
+                db = self.database
+            else:
+                db = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
             to_blast = list()
             f = open(self.samples[sample].mer_fasta)
             mers = f.readlines()
@@ -251,7 +318,8 @@ class Detector(object):
                 # BLAST our potentially contaminating sequences in parallel to speed things up because BLASTing
                 # is painfully slow.
                 pool = multiprocessing.Pool(processes=self.threads)
-                results = pool.map(self.present_in_db, to_blast)
+                db_list = [db] * len(to_blast)
+                results = pool.starmap(self.present_in_db, zip(to_blast, db_list))
                 pool.close()
                 pool.join()
                 # Every time BLAST verifies that the potential contaminant is indeed part of our rMLST dataset,
@@ -269,26 +337,32 @@ class Detector(object):
         """
         Makes the blast database if it isn't present. Doesn't do anything if we already have database files.
         """
-        db_files = ['.nhr', '.nin', '.nsq']
-        db_present = True
-        for db_file in db_files:
-            if len(glob.glob(self.database + '*' + db_file)) == 0:
-                db_present = False
-        if not db_present:
-            print('Making database!')
-            cmd = 'makeblastdb -dbtype nucl -in ' + self.database
-            with open(self.logfile, 'a+') as logfile:
-                subprocess.call(cmd, shell=True, stderr=logfile)
+        for sample in self.samples:
+            if self.samples[sample].genus == 'NA':
+                db = self.database
+            else:
+                db = 'databases/{}_db.fasta'.format(self.samples[sample].genus)
+            db_files = ['.nhr', '.nin', '.nsq']
+            db_present = True
+            for db_file in db_files:
+                if len(glob.glob(db + '*' + db_file)) == 0:
+                    db_present = False
+            if not db_present:
+                print('Making database!')
+                cmd = 'makeblastdb -dbtype nucl -in ' + db
+                with open(self.logfile, 'a+') as logfile:
+                    subprocess.call(cmd, shell=True, stderr=logfile)
 
-    def present_in_db(self, query_sequence):
+    def present_in_db(self, query_sequence, database):
         """
         Checks if a sequence is present in our rMLST database, as some overhangs on reads can be in repetitive regions
         that could cause false positives and should therfore be screened out.
         :param query_sequence: nucleotide sequence, as a string.
+        :param database: Database to be used.
         :return: True if sequence is found in rMLST database, False if it isn't.
         """
         # Blast the sequence against our database.
-        blastn = NcbiblastnCommandline(db=self.database, outfmt=6)
+        blastn = NcbiblastnCommandline(db=database, outfmt=6)
         stdout, stderr = blastn(stdin=query_sequence)
         # If there's any result, the sequence is present. No result means not present.
         if stdout:
@@ -336,9 +410,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--threads', type=int, default=cpu_count, help='Number of threads to run analysis with.')
     parser.add_argument('-n', '--number_subsamples', type=int, default=5, help='Number of time to subsample.')
     parser.add_argument('-k', '--kmer-size', type=int, default=31, help='Kmer size to use for contamination detection.')
+    parser.add_argument('-s', '--subsample_depth', type=int, default=20, help='Depth to subsample to. Higher increases sensitivity, but a'
+                                                                              'lso false positive rate. Default is 20.')
     arguments = parser.parse_args()
     detector = Detector(arguments)
     Detector.parse_fastq_directory(detector)
+    printtime('Finding genus of samples...', start)
+    Detector.determine_genus(detector)
+    Detector.prepare_genusspecific_databases(detector)
     printtime('Extracting rMLST reads...', start)
     Detector.extract_rmlst_reads(detector)
     printtime('Quality trimming reads...', start)

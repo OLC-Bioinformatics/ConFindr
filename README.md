@@ -5,6 +5,7 @@
 - jellyfish (>= 2.2.6) installed and on your $PATH
 - Python 3.5 (2.7 should also work, though that isn't tested.)
 - NCBI BLAST+ (>=2.2.31) 
+- mash (>=1.1.1 - https://github.com/marbl/Mash) installed and on your $PATH
 
 ### Python Package Requirements
 - pysam >= 0.11.2.2
@@ -20,6 +21,7 @@
 - Threads (-t): Number of threads to run analysis on. Default is number of cores on your system.
 - Number subsamples (-n): Number of times to subsample. More is generally better, although more time-consuming. Default is 5.
 - Kmer size (-k): Kmer size to use. Default is 31. Other values may make results extremely unreliable. USE WITH CAUTION.
+- Subsample depth (-s): Depth to subsample to. Default is 20. Higher values increase sensitivity, but also false positive rate.
 #### Example Usages
 
 Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses database.fasta
