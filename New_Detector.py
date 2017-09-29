@@ -10,7 +10,9 @@ import argparse
 import glob
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
+from Bio.Blast import NCBIXML
 from Bio import SeqIO
+from io import StringIO
 
 
 class ContamObject:
@@ -52,6 +54,7 @@ class Detector(object):
         self.threads = args.threads
         self.kmer_size = args.kmer_size
         self.subsample_depth = args.subsample_depth
+        self.kmer_cutoff = args.kmer_cutoff
 
     def parse_fastq_directory(self):
         """
@@ -270,7 +273,7 @@ class Detector(object):
             sequences = list()
             for i in range(len(fastas)):
                 if '>' in fastas[i]:
-                    if int(fastas[i].replace('>', '')) > 1:
+                    if int(fastas[i].replace('>', '')) >= self.kmer_cutoff:
                         num_mers += 1
                         sequences.append(fastas[i].rstrip() + '_' + str(num_mers) + '\n' + fastas[i + 1])
             # Write out our solid kmers to file to be used later.
@@ -368,17 +371,28 @@ class Detector(object):
     def present_in_db(self, query_sequence, database):
         """
         Checks if a sequence is present in our rMLST database, as some overhangs on reads can be in repetitive regions
-        that could cause false positives and should therfore be screened out.
+        that could cause false positives and should therefore be screened out.
         :param query_sequence: nucleotide sequence, as a string.
         :param database: Database to be used.
         :return: True if sequence is found in rMLST database, False if it isn't.
         """
         # Blast the sequence against our database.
-        blastn = NcbiblastnCommandline(db=database, outfmt=6)
+        blastn = NcbiblastnCommandline(db=database, outfmt=5)
         stdout, stderr = blastn(stdin=query_sequence)
-        # If there's any result, the sequence is present. No result means not present.
+        # If there's any full-length result, the sequence is present. No result means not present.
         if stdout:
-            return True
+            for record in NCBIXML.parse(StringIO(stdout)):
+                for alignment in record.alignments:
+                    for hsp in alignment.hsps:
+                        if hsp.align_length == self.kmer_size:
+                            return True
+                        else:
+                            return False
+            # Sometimes despite something being in stdout there aren't any records to iterate through.
+            # Not how I thought it worked, but apparently the case.
+            return False
+        # Given that apparently stdout always gets created, I don't think this is actually reachable,
+        # but it's left here just in case I've totally misunderstood how things work.
         else:
             return False
 
@@ -425,6 +439,9 @@ if __name__ == '__main__':
     parser.add_argument('-k', '--kmer-size', type=int, default=31, help='Kmer size to use for contamination detection.')
     parser.add_argument('-s', '--subsample_depth', type=int, default=20, help='Depth to subsample to. Higher increases sensitivity, but a'
                                                                               'lso false positive rate. Default is 20.')
+    parser.add_argument('-c', '--kmer_cutoff', type=int, default=2, help='Number of times you need to see a kmer before'
+                                                                         ' it is considered trustworthy. Kmers with counts'
+                                                                         ' below this will be discarded.')
     arguments = parser.parse_args()
     detector = Detector(arguments)
     Detector.parse_fastq_directory(detector)

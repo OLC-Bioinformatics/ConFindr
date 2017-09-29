@@ -22,6 +22,7 @@
 - Number subsamples (-n): Number of times to subsample. More is generally better, although more time-consuming. Default is 5.
 - Kmer size (-k): Kmer size to use. Default is 31. Other values may make results extremely unreliable. USE WITH CAUTION.
 - Subsample depth (-s): Depth to subsample to. Default is 20. Higher values increase sensitivity, but also false positive rate.
+- Kmer cutoff (-c): Number of times a kmer has to be seen before it's considered to be trustworthy. Default value 2.
 #### Example Usages
 
 Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses database.fasta
