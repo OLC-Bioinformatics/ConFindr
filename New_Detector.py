@@ -38,8 +38,6 @@ class ContamObject:
         self.genus = 'NA'
         self.genus_database = 'NA'
 
-#  Would be nice to do error checking of some sort on input data to make sure they're properly formatted fastqs.
-
 
 class Detector(object):
     def __init__(self, args):
@@ -102,7 +100,8 @@ class Detector(object):
                         if row['Strain'] in self.samples[sample].forward_reads:
                             self.samples[sample].genus = row['ReferenceGenus']
         except FileNotFoundError:
-            print('WARNING: Could not find the MASH result file...')
+            print('WARNING: Could not find the MASH result file. All samples will be processed with'
+                  ' non-specific databases..')
 
     def prepare_genusspecific_databases(self):
         databases_to_create = list()
@@ -182,6 +181,7 @@ class Detector(object):
         """
         rMLST read extraction. Should be the first thing called after parsing the fastq directory.
         """
+        bad_samples = list()
         for sample in self.samples:
             # For paired reads.
             if self.samples[sample].reverse_reads != 'NA':
@@ -211,7 +211,10 @@ class Detector(object):
             except subprocess.TimeoutExpired:
                 # If BBDUK does hang forever, remove sample from further analysis.
                 print('ERROR: Could not extract rMLST reads from sample {}. Excluding from further analyses...'.format(sample))
-                del self.samples[sample]
+                bad_samples.append(sample)
+        # If any of the samples are bad, delete them so they don't go for further analysis.
+        for sample in bad_samples:
+            del self.samples[sample]
 
     def subsample_reads(self):
         """
@@ -424,6 +427,7 @@ class Detector(object):
         Gets rid of our tmp directory and all its files.
         """
         shutil.rmtree(self.tmpdir)
+
 
 
 if __name__ == '__main__':

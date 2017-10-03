@@ -26,9 +26,9 @@
 #### Example Usages
 
 Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses database.fasta
-as the database of rMLST genes.
+as the database of rMLST genes. The default database is included in the databases folder as rMLST_combined.fasta
 
-`python3 New_Detector.py Fastq_Folder outputname database.fasta`
+`python3 New_Detector.py Fastq_Folder outputname databases/rMLST_combined.fasta`
 
 ## Using Docker
 - A docker image will be created for ease of use. It can be downloaded at (insert here eventually where you'll put it).
