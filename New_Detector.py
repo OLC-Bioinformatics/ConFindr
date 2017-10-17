@@ -13,6 +13,7 @@ from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio.Blast import NCBIXML
 from Bio import SeqIO
 from io import StringIO
+from Bio.SeqUtils import GC
 
 
 class ContamObject:
@@ -80,10 +81,16 @@ class Detector(object):
         Hopefully makes sensitivity even higher than before.
         :return:
         """
-        # Step 0.1: Link the fastq files in each sample to the tmp directory.
+        # Step 0.1: Link the fastq files in each sample to the tmp directory. If they're already there, perhaps
+        # due to a previous failed run that didn't delete the tmp directory, pass.
         fastq_files = glob.glob(self.fastq_directory + '/*.f*q*')
         for name in fastq_files:
-            os.link(name, self.tmpdir + name.split('/')[-1])
+            try:
+                os.link(name, self.tmpdir + name.split('/')[-1])
+            except FileExistsError:
+                pass
+            except OSError:
+                shutil.copy(name, self.tmpdir + name.split('/')[-1])
         # Step 1: Run the mashsippr to determine genus. This should create a mash.csv file in self.tmpdir/reports
         # TODO: Un-hardcode the targets argument once this gets more fully up and running.
         cmd = 'python3 mashsippr.py -s {} -t databases/ {}'.format(self.tmpdir,
@@ -427,7 +434,6 @@ class Detector(object):
         Gets rid of our tmp directory and all its files.
         """
         shutil.rmtree(self.tmpdir)
-
 
 
 if __name__ == '__main__':
