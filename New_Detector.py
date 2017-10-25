@@ -436,6 +436,14 @@ class Detector(object):
         shutil.rmtree(self.tmpdir)
 
 
+def check_dependencies():
+    dependencies = ['bbmap.sh', 'bbduk.sh', 'blastn', 'jellyfish', 'mash']
+    for dep in dependencies:
+        is_present = shutil.which(dep)
+        if is_present is None:
+            raise ModuleNotFoundError('ERROR! Could not find executable for: {}!'.format(dep))
+
+
 if __name__ == '__main__':
     start = time.time()
     parser = argparse.ArgumentParser()
@@ -453,6 +461,7 @@ if __name__ == '__main__':
                                                                          ' it is considered trustworthy. Kmers with counts'
                                                                          ' below this will be discarded.')
     arguments = parser.parse_args()
+    check_dependencies()
     detector = Detector(arguments)
     Detector.parse_fastq_directory(detector)
     printtime('Finding genus of samples...', start)
