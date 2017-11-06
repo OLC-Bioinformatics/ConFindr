@@ -1,6 +1,7 @@
 import statistics
 import csv
 from accessoryFunctions.accessoryFunctions import printtime
+import re
 import time
 import multiprocessing
 import shutil
@@ -13,7 +14,7 @@ from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio.Blast import NCBIXML
 from Bio import SeqIO
 from io import StringIO
-from Bio.SeqUtils import GC
+from biotools import mash
 
 
 class ContamObject:
@@ -38,6 +39,7 @@ class ContamObject:
         self.samfile = 'NA'
         self.genus = 'NA'
         self.genus_database = 'NA'
+        self.cross = 'NA'
 
 
 class Detector(object):
@@ -93,8 +95,7 @@ class Detector(object):
                 shutil.copy(name, self.tmpdir + name.split('/')[-1])
         # Step 1: Run the mashsippr to determine genus. This should create a mash.csv file in self.tmpdir/reports
         # TODO: Un-hardcode the targets argument once this gets more fully up and running.
-        cmd = 'python3 mashsippr.py -s {} -t databases/ {}'.format(self.tmpdir,
-                                                                                                         self.tmpdir)
+        cmd = 'python3 mashsippr.py -s {} -t databases/ {}'.format(self.tmpdir, self.tmpdir)
         with open(self.logfile, 'a+') as logfile:
             subprocess.call(cmd, shell=True, stdout=logfile, stderr=logfile)
 
@@ -406,24 +407,38 @@ class Detector(object):
         else:
             return False
 
+    def cross_contamination(self):
+        # Need to extract taxonomy information from the query_id field. Seems like it'll be a bit of a pain.
+        for sample in self.samples:
+            genuses_present = list()
+            mash.screen('databases/RefSeqSketchesDefaults.msh', self.samples[sample].forward_reads,
+                        self.samples[sample].reverse_reads, threads=self.threads, w='', i='0.99')
+            screen_output = mash.read_mash_screen('screen.tab')
+            for item in screen_output:
+                x = re.findall(r'.+-(.+)\.fna', item.query_id)
+                genus = x[0].split('_')[0]
+                if genus not in genuses_present:
+                    genuses_present.append(genus)
+            self.samples[sample].cross = genuses_present
+
     def write_output(self):
         """
         Writes our output. Takes the median number of contaminating SNVs across our subsample reps, and the highest
         number of unique kmers.
         """
         f = open(self.outfile, 'w')
-        f.write('Sample,Genus,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
+        f.write('Sample,Genus,NumContamSNVs,NumUniqueKmers,CrossContamination,ContamStatus\n')
         for sample in self.samples:
             try:  # This try/except shouldn't be necessary, but it's good insurance I guess.
                 snv_median = statistics.median(self.samples[sample].snv_count)
             except statistics.StatisticsError:
                 snv_median = 0
-            if snv_median > 0 or self.samples[sample].unique_kmers > 50000:
+            if snv_median > 0 or self.samples[sample].unique_kmers > 50000 or len(self.samples[sample].cross) > 1:
                 contam_status = 'Contaminated'
             else:
                 contam_status = 'Clean'
-            f.write('{},{},{},{},{}\n'.format(sample.split('/')[-1], self.samples[sample].genus, str(statistics.median(self.samples[sample].snv_count)),
-                                                str(self.samples[sample].unique_kmers),
+            f.write('{},{},{},{},{},{}\n'.format(sample.split('/')[-1], self.samples[sample].genus, str(statistics.median(self.samples[sample].snv_count)),
+                                                str(self.samples[sample].unique_kmers), self.samples[sample].cross,
                                                 contam_status))
             # Should also write more detailed statistics somewhere - namely, number of SNVs per subsample in addition
             # to the median.
@@ -452,14 +467,28 @@ if __name__ == '__main__':
     parser.add_argument('output_name', help='Base name for output/temporary directories.')
     parser.add_argument('rmlst_database', help='rMLST database, in fasta format.')
     cpu_count = multiprocessing.cpu_count()
-    parser.add_argument('-t', '--threads', type=int, default=cpu_count, help='Number of threads to run analysis with.')
-    parser.add_argument('-n', '--number_subsamples', type=int, default=5, help='Number of time to subsample.')
-    parser.add_argument('-k', '--kmer-size', type=int, default=31, help='Kmer size to use for contamination detection.')
-    parser.add_argument('-s', '--subsample_depth', type=int, default=20, help='Depth to subsample to. Higher increases sensitivity, but a'
-                                                                              'lso false positive rate. Default is 20.')
-    parser.add_argument('-c', '--kmer_cutoff', type=int, default=2, help='Number of times you need to see a kmer before'
-                                                                         ' it is considered trustworthy. Kmers with counts'
-                                                                         ' below this will be discarded.')
+    parser.add_argument('-t', '--threads',
+                        type=int,
+                        default=cpu_count,
+                        help='Number of threads to run analysis with.')
+    parser.add_argument('-n', '--number_subsamples',
+                        type=int,
+                        default=5,
+                        help='Number of times to subsample.')
+    parser.add_argument('-k', '--kmer-size',
+                        type=int,
+                        default=31,
+                        help='Kmer size to use for contamination detection.')
+    parser.add_argument('-s', '--subsample_depth',
+                        type=int,
+                        default=20,
+                        help='Depth to subsample to. Higher increases sensitivity, but also false positive '
+                             'rate. Default is 20.')
+    parser.add_argument('-c', '--kmer_cutoff',
+                        type=int,
+                        default=2,
+                        help='Number of times you need to see a kmer before it is considered trustworthy.'
+                             ' Kmers with counts below this number will be discarded.')
     arguments = parser.parse_args()
     check_dependencies()
     detector = Detector(arguments)
@@ -478,6 +507,8 @@ if __name__ == '__main__':
         Detector.write_mer_file(detector)
         Detector.run_bbmap(detector)
         Detector.read_samfile(detector)
+    printtime('Looking for cross-species contamination...', start)
+    Detector.cross_contamination(detector)
     printtime('Writing output and cleaning up temporary files!', start)
     Detector.write_output(detector)
     Detector.cleanup(detector)

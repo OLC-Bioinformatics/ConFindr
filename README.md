@@ -1,28 +1,26 @@
 # KmerContam
 
+This program is designed to find bacterial intra-species contamination in raw NGS data. It does this
+ by looking for multiple copies of rMLST genes, which are known to be universal across the bacterial kingdom
+ and present only in single copies. 
+
 ### Program Requirements
 - bbmap (>= 37.23) installed and present on your $PATH
 - jellyfish (>= 2.2.6) installed and on your $PATH
-- Python 3.5 (2.7 should also work, though that isn't tested.)
+- Python 3.5
 - NCBI BLAST+ (>=2.2.31) 
-- mash (>=1.1.1 - https://github.com/marbl/Mash) installed and on your $PATH
+- mash (>=2.0 - https://github.com/marbl/Mash) installed and on your $PATH
 
 ### Python Package Requirements
 - pysam >= 0.11.2.2
-- OLCTools >= 0.2.3
+- OLCTools >= 0.3.4
 - biopython >= 1.70
 
 ### Usage
 - Program takes a folder with paired or single-ended fastq files as input. Files can be uncompressed, or compressed with gzip/bzip2.
 - outputs results to a csv file which you name when calling the script.
-- Currently runs through New_Detector.py
+- New_Detector.py is what is responsible for running analysis.
 
-#### Options
-- Threads (-t): Number of threads to run analysis on. Default is number of cores on your system.
-- Number subsamples (-n): Number of times to subsample. More is generally better, although more time-consuming. Default is 5.
-- Kmer size (-k): Kmer size to use. Default is 31. Other values may make results extremely unreliable. USE WITH CAUTION.
-- Subsample depth (-s): Depth to subsample to. Default is 20. Higher values increase sensitivity, but also false positive rate.
-- Kmer cutoff (-c): Number of times a kmer has to be seen before it's considered to be trustworthy. Default value 2.
 #### Example Usages
 
 Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses database.fasta
@@ -30,6 +28,33 @@ as the database of rMLST genes. The default database is included in the database
 
 `python3 New_Detector.py Fastq_Folder outputname databases/rMLST_combined.fasta`
 
-## Using Docker
-- A docker image will be created for ease of use. It can be downloaded at (insert here eventually where you'll put it).
-- Add in instructions on mounting the files you want and running the docker image here.
+#### Options
+
+```
+usage: New_Detector.py [-h] [-t THREADS] [-n NUMBER_SUBSAMPLES] [-k KMER_SIZE]
+                       [-s SUBSAMPLE_DEPTH] [-c KMER_CUTOFF]
+                       fastq_directory output_name rmlst_database
+
+positional arguments:
+  fastq_directory       Folder that contains fastq files you want to check for
+                        contamination. Will find any fastq file that contains
+                        .fq or .fastq in the filename.
+  output_name           Base name for output/temporary directories.
+  rmlst_database        rMLST database, in fasta format.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t THREADS, --threads THREADS
+                        Number of threads to run analysis with.
+  -n NUMBER_SUBSAMPLES, --number_subsamples NUMBER_SUBSAMPLES
+                        Number of times to subsample.
+  -k KMER_SIZE, --kmer-size KMER_SIZE
+                        Kmer size to use for contamination detection.
+  -s SUBSAMPLE_DEPTH, --subsample_depth SUBSAMPLE_DEPTH
+                        Depth to subsample to. Higher increases sensitivity,
+                        but also false positive rate. Default is 20.
+  -c KMER_CUTOFF, --kmer_cutoff KMER_CUTOFF
+                        Number of times you need to see a kmer before it is
+                        considered trustworthy. Kmers with counts below this
+                        number will be discarded.
+```
