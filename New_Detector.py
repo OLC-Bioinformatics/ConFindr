@@ -1,7 +1,6 @@
 import statistics
 import csv
 from accessoryFunctions.accessoryFunctions import printtime
-import re
 import time
 import multiprocessing
 import shutil
@@ -94,7 +93,6 @@ class Detector(object):
             except OSError:
                 shutil.copy(name, self.tmpdir + name.split('/')[-1])
         # Step 1: Run the mashsippr to determine genus. This should create a mash.csv file in self.tmpdir/reports
-        # TODO: Un-hardcode the targets argument once this gets more fully up and running.
         cmd = 'python3 mashsippr.py -s {} -t databases/ {}'.format(self.tmpdir, self.tmpdir)
         with open(self.logfile, 'a+') as logfile:
             subprocess.call(cmd, shell=True, stdout=logfile, stderr=logfile)
@@ -411,12 +409,11 @@ class Detector(object):
         # Need to extract taxonomy information from the query_id field. Seems like it'll be a bit of a pain.
         for sample in self.samples:
             genuses_present = list()
-            mash.screen('databases/RefSeqSketchesDefaults.msh', self.samples[sample].forward_reads,
-                        self.samples[sample].reverse_reads, threads=self.threads, w='', i='0.99')
+            mash.screen('databases/refseq.msh', self.samples[sample].forward_reads,
+                        self.samples[sample].reverse_reads, threads=self.threads, w='', i='0.95')
             screen_output = mash.read_mash_screen('screen.tab')
             for item in screen_output:
-                x = re.findall(r'.+-(.+)\.fna', item.query_id)
-                genus = x[0].split('_')[0]
+                genus = item.query_id.split('/')[-3]
                 if genus not in genuses_present:
                     genuses_present.append(genus)
             self.samples[sample].cross = genuses_present
