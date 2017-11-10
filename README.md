@@ -1,4 +1,4 @@
-# KmerContam
+# ConFindr
 
 This program is designed to find bacterial intra-species contamination in raw NGS data. It does this
  by looking for multiple copies of rMLST genes, which are known to be universal across the bacterial kingdom
@@ -11,10 +11,13 @@ This program is designed to find bacterial intra-species contamination in raw NG
 - NCBI BLAST+ (>=2.2.31) 
 - mash (>=2.0 - https://github.com/marbl/Mash) installed and on your $PATH
 
-### Python Package Requirements
-- pysam >= 0.11.2.2
-- OLCTools >= 0.3.4
-- biopython >= 1.70
+
+### Installation
+
+- Clone this repository - you'll need the `databases` folder (Git LFS is required for this download.)
+- Install the confindr script with pip: `pip install confindr`. With this done, you'll be able to call the script by 
+simply typing `confindr.py` on the command line, no matter what directory you're currently in.
+
 
 ### Usage
 - Program takes a folder with paired or single-ended fastq files as input. Files can be uncompressed, or compressed with gzip/bzip2.
@@ -24,16 +27,14 @@ This program is designed to find bacterial intra-species contamination in raw NG
 #### Example Usages
 
 Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses files in the 
-databases folder for contamination detection - files that need to be present there are rMLST_combined.fasta,
-profiles.txt (both available from pubMLST), RefSeqSketchesDefaults.msh (available with mash), and refseq.msh (included with
-distribution.)
+databases folder for contamination detection - this folder should be the databases folder in this repository.
 
-`python3 New_Detector.py Fastq_Folder outputname databases`
+`confindr.py Fastq_Folder outputname databases`
 
 #### Options
 
 ```
-usage: New_Detector.py [-h] [-t THREADS] [-n NUMBER_SUBSAMPLES] [-k KMER_SIZE]
+usage: confindr.py [-h] [-t THREADS] [-n NUMBER_SUBSAMPLES] [-k KMER_SIZE]
                        [-s SUBSAMPLE_DEPTH] [-c KMER_CUTOFF]
                        fastq_directory output_name databases
 
