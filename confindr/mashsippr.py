@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import subprocess
 import time
-from mash import *
+from confindr.mash import *
 from sipprCommon.objectprep import Objectprep
 from accessoryFunctions.accessoryFunctions import *
 

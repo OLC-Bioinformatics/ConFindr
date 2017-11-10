@@ -93,7 +93,7 @@ class Detector(object):
             except OSError:
                 shutil.copy(name, self.tmpdir + name.split('/')[-1])
         # Step 1: Run the mashsippr to determine genus. This should create a mash.csv file in self.tmpdir/reports
-        cmd = 'python3 mashsippr.py -s {} -t {} {}'.format(self.tmpdir, self.databasedir, self.tmpdir)
+        cmd = 'python3 -m confindr.mashsippr -s {} -t {} {}'.format(self.tmpdir, self.databasedir, self.tmpdir)
         with open(self.logfile, 'a+') as logfile:
             subprocess.call(cmd, shell=True, stdout=logfile, stderr=logfile)
 
@@ -113,7 +113,7 @@ class Detector(object):
         databases_to_create = list()
         genes_to_exclude = dict()
         # Read in the profiles file.
-        f = open('{}/profiles.txt'.format(self.databasedir))  # This should probably also get un-hardcoded.
+        f = open('{}/profiles.txt'.format(self.databasedir))
         lines = f.readlines()
         f.close()
         # Parse the profiles file to know what genes to exclude for every genus.
@@ -410,7 +410,7 @@ class Detector(object):
         # Need to extract taxonomy information from the query_id field. Seems like it'll be a bit of a pain.
         for sample in self.samples:
             genuses_present = list()
-            mash.screen('databases/refseq.msh', self.samples[sample].forward_reads,
+            mash.screen('{}/refseq.msh'.format(self.databasedir), self.samples[sample].forward_reads,
                         self.samples[sample].reverse_reads, threads=self.threads, w='', i='0.95')
             screen_output = mash.read_mash_screen('screen.tab')
             for item in screen_output:
