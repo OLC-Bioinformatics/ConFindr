@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import statistics
 import csv
 from accessoryFunctions.accessoryFunctions import printtime
@@ -453,10 +454,13 @@ class Detector(object):
 
 def check_dependencies():
     dependencies = ['bbmap.sh', 'bbduk.sh', 'blastn', 'jellyfish', 'mash']
+    missing = list()
     for dep in dependencies:
         is_present = shutil.which(dep)
         if is_present is None:
-            raise ModuleNotFoundError('ERROR! Could not find executable for: {}!'.format(dep))
+            missing.append(dep)
+    if len(missing) > 0:
+        raise ImportError('ERROR: Could not find following dedendencies: {}'.format(str(missing)))
 
 
 if __name__ == '__main__':
