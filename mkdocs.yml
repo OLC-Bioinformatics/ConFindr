@@ -1,0 +1,10 @@
+site_name: ConFindr
+site_url: https://lowandrew.github.io/ConFindr
+site_description: ConFindr Pipeline for detecting intra-species contamination in raw bacterial NGS reads.
+repo_url: https://github.com/lowandrew/Confindr
+theme: readthedocs
+
+pages:
+- Home: 'index.md'
+- Installation: 'install.md'
+- Usage: 'usage.md'
