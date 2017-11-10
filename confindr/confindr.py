@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import statistics
 import csv
 from accessoryFunctions.accessoryFunctions import printtime
