@@ -23,24 +23,28 @@ This program is designed to find bacterial intra-species contamination in raw NG
 
 #### Example Usages
 
-Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses database.fasta
-as the database of rMLST genes. The default database is included in the databases folder as rMLST_combined.fasta
+Detect contamination on any fastq files within fastq folder, outputs results to outputname.csv, and uses files in the 
+databases folder for contamination detection - files that need to be present there are rMLST_combined.fasta,
+profiles.txt (both available from pubMLST), RefSeqSketchesDefaults.msh (available with mash), and refseq.msh (included with
+distribution.)
 
-`python3 New_Detector.py Fastq_Folder outputname databases/rMLST_combined.fasta`
+`python3 New_Detector.py Fastq_Folder outputname databases`
 
 #### Options
 
 ```
 usage: New_Detector.py [-h] [-t THREADS] [-n NUMBER_SUBSAMPLES] [-k KMER_SIZE]
                        [-s SUBSAMPLE_DEPTH] [-c KMER_CUTOFF]
-                       fastq_directory output_name rmlst_database
+                       fastq_directory output_name databases
 
 positional arguments:
   fastq_directory       Folder that contains fastq files you want to check for
                         contamination. Will find any fastq file that contains
                         .fq or .fastq in the filename.
   output_name           Base name for output/temporary directories.
-  rmlst_database        rMLST database, in fasta format.
+  databases             Databases folder. Should contain rMLST_combined.fasta,
+                        profiles.txt, and refseq.msh as well as
+                        RefSeqSketchesDefaults.msh
 
 optional arguments:
   -h, --help            show this help message and exit

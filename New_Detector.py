@@ -48,13 +48,13 @@ class Detector(object):
         self.tmpdir = args.output_name + 'tmp/'
         self.outfile = args.output_name + '.csv'
         self.logfile = args.output_name + '.log'
-        self.database = args.rmlst_database
         if not os.path.exists(self.tmpdir):
             os.makedirs(self.tmpdir)
         self.threads = args.threads
         self.kmer_size = args.kmer_size
         self.subsample_depth = args.subsample_depth
         self.kmer_cutoff = args.kmer_cutoff
+        self.databasedir = args.databases
 
     def parse_fastq_directory(self):
         """
@@ -93,7 +93,7 @@ class Detector(object):
             except OSError:
                 shutil.copy(name, self.tmpdir + name.split('/')[-1])
         # Step 1: Run the mashsippr to determine genus. This should create a mash.csv file in self.tmpdir/reports
-        cmd = 'python3 mashsippr.py -s {} -t databases/ {}'.format(self.tmpdir, self.tmpdir)
+        cmd = 'python3 mashsippr.py -s {} -t {} {}'.format(self.tmpdir, self.databasedir, self.tmpdir)
         with open(self.logfile, 'a+') as logfile:
             subprocess.call(cmd, shell=True, stdout=logfile, stderr=logfile)
 
@@ -113,7 +113,7 @@ class Detector(object):
         databases_to_create = list()
         genes_to_exclude = dict()
         # Read in the profiles file.
-        f = open('databases/profiles.txt')  # This should probably also get un-hardcoded.
+        f = open('{}/profiles.txt'.format(self.databasedir))  # This should probably also get un-hardcoded.
         lines = f.readlines()
         f.close()
         # Parse the profiles file to know what genes to exclude for every genus.
@@ -130,11 +130,11 @@ class Detector(object):
                 databases_to_create.append(self.samples[sample].genus)
         # Now create the db with the aid of SeqIO.
         for db in databases_to_create:
-            genus_database = 'databases/{}_db.fasta'.format(db)
+            genus_database = '{}/{}_db.fasta'.format(self.databasedir, db)
             if not os.path.exists(genus_database):
                 print('Creating database for {}...'.format(db))
                 f = open(genus_database, 'w')
-                sequences = SeqIO.parse(self.database, 'fasta')
+                sequences = SeqIO.parse(os.path.join(self.databasedir, 'rMLST_combined.fasta'), 'fasta')
                 for item in sequences:
                     if item.id.split('_')[0] not in genes_to_exclude[db]:
                         f.write('>' + item.id + '\n')
@@ -194,7 +194,7 @@ class Detector(object):
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 self.samples[sample].reverse_rmlst_reads = self.tmpdir + self.samples[sample].reverse_reads.split('/')[-1] + '_rmlst'
                 if self.samples[sample].genus_database == 'NA':
-                    db = self.database
+                    db = os.path.join(self.databasedir, 'rMLST_combined.fasta')
                 else:
                     db = self.samples[sample].genus_database
                 cmd = 'bbduk.sh ref={} in1={} in2={} outm={} outm2={} threads={}'.format(db,
@@ -205,6 +205,7 @@ class Detector(object):
                                                                                          str(self.threads))
             else:
                 # Unpaired reads.
+                db = os.path.join(self.databasedir, 'rMLST_combined.fasta')
                 self.samples[sample].forward_rmlst_reads = self.tmpdir + self.samples[sample].forward_reads.split('/')[-1] + '_rmlst'
                 cmd = 'bbduk.sh ref={} in={} outm={} threads={}'.format(db,
                                                                         self.samples[sample].forward_reads,
@@ -317,7 +318,7 @@ class Detector(object):
         # Make a dict for all or our mer sequences so we know what sequence goes with which header.
         for sample in self.samples:
             if self.samples[sample].genus_database == 'NA':
-                db = self.database
+                db = os.path.join(self.databasedir, 'rMLST_combined.fasta')
             else:
                 db = self.samples[sample].genus_database
             to_blast = list()
@@ -363,7 +364,7 @@ class Detector(object):
         """
         for sample in self.samples:
             if self.samples[sample].genus_database == 'NA':
-                db = self.database
+                db = os.path.join(self.databasedir, 'rMLST_combined.fasta')
             else:
                 db = self.samples[sample].genus_database
             db_files = ['.nhr', '.nin', '.nsq']
@@ -417,6 +418,8 @@ class Detector(object):
                 if genus not in genuses_present:
                     genuses_present.append(genus)
             self.samples[sample].cross = genuses_present
+            if len(self.samples[sample].cross) < 2:
+                self.samples[sample].cross = ['NA']
 
     def write_output(self):
         """
@@ -462,7 +465,8 @@ if __name__ == '__main__':
     parser.add_argument("fastq_directory", help="Folder that contains fastq files you want to check for contamination. "
                                                 "Will find any fastq file that contains .fq or .fastq in the filename.")
     parser.add_argument('output_name', help='Base name for output/temporary directories.')
-    parser.add_argument('rmlst_database', help='rMLST database, in fasta format.')
+    parser.add_argument('databases', help='Databases folder. Should contain rMLST_combined.fasta, profiles.txt, '
+                                          'and refseq.msh as well as RefSeqSketchesDefaults.msh')
     cpu_count = multiprocessing.cpu_count()
     parser.add_argument('-t', '--threads',
                         type=int,
