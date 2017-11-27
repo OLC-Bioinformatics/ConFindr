@@ -1,3 +1,5 @@
+[![Build status](https://travis-ci.org/lowandrew/ConFindr.svg?master)](https://travis-ci.org/lowandrew)
+
 # ConFindr
 
 This program is designed to find bacterial intra-species contamination in raw NGS data. It does this

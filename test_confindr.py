@@ -1,6 +1,6 @@
 import shutil
 import os
-from new_confindr import *
+from confindr.confindr import *
 from Bio import SeqIO
 
 
@@ -27,10 +27,10 @@ def test_empty_fastqs():
     assert find_paired_reads('tests/fake_fastqs/', forward_id='_asdf', reverse_id='_fdsa') == []
 
 
-def test_mashsippr_run():
-    assert run_mashsippr('tests/mashsippr', 'tests/mashsippr/mashsippr_results', 'databases') is True
-    shutil.rmtree('tests/mashsippr/O157')
-    shutil.rmtree('tests/mashsippr/mashsippr_results')
+# def test_mashsippr_run():
+#    assert run_mashsippr('tests/mashsippr', 'tests/mashsippr/mashsippr_results', 'databases') is True
+#    shutil.rmtree('tests/mashsippr/O157')
+#    shutil.rmtree('tests/mashsippr/mashsippr_results')
 
 
 def test_mashsippr_read():
@@ -76,7 +76,7 @@ def test_read_subsampling():
 def test_kmerization():
     pair = ['tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz']
     generate_kmers(pair[0], pair[1], 'tests/counts.fasta', 31, 'tmp')
-    expected_num_kmers = 85627
+    expected_num_kmers = 23871
     thing = SeqIO.parse('tests/counts.fasta', 'fasta')
     i = 0
     for item in thing:
@@ -88,3 +88,11 @@ def test_kmerization():
 def test_bam_parsing():
     fasta_ids = parse_bamfile('tests/subsample_0.bam', 31)
     assert len(fasta_ids) == 32
+
+
+def test_present_database():
+    assert check_db_presence('tests/fake_database.fasta') is True
+
+
+def test_nonexistent_database():
+    assert check_db_presence('tests/not_a_database.fasta') is False
