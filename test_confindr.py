@@ -55,7 +55,7 @@ def test_rmlst_bait():
                     'CAAGCAGGCTTACCGTATTGTTGACTTCAAACGCAACAAAGACGGTATCCCGGCAGTTGTTGAACGTCTT' \
                     'GAGTACGATCCGAACCGTTCCGCGAACATCGCGCTGGTTCTGTACAAAGACGGTGAACGCCGTTACATCC' \
                     'TGGCCCCTAAAGGCCTGAAAGCTGGCGACCAGATTCAGTC'
-    extract_rmlst_genes(pair, 'databases/rMLST_combined.fasta', 'tests/asdf_R1.fasta', 'tests/asdf_R2.fasta')
+    extract_rmlst_genes(pair, 'tests/bait_fasta.fasta', 'tests/asdf_R1.fasta', 'tests/asdf_R2.fasta')
     thing = SeqIO.read('tests/asdf_R1.fasta', 'fasta')
     assert str(thing.seq) == actual_result
     os.remove('tests/asdf_R1.fasta')
