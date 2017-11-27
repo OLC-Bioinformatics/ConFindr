@@ -21,4 +21,4 @@ branches:
     - master
 
 script:
-  - pytest
+  - pytest test_confindr.py
