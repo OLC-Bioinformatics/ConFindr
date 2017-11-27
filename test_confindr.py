@@ -60,3 +60,31 @@ def test_rmlst_bait():
     assert str(thing.seq) == actual_result
     os.remove('tests/asdf_R1.fasta')
     os.remove('tests/asdf_R2.fasta')
+
+
+def test_read_subsampling():
+    subsample_reads('tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz', 2, 1000, 'tests/asdf_R1.fasta', 'tests/asdf_R2.fasta')
+    thing = SeqIO.parse('tests/asdf_R1.fasta', 'fasta')
+    bases = 0
+    for record in thing:
+        bases += len(record.seq)
+    assert 1000 <= bases <= 1250
+    os.remove('tests/asdf_R1.fasta')
+    os.remove('tests/asdf_R2.fasta')
+
+
+def test_kmerization():
+    pair = ['tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz']
+    generate_kmers(pair[0], pair[1], 'tests/counts.fasta', 31, 'tmp')
+    expected_num_kmers = 85627
+    thing = SeqIO.parse('tests/counts.fasta', 'fasta')
+    i = 0
+    for item in thing:
+        i += 1
+    assert i == expected_num_kmers
+    os.remove('tests/counts.fasta')
+
+
+def test_bam_parsing():
+    fasta_ids = parse_bamfile('tests/subsample_0.bam', 31)
+    assert len(fasta_ids) == 32
