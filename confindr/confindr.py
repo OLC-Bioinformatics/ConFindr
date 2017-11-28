@@ -428,7 +428,7 @@ if __name__ == '__main__':
                         default='_R2',
                         help='Identifier for reverse reads.')
     # Check for dependencies.
-    dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh']
+    dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             print('WARNING: Dependency {} not found. ConFindr will likely crash!'.format(dependency))

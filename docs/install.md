@@ -35,13 +35,16 @@ Before using ConFindr, you'll need to download and add the following programs to
 
 Instructions on adding programs to your $PATH can be found [here](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix).
 
-If ConFindr can't find these dependencies when you try to run it, an _ImportError_ will be raised with a list of unfindable dependences.
+If ConFindr can't find these dependencies when you try to run it, you will see an error message. ConFindr will continue to attempt to run, but will likely crash at some point in the process.
 
 
 #### Databases
 
-Once you have the executable and dependencies installed, you'll just need to download the databases that ConFindr depends on.
+The databases necessary for making ConFindr run are available for download from FigShare.
 
-To do this, you'll need to install Git LFS (instructions [here](https://git-lfs.github.com/)). 
+Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
 
-Then, clone the ConFindr Git repository (`git clone https://github.com/lowandrew/ConFindr.git`). The `databases` folder is the important one - you'll need it for calling ConFindr, as seen in the `Usage` section. 
+`wget https://ndownloader.figshare.com/files/9827251
+tar xf 9827251`
+
+These commands should create a folder called `databases` in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the `-d` option.

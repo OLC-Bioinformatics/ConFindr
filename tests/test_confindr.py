@@ -89,6 +89,14 @@ def test_kmerization():
     os.remove('counts.fasta')
 
 
+def test_kmer_rename():
+    rename_kmers('tests/kmers.fasta', 'counts.fasta', 2)
+    with open('counts.fasta') as f:
+        lines = f.readlines()
+    assert lines == ['>3_1\n', 'GCTAGCTAGCTAGCTAGCATGCTACT\n', '>2_2\n', 'ATTCTAGCTACTAGCATGCAGTGGGG\n']
+    os.remove('counts.fasta')
+
+
 def test_bam_parsing():
     fasta_ids = parse_bamfile('tests/subsample_0.bam', 31)
     assert len(fasta_ids) == 32
@@ -100,3 +108,11 @@ def test_present_database():
 
 def test_nonexistent_database():
     assert check_db_presence('tests/not_a_database.fasta') is False
+
+
+def test_blast_positive():
+    assert present_in_db('CAAGCAGGCTTACCGTATTGTTGACTTCAAA', 'tests/bait_fasta.fasta', 31) is True
+
+
+def test_blast_negative():
+    assert present_in_db('CATGCTACGATCGAGTGGGGGGGGG', 'tests/bait_fasta.fasta', 31) is False
