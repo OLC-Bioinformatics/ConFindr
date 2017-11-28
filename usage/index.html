@@ -120,28 +120,29 @@
               
                 <h1 id="usage-with-a-pip-install">Usage with a Pip Install</h1>
 <p>If you used pip to install, all you need to do is type <code>confindr.py</code> on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.</p>
-<p>The parameters you need to provide are (in this order!):</p>
+<p>The parameters you need to provide are:</p>
 <ul>
-<li><code>fastq_directory</code>: The path to a directory containing the reads, in FASTQ format, that you want analyzed.</li>
-<li><code>output_directory</code>: The base name for your output. For example, putting <code>/home/user/confindr_output</code> would create an output file called <code>/home/user/confindr_output.csv</code></li>
-<li><code>databases</code>: The path to the databases directory obtained when cloning the ConFindr GitHub repository.</li>
+<li><code>-i, --input_directory</code>: The path to a directory containing the reads, in FASTQ format, that you want analyzed.</li>
+<li><code>-o, --output_name</code>: The base name for your output. For example, putting <code>/home/user/confindr_output</code> would create an output file called <code>/home/user/confindr_output/confindr_report.csv</code></li>
+<li><code>-d, ---databases</code>: The path to the databases directory obtained when downloading the <code>databases</code> folder from FigShare..</li>
 </ul>
 <p>So, if the ConFindr repository was cloned to <code>/home/user</code> and the data to be analyzed is in <code>/home/user/example-data</code>, the command to run ConFindr would be:</p>
-<p><code>confindr.py /home/user/example-data /home/user/confindr_output /home/user/ConFindr/databases/</code></p>
-<p>This command will create a file called <code>/home/user/confindr_output.csv</code> with results, and a file called <code>/home/user/confindr_output.log</code> which shows the log of what STDOUT and STDERR from programs called
-in the ConFindr pipeline.</p>
+<p><code>confindr.py -i /home/user/example-data -o /home/user/confindr_output -d /home/user/ConFindr/databases/</code></p>
+<p>This command will create a file called <code>/home/user/confindr_output/confindr_report.csv</code> with results.</p>
 <h1 id="usage-with-docker">Usage with Docker</h1>
 <p>Usage with docker is very similar to usage with a pip install. In order to have the output from the docker container accessible by you, you'll need to mount some folders - it's recommended to put the output in your input folder in this case. In this case, if the data to be analyzed is in <code>/home/user/example-data</code>, the command to run ConFindr would be:</p>
 <p><code>docker run -v /home/user/example-data/:/home/user/example-data/ olcbioinformatics/confindr confindr.py /home/user/example-data/ /home/user/example-data/confindr_output /home/user/ConFindr/databases/</code> </p>
 <p>In this case, the output file <code>confindr_output.csv</code> will be found in <code>/home/user/example-data/</code>.</p>
 <h2 id="optional-arguments">Optional Arguments</h2>
-<p>ConFindr has a few optional arguments that allow you to modify its parameters. These should be placed after the positional arguments described above. Optional arguments are:</p>
+<p>ConFindr has a few optional arguments that allow you to modify its other parameters. Optional arguments are:</p>
 <ul>
 <li><code>-t, --threads</code>: The number of threads to run ConFindr analysis with. The default is to use all threads available on your machine, and ConFindr scales very well with more threads, so it's recommended that this option be left at the default unless you need the computational resources for somethin else.</li>
 <li><code>-n, --number_subsamples</code>: The number of times you want ConFindr to sample your rMLST reads to try to detect contamination. By default this is set to 5.</li>
 <li><code>-k, --kmer-size</code>: The kmer size ConFindr uses to try to detect contamination. Default is 31. Usage with other values may produce very unreliable results and is <em>not</em> recommended.</li>
 <li><code>-s, --subsample_depth</code>: Coverage depth to subsample to. Default value is 20, which provides a good tradeoff between sensitvity and specificity. Going any lower will make it very difficult to detect contamination, and going higher will increase the false positive rate.</li>
 <li><code>-c, --kmer_cutoff</code>: The cutoff for the number of times a kmer must be seen before it is considered trustworthy and is included in the analysis. By default set to 2. Setting any lower this this essentially guarantees that your analysis will be overrun by false positives called by sequencing errors.</li>
+<li><code>-fid, --forward_id</code>: The identifier for forward reads in your input FASTQ folder. By default, this is <code>_R1</code>. If you follow a different naming scheme, this is the parameter to change.</li>
+<li><code>-rid, --reverse_id</code>: The identifier for reverse reads in your input FASTQ folder. By default, this is <code>_R2</code>. If you follow a different naming scheme, this is the parameter to change. </li>
 </ul>
 <p>Generally speaking, none of these parameters should be changed; ConFindr has been tested extensively with its default parameters and been found to work very well. </p>
               
