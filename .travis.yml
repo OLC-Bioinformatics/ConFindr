@@ -15,10 +15,10 @@ install:
   - tar xf mash-Linux64-v2.0.tar
   - export PATH=$PATH:$PWD/mash-Linux64-v2.0
   - sudo apt install ncbi-blast+
-
+  - pushd lowandrew/ConFindr && wget https://ndownloader.figshare.com/files/9827251 && tar xf 9827251 && popd
 branches:
   only:
     - master
 
 script:
-  - pytest test_confindr.py
+  - pytest tests/test_confindr.py
