@@ -142,7 +142,10 @@ class Mash(object):
         self.starttime = inputobject.starttime
         self.reportpath = inputobject.reportpath
         self.cpus = inputobject.cpus
-        self.threads = int(self.cpus / len(self.metadata)) if self.cpus / len(self.metadata) > 1 else 1
+        try:
+            self.threads = int(self.cpus / len(self.metadata)) if self.cpus / len(self.metadata) > 1 else 1
+        except ZeroDivisionError:
+            self.threads = 1
         self.sketchqueue = Queue(maxsize=self.cpus)
         self.mashqueue = Queue(maxsize=4)
         self.analysistype = analysistype
