@@ -1,14 +1,9 @@
 # System Requirements
 
-ConFindr has a fair number of dependencies. The easiest way to install ConFindr is by using docker, but other methods are also possible. 
+ConFindr has a fair number of dependencies.
 Testing of ConFindr has been done with Ubuntu 16.04 and Linux Mint. Other variants of linux should have no issues,
 and MacOS systems should also work. Windows is not supported at this time, but Windows users should be able to use the docker version.
 
-## Installing Using Docker
-
-To install using docker: `docker pull olcbioinformatics/confindr`
-
-This should download the newest image, complete with the databases that ConFindr needs. For usage with docker, see the Usage page (HYPERLINK ME!)
 
 ## Installing Using Pip
 
