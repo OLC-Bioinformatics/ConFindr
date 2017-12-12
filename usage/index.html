@@ -1,142 +1,175 @@
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Usage - ConFindr</title>
-  
-
-  <link rel="shortcut icon" href="../img/favicon.ico">
-
-  
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
-
-  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
-  <link rel="stylesheet" href="../css/highlight.css">
-
-  
-  <script>
-    // Current page data
-    var mkdocs_page_name = "Usage";
-  </script>
-  
-  <script src="../js/jquery-2.1.1.min.js"></script>
-  <script src="../js/modernizr-2.8.3.min.js"></script>
-  <script type="text/javascript" src="../js/highlight.pack.js"></script>
-  <script src="../js/theme.js"></script> 
-
-  
-</head>
-
-<body class="wy-body-for-nav" role="document">
-
-  <div class="wy-grid-for-nav">
-
-    
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
-      <div class="wy-side-nav-search">
-        <a href=".." class="icon icon-home"> ConFindr</a>
-        <div role="search">
-  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-  </form>
-</div>
-      </div>
-
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-        <ul class="current">
-          
-            <li>
-    <li class="toctree-l1 ">
-        <a class="" href="..">Home</a>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
-    </li>
-<li>
-          
-            <li>
-    <li class="toctree-l1 ">
-        <a class="" href="../install/">Installation</a>
         
-    </li>
-<li>
-          
-            <li>
-    <li class="toctree-l1 current">
-        <a class="current" href="./">Usage</a>
+        <link rel="canonical" href="https://lowandrew.github.io/ConFindr/usage/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Usage - ConFindr</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+        <link href="../css/base.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
         
-            <ul>
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">ConFindr</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            <!-- Main navigation -->
+            <ul class="nav navbar-nav">
             
-                <li class="toctree-l3"><a href="#usage-with-a-pip-install">Usage with a Pip Install</a></li>
-                
             
-                <li class="toctree-l3"><a href="#usage-with-docker">Usage with Docker</a></li>
-                
-                    <li><a class="toctree-l4" href="#optional-arguments">Optional Arguments</a></li>
-                
+                <li >
+                    <a href="..">Home</a>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../install/">Installation</a>
+                </li>
+            
+            
+            
+                <li class="active">
+                    <a href="./">Usage</a>
+                </li>
+            
             
             </ul>
-        
-    </li>
-<li>
-          
-        </ul>
-      </div>
-      &nbsp;
-    </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="..">ConFindr</a>
-      </nav>
-
-      
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
-  <ul class="wy-breadcrumbs">
-    <li><a href="..">Docs</a> &raquo;</li>
-    
-      
-    
-    <li>Usage</li>
-    <li class="wy-breadcrumbs-aside">
-      
-        
-          <a href="https://github.com/lowandrew/Confindr" class="icon icon-github"> Edit on GitHub</a>
-        
-      
-    </li>
-  </ul>
-  <hr/>
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                <li >
+                    <a rel="next" href="../install/">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li class="disabled">
+                    <a rel="prev" >
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="https://github.com/lowandrew/Confindr">
+                        
+                            <i class="fa fa-github"></i>
+                        
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
 </div>
-          <div role="main">
-            <div class="section">
-              
-                <h1 id="usage-with-a-pip-install">Usage with a Pip Install</h1>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#usage-with-a-pip-install">Usage with a Pip Install</a></li>
+        
+            <li><a href="#example-dataset">Example Dataset</a></li>
+        
+            <li><a href="#interpreting-confindr-results">Interpreting ConFindr Results</a></li>
+        
+            <li><a href="#optional-arguments">Optional Arguments</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<h1 id="usage-with-a-pip-install">Usage with a Pip Install</h1>
 <p>If you used pip to install, all you need to do is type <code>confindr.py</code> on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.</p>
-<p>The parameters you need to provide are:</p>
+<h2 id="example-dataset">Example Dataset</h2>
+<p>An example dataset has been uploaded to FigShare. You can download it to your current working directory with the following command:</p>
+<p><code>wget https://ndownloader.figshare.com/files/9972709 &amp;&amp; tar xf 9972709</code></p>
+<p>This example dataset contains two different serotypes of <em>Escherichia coli</em> mixed together - it's about 80/20 split of O103 and O157. Contamination like this is difficult to detect
+with regular tools - it's possible to pick up that it's two different strains, but it can be finicky. ConFindr, however, has no difficulty picking up the fact that this sample is contaminated.</p>
+<p>In order to have ConFindr analyze this sample, the parameters you need to provide are:</p>
 <ul>
-<li><code>-i, --input_directory</code>: The path to a directory containing the reads, in FASTQ format, that you want analyzed.</li>
-<li><code>-o, --output_name</code>: The base name for your output. For example, putting <code>/home/user/confindr_output</code> would create an output file called <code>/home/user/confindr_output/confindr_report.csv</code></li>
-<li><code>-d, ---databases</code>: The path to the databases directory obtained when downloading the <code>databases</code> folder from FigShare..</li>
+<li><code>-i, --input_directory</code>: The path to a directory containing the reads, in FASTQ format, that you want analyzed. If you're using the example dataset, you'll want to enter <code>example-data</code></li>
+<li><code>-o, --output_name</code>: The base name for your output. If you put <code>output</code> for this parameter, a folder called <code>output</code> will be created, and a file called <code>confindr_report.csv</code> with contamination
+information will be created in this folder</li>
+<li><code>-d, ---databases</code>: The path to the databases directory obtained when downloading the <code>databases</code> folder from FigShare.</li>
 </ul>
-<p>So, if the ConFindr repository was cloned to <code>/home/user</code> and the data to be analyzed is in <code>/home/user/example-data</code>, the command to run ConFindr would be:</p>
-<p><code>confindr.py -i /home/user/example-data -o /home/user/confindr_output -d /home/user/ConFindr/databases/</code></p>
-<p>This command will create a file called <code>/home/user/confindr_output/confindr_report.csv</code> with results.</p>
-<h1 id="usage-with-docker">Usage with Docker</h1>
-<p>Usage with docker is very similar to usage with a pip install. In order to have the output from the docker container accessible by you, you'll need to mount some folders - it's recommended to put the output in your input folder in this case. In this case, if the data to be analyzed is in <code>/home/user/example-data</code>, the command to run ConFindr would be:</p>
-<p><code>docker run -v /home/user/example-data/:/home/user/example-data/ olcbioinformatics/confindr confindr.py /home/user/example-data/ /home/user/example-data/confindr_output /home/user/ConFindr/databases/</code> </p>
-<p>In this case, the output file <code>confindr_output.csv</code> will be found in <code>/home/user/example-data/</code>.</p>
+<p>So, if the <code>databases</code> and <code>example-data</code> folders were downloaded to your current working directory and you want to have an output folder called <code>output</code>, the command to run ConFindr would be:</p>
+<p><code>confindr.py -i example-data -o output -d databases</code></p>
+<p>You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified. If ConFindr is properly installed, you should see something similar to the following appear on your terminal:</p>
+<pre><code class="bash"> [Elapsed Time: 0.00 seconds] Determining genus of each sample... 
+
+
+
+ [Elapsed Time: 14.38 seconds] Beginning analysis of sample example...
+
+ [Elapsed Time: 0.00 seconds] Extracting rMLST genes... 
+ [Elapsed Time: 19.88 seconds] Quality trimming... 
+ [Elapsed Time: 20.43 seconds] Beginning 5 cycles of contamination detection... 
+ [Elapsed Time: 20.43 seconds] Working on cycle 1 of 5... 
+ [Elapsed Time: 30.40 seconds] Working on cycle 2 of 5... 
+ [Elapsed Time: 41.05 seconds] Working on cycle 3 of 5... 
+ [Elapsed Time: 52.03 seconds] Working on cycle 4 of 5... 
+ [Elapsed Time: 63.27 seconds] Working on cycle 5 of 5... 
+ [Elapsed Time: 73.72 seconds] Finding cross contamination... 
+ [Elapsed Time: 84.94 seconds] Finished analysis of sample example! 
+</code></pre>
+
+<p>The run shouldn't take too long - depending on how powerful your machine is, it will most likely take 2 or 3 minutes. Once the run is done, you'll be able to inspect your results.
+The <code>ContamStatus</code> column should read <code>True</code>, and the <code>NumContamSNVs</code> column should have a value somewhere around 40.</p>
+<h2 id="interpreting-confindr-results">Interpreting ConFindr Results</h2>
+<p>The results file that ConFindr produces is in comma-separated value (CSV) format, which can be opened by any spreadsheet application (Excel, LibreOffice, etc.) or your favorite text editor.</p>
+<p>The file has the following headers: Sample, Genus, NumContamSNVs, NumUniqueKmers, CrossContamination, and ContamStatus. Of these, ContamStatus is the most important - it will be <code>True</code> if a sample
+is contaminated, and <code>False</code> if a sample is not contaminated. Detailed descriptions of each header follow.</p>
+<ul>
+<li><code>Sample</code>: The name of the sample. </li>
+<li><code>Genus</code>: The genus that ConFindr thinks your sample is. If ConFindr couldn't figure out what genus your sample is from, this will be NA.</li>
+<li><code>NumContamSNVs</code>: The number of times ConFindr found a kmer that had a mismatch, indicating the potential for multiple alleles of one gene being present. Completely clean samples should have a value of 0.</li>
+<li><code>NumUniqueKmers</code>: The number of unique kmers found by ConFindr for a sample. Numbers substantially above the total length of the rMLST genes (~35000 base pairs) can indicate contamination.</li>
+<li><code>CrossContamination</code>: If ConFindr has detected contamination due to multiple genera being present, this is where you'll see it, in the form of a list of genera present separated by colons. If only one
+genus is present in the sample, this column will read <code>NA</code>.</li>
+<li><code>ContamStatus</code>: The most important of all! Will read <code>True</code> if contamination is present in the sample, and <code>False</code> if contamination is not present. The result will be <code>True</code> if any of the following conditions are met: 
+1) 3 or more contaminating SNVs are found. 
+2) More than 40000 unique rMLST kmers are found.
+3) Thre is cross contamination between genera.</li>
+</ul>
 <h2 id="optional-arguments">Optional Arguments</h2>
 <p>ConFindr has a few optional arguments that allow you to modify its other parameters. Optional arguments are:</p>
 <ul>
-<li><code>-t, --threads</code>: The number of threads to run ConFindr analysis with. The default is to use all threads available on your machine, and ConFindr scales very well with more threads, so it's recommended that this option be left at the default unless you need the computational resources for somethin else.</li>
+<li><code>-t, --threads</code>: The number of threads to run ConFindr analysis with. The default is to use all threads available on your machine, and ConFindr scales very well with more threads, so it's recommended that this option be left at the default unless you need the computational resources for something else.</li>
 <li><code>-n, --number_subsamples</code>: The number of times you want ConFindr to sample your rMLST reads to try to detect contamination. By default this is set to 5.</li>
 <li><code>-k, --kmer-size</code>: The kmer size ConFindr uses to try to detect contamination. Default is 31. Usage with other values may produce very unreliable results and is <em>not</em> recommended.</li>
 <li><code>-s, --subsample_depth</code>: Coverage depth to subsample to. Default value is 20, which provides a good tradeoff between sensitvity and specificity. Going any lower will make it very difficult to detect contamination, and going higher will increase the false positive rate.</li>
@@ -144,48 +177,18 @@
 <li><code>-fid, --forward_id</code>: The identifier for forward reads in your input FASTQ folder. By default, this is <code>_R1</code>. If you follow a different naming scheme, this is the parameter to change.</li>
 <li><code>-rid, --reverse_id</code>: The identifier for reverse reads in your input FASTQ folder. By default, this is <code>_R2</code>. If you follow a different naming scheme, this is the parameter to change. </li>
 </ul>
-<p>Generally speaking, none of these parameters should be changed; ConFindr has been tested extensively with its default parameters and been found to work very well. </p>
-              
-            </div>
-          </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-      
-        <a href="../install/" class="btn btn-neutral" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-      
-    </div>
-  
-
-  <hr/>
-
-  <div role="contentinfo">
-    <!-- Copyright etc -->
-    
-  </div>
-
-  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
-</footer>
-	  
+<p>Generally speaking, none of these parameters should be changed; ConFindr has been tested extensively with its default parameters and been found to work very well. </p></div>
         </div>
-      </div>
 
-    </section>
+        <footer class="col-md-12">
+            <hr>
+            
+            <center>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</center>
+        </footer>
 
-  </div>
-
-<div class="rst-versions" role="note" style="cursor: pointer">
-    <span class="rst-current-version" data-toggle="rst-current-version">
-      
-          <a class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
-      
-      
-        <span><a href="../install/" style="color: #fcfcfc;">&laquo; Previous</a></span>
-      
-      
-    </span>
-</div>
-
-</body>
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script src="../js/base.js"></script>
+    </body>
 </html>
