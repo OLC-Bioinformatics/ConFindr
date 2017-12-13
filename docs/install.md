@@ -1,8 +1,33 @@
 # System Requirements
 
-ConFindr has a fair number of dependencies.
-Testing of ConFindr has been done with Ubuntu 16.04 and Linux Mint. Other variants of linux should have no issues,
-and MacOS systems should also work. Windows is not supported at this time, but Windows users should be able to use the docker version.
+ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time,
+but Windows users may be able to use the ConFindr Docker image (coming soon!) in order to run ConFindr.
+
+To run ConFindr, your PC should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.
+
+## Downloading ConFindr Databases
+
+The databases necessary for making ConFindr run are available for download from FigShare.
+
+Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
+
+`wget https://ndownloader.figshare.com/files/9827251 && tar xf 9827251`
+
+These commands should create a folder called `databases` in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the `-d` option.
+
+## Installing Using Conda (Recommended)
+
+The easiest way to install the ConFindr script and all of its dependencies is using conda. If you don't already have conda installed, instructions can be found [on the conda ReadTheDocs page](https://conda.io/docs/user-guide/install/index.html).
+
+With conda installed, all you'll need to do is download the ConFindr environment, which as been uploaded to the Anaconda cloud. To do this, use this command:
+
+`conda env create lowandrew/confindr`
+
+You should then be able to enter the conda environment:
+
+`source activate confindr`
+
+Within the environment, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 
 
 ## Installing Using Pip
@@ -33,13 +58,4 @@ Instructions on adding programs to your $PATH can be found [here](https://stacko
 If ConFindr can't find these dependencies when you try to run it, you will see an error message. ConFindr will continue to attempt to run, but will likely crash at some point in the process.
 
 
-#### Databases
 
-The databases necessary for making ConFindr run are available for download from FigShare.
-
-Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
-
-`wget https://ndownloader.figshare.com/files/9827251
-tar xf 9827251`
-
-These commands should create a folder called `databases` in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the `-d` option.
