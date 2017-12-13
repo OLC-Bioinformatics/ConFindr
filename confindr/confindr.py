@@ -94,11 +94,17 @@ def read_mashsippr_output(mashsippr_result_file, sample):
     NA
     """
     genus = 'NA'
-    with open(mashsippr_result_file) as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row['Strain'] == sample:
-                genus = row['ReferenceGenus']
+    try:
+        with open(mashsippr_result_file) as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['Strain'] == sample:
+                    genus = row['ReferenceGenus']
+    except FileNotFoundError:
+        print('WARNING: Could not find Mash result file for genus determination. Will proceed with generic database.')
+    if genus == 'Shigella':  # We'll pretened that Shigella doesn't exist since poeple can't make up their minds
+        # about what it is.
+        genus = 'Escherichia'
     return genus
 
 
@@ -234,6 +240,12 @@ def rename_kmers(input_kmers, output_kmers, cutoff):
 
 
 def parse_bamfile(bamfile, kmer_size):
+    """
+    Parses a bamfile to find sequences with one mismatch to other sequences.
+    :param bamfile: Path to bamfile.
+    :param kmer_size: Kmer size, used to make sure hits are full length.
+    :return: List of fasta ids that have one mismatch to some other sequence.
+    """
     mismatch_kmer_headers = list()
     bam_handle = pysam.AlignmentFile(bamfile, 'rb')
     for match in bam_handle:
@@ -244,6 +256,11 @@ def parse_bamfile(bamfile, kmer_size):
 
 
 def check_db_presence(database):
+    """
+    Checks if a BLAST nucleotide database is present via checking for files with the proper extensions.
+    :param database: Path to Fasta file for database.
+    :return: True is all necessary files are present, False if not.
+    """
     extensions = ['.nhr', '.nin', '.nsq']
     is_present = True
     for extension in extensions:
@@ -253,12 +270,25 @@ def check_db_presence(database):
 
 
 def make_blast_database(database, logfile='log.txt'):
+    """
+    Makes a nucleotide blast database.
+    :param database: Path to fasta file you want to turn into a database.
+    :param logfile: Logfile to write things to.
+    """
     cmd = 'makeblastdb -in {} -dbtype nucl'.format(database)
     with open(logfile, 'a+') as f:
+        f.write('Command: {}\n'.format(cmd))
         subprocess.call(cmd, shell=True, stdout=f, stderr=f)
 
 
 def present_in_db(query_sequence, database, kmer_size):
+    """
+    Given a query sequence, will determine if the sequence has a hit in a specified blast database.
+    :param query_sequence: Sequence to query against the blast database as a string.
+    :param database: Path to BLAST database.
+    :param kmer_size: The length of the sequence to query. Ensures that full-length hits are present.
+    :return: True if sequence is in database, False if sequence is not in database.
+    """
     # Blast the sequence against our database.
     blastn = NcbiblastnCommandline(db=database, outfmt=5)
     stdout, stderr = blastn(stdin=query_sequence)
@@ -278,6 +308,43 @@ def present_in_db(query_sequence, database, kmer_size):
     # but it's left here just in case I've totally misunderstood how things work.
     else:
         return False
+
+
+def find_cross_contamination(databases, tmpdir='tmp', log='log.txt', threads=1):
+    """
+    Usese mash to find out whether or not a sample has more than one genus present, indicating cross-contamination.
+    :param databases: A databases folder, which must contain refseq.msh, a mash sketch that has one representative
+    per genus from refseq.
+    :param tmpdir: Temporary directory to store mash result files in.
+    :param log: Logfile to write to.
+    :param threads: Number of threads to run mash wit.
+    :return: cross_contam: a bool that is True if more than one genus is found, and False otherwise.
+    :return: genera_present: A string. If only one genus is found, string is NA. If more than one genus is found,
+    the string is a list of genera present, separated by colons (i.e. for Escherichia and Salmonella found, string would
+    be 'Escherichia:Salmonella'
+    """
+    genera_present = list()
+    out, err, cmd = mash.screen('{}/refseq.msh'.format(databases), pair[0],
+                                pair[1], threads=threads, w='', i='0.95',
+                                output_file=os.path.join(tmpdir, 'screen.tab'), returncmd=True)
+    write_to_logfile(log, out, err, cmd)
+    screen_output = mash.read_mash_screen(os.path.join(tmpdir, 'screen.tab'))
+    for item in screen_output:
+        mash_genus = item.query_id.split('/')[-3]
+        if mash_genus == 'Shigella':
+            mash_genus = 'Escherichia'
+        if mash_genus not in genera_present:
+            genera_present.append(mash_genus)
+    if len(genera_present) <= 1:
+        genera_present = 'NA'
+        cross_contam = False
+    else:
+        tmpstr = ''
+        for mash_genus in genera_present:
+            tmpstr += mash_genus + ':'
+        genera_present = tmpstr[:-1]
+        cross_contam = True
+    return cross_contam, genera_present
 
 
 def find_contamination(pair, args, genus):
@@ -384,25 +451,8 @@ def find_contamination(pair, args, genus):
 
     # Find cross contamination.
     printtime('Finding cross contamination...', sample_start)
-    genera_present = list()
-    out, err, cmd = mash.screen('{}/refseq.msh'.format(args.databases), pair[0],
-                                pair[1], threads=args.threads, w='', i='0.95', p=str(args.threads),
-                                output_file=os.path.join(sample_tmp_dir, 'screen.tab'), returncmd=True)
-    write_to_logfile(log, out, err, cmd)
-    screen_output = mash.read_mash_screen(os.path.join(sample_tmp_dir, 'screen.tab'))
-    for item in screen_output:
-        mash_genus = item.query_id.split('/')[-3]
-        if mash_genus not in genera_present:
-            genera_present.append(mash_genus)
-    if len(genera_present) <= 1:
-        genera_present = 'NA'
-        cross_contam = False
-    else:
-        tmpstr = ''
-        for mash_genus in genera_present:
-            tmpstr += mash_genus + ':'
-        genera_present = tmpstr[:-1]
-        cross_contam = True
+    cross_contam, genera_present = find_cross_contamination(args.databases, log=log,
+                                                            threads=args.threads, tmpdir=sample_tmp_dir)
     # Create contamination report.
     if statistics.median(snv_list) > 2 or cross_contam or max_kmers > 45000:
         contamination = True

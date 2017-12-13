@@ -53,16 +53,16 @@ The results file that ConFindr produces is in comma-separated value (CSV) format
 The file has the following headers: Sample, Genus, NumContamSNVs, NumUniqueKmers, CrossContamination, and ContamStatus. Of these, ContamStatus is the most important - it will be `True` if a sample
 is contaminated, and `False` if a sample is not contaminated. Detailed descriptions of each header follow.
 
-- `Sample`: The name of the sample. 
+- `Sample`: The name of the sample. ConFindr will take everything before the first underscore (\_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.
 - `Genus`: The genus that ConFindr thinks your sample is. If ConFindr couldn't figure out what genus your sample is from, this will be NA.
 - `NumContamSNVs`: The number of times ConFindr found a kmer that had a mismatch, indicating the potential for multiple alleles of one gene being present. Completely clean samples should have a value of 0.
 - `NumUniqueKmers`: The number of unique kmers found by ConFindr for a sample. Numbers substantially above the total length of the rMLST genes (~35000 base pairs) can indicate contamination.
 - `CrossContamination`: If ConFindr has detected contamination due to multiple genera being present, this is where you'll see it, in the form of a list of genera present separated by colons. If only one
 genus is present in the sample, this column will read `NA`.
 - `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met: 
-1) 3 or more contaminating SNVs are found. 
-2) More than 40000 unique rMLST kmers are found.
-3) Thre is cross contamination between genera.
+	- 3 or more contaminating SNVs are found. 
+	- More than 40000 unique rMLST kmers are found.
+	- There is cross contamination between genera.
 
 
 ## Optional Arguments
