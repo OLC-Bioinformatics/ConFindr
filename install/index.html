@@ -102,6 +102,10 @@
     
         <li class="main active"><a href="#system-requirements">System Requirements</a></li>
         
+            <li><a href="#downloading-confindr-databases">Downloading ConFindr Databases</a></li>
+        
+            <li><a href="#installing-using-conda-recommended">Installing Using Conda (Recommended)</a></li>
+        
             <li><a href="#installing-using-pip">Installing Using Pip</a></li>
         
     
@@ -110,9 +114,21 @@
             <div class="col-md-9" role="main">
 
 <h1 id="system-requirements">System Requirements</h1>
-<p>ConFindr has a fair number of dependencies.
-Testing of ConFindr has been done with Ubuntu 16.04 and Linux Mint. Other variants of linux should have no issues,
-and MacOS systems should also work. Windows is not supported at this time, but Windows users should be able to use the docker version.</p>
+<p>ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time,
+but Windows users may be able to use the ConFindr Docker image (coming soon!) in order to run ConFindr.</p>
+<p>To run ConFindr, your PC should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.</p>
+<h2 id="downloading-confindr-databases">Downloading ConFindr Databases</h2>
+<p>The databases necessary for making ConFindr run are available for download from FigShare.</p>
+<p>Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:</p>
+<p><code>wget https://ndownloader.figshare.com/files/9827251 &amp;&amp; tar xf 9827251</code></p>
+<p>These commands should create a folder called <code>databases</code> in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the <code>-d</code> option.</p>
+<h2 id="installing-using-conda-recommended">Installing Using Conda (Recommended)</h2>
+<p>The easiest way to install the ConFindr script and all of its dependencies is using conda. If you don't already have conda installed, instructions can be found <a href="https://conda.io/docs/user-guide/install/index.html">on the conda ReadTheDocs page</a>.</p>
+<p>With conda installed, all you'll need to do is download the ConFindr environment, which as been uploaded to the Anaconda cloud. To do this, use this command:</p>
+<p><code>conda env create lowandrew/confindr</code></p>
+<p>You should then be able to enter the conda environment:</p>
+<p><code>source activate confindr</code></p>
+<p>Within the environment, typing <code>confindr.py</code> will bring access the ConFindr pipeline. See the <a href="../usage/">Usage</a> section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.</p>
 <h2 id="installing-using-pip">Installing Using Pip</h2>
 <h4 id="executable">Executable</h4>
 <p>ConFindr can also be installed using pip. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:</p>
@@ -133,13 +149,7 @@ and MacOS systems should also work. Windows is not supported at this time, but W
 <li><a href="https://www.python.org/downloads/">Python (&gt;=3.5)</a></li>
 </ul>
 <p>Instructions on adding programs to your $PATH can be found <a href="https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix">here</a>.</p>
-<p>If ConFindr can't find these dependencies when you try to run it, you will see an error message. ConFindr will continue to attempt to run, but will likely crash at some point in the process.</p>
-<h4 id="databases">Databases</h4>
-<p>The databases necessary for making ConFindr run are available for download from FigShare.</p>
-<p>Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:</p>
-<p><code>wget https://ndownloader.figshare.com/files/9827251
-tar xf 9827251</code></p>
-<p>These commands should create a folder called <code>databases</code> in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the <code>-d</code> option.</p></div>
+<p>If ConFindr can't find these dependencies when you try to run it, you will see an error message. ConFindr will continue to attempt to run, but will likely crash at some point in the process.</p></div>
         </div>
 
         <footer class="col-md-12">
