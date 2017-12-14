@@ -100,9 +100,12 @@
             <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
     
-        <li class="main active"><a href="#usage-with-a-pip-install">Usage with a Pip Install</a></li>
+        <li class="main active"><a href="#usage-with-a-pipconda-install">Usage with a Pip/Conda Install</a></li>
         
             <li><a href="#example-dataset">Example Dataset</a></li>
+        
+    
+        <li class="main "><a href="#usage-with-a-docker-install">Usage with a Docker Install</a></li>
         
             <li><a href="#interpreting-confindr-results">Interpreting ConFindr Results</a></li>
         
@@ -113,8 +116,8 @@
 </div></div>
             <div class="col-md-9" role="main">
 
-<h1 id="usage-with-a-pip-install">Usage with a Pip Install</h1>
-<p>If you used pip to install, all you need to do is type <code>confindr.py</code> on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.</p>
+<h1 id="usage-with-a-pipconda-install">Usage with a Pip/Conda Install</h1>
+<p>If you used pip or conda to install, all you need to do is activate your ConFindr virtualenv/type <code>confindr.py</code> on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.</p>
 <h2 id="example-dataset">Example Dataset</h2>
 <p>An example dataset has been uploaded to FigShare. You can download it to your current working directory with the following command:</p>
 <p><code>wget https://ndownloader.figshare.com/files/9972709 &amp;&amp; tar xf 9972709</code></p>
@@ -150,6 +153,11 @@ information will be created in this folder</li>
 
 <p>The run shouldn't take too long - depending on how powerful your machine is, it will most likely take 2 or 3 minutes. Once the run is done, you'll be able to inspect your results.
 The <code>ContamStatus</code> column should read <code>True</code>, and the <code>NumContamSNVs</code> column should have a value somewhere around 40.</p>
+<h1 id="usage-with-a-docker-install">Usage with a Docker Install</h1>
+<p>If you used Docker to install ConFindr, usage will be slightly different. Assuming you have the <code>databases</code> from the <a href="../install/">Installation</a> step and <code>example-data</code> from above in your current working
+directory, the command to run ConFindr would be:</p>
+<p><code>docker run -it -v /path/to/current/directory/:/data olcbioinformatics/confindr confindr.py -i /data/example-data -o /data/output -d /data/databases</code></p>
+<p>You should see the same output to the terminal that was mentioned above, and have the same output files in a folder called <code>output</code> in your current working directory.</p>
 <h2 id="interpreting-confindr-results">Interpreting ConFindr Results</h2>
 <p>The results file that ConFindr produces is in comma-separated value (CSV) format, which can be opened by any spreadsheet application (Excel, LibreOffice, etc.) or your favorite text editor.</p>
 <p>The file has the following headers: Sample, Genus, NumContamSNVs, NumUniqueKmers, CrossContamination, and ContamStatus. Of these, ContamStatus is the most important - it will be <code>True</code> if a sample

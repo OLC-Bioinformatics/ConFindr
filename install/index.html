@@ -106,7 +106,9 @@
         
             <li><a href="#installing-using-conda-recommended">Installing Using Conda (Recommended)</a></li>
         
-            <li><a href="#installing-using-pip">Installing Using Pip</a></li>
+            <li><a href="#installing-using-docker">Installing Using Docker</a></li>
+        
+            <li><a href="#manual-install-using-pip">Manual Install Using Pip</a></li>
         
     
     </ul>
@@ -115,10 +117,10 @@
 
 <h1 id="system-requirements">System Requirements</h1>
 <p>ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time,
-but Windows users may be able to use the ConFindr Docker image (coming soon!) in order to run ConFindr.</p>
+but Windows users may be able to use the ConFindr Docker image in order to run ConFindr.</p>
 <p>To run ConFindr, your PC should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.</p>
 <h2 id="downloading-confindr-databases">Downloading ConFindr Databases</h2>
-<p>The databases necessary for making ConFindr run are available for download from FigShare.</p>
+<p>The databases necessary for making ConFindr run are available for download from FigShare. <strong><em><em>These databases must be downloaded, no matter which install method you choose to use.</em></em></strong></p>
 <p>Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:</p>
 <p><code>wget https://ndownloader.figshare.com/files/9827251 &amp;&amp; tar xf 9827251</code></p>
 <p>These commands should create a folder called <code>databases</code> in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the <code>-d</code> option.</p>
@@ -129,7 +131,14 @@ but Windows users may be able to use the ConFindr Docker image (coming soon!) in
 <p>You should then be able to enter the conda environment:</p>
 <p><code>source activate confindr</code></p>
 <p>Within the environment, typing <code>confindr.py</code> will bring access the ConFindr pipeline. See the <a href="../usage/">Usage</a> section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.</p>
-<h2 id="installing-using-pip">Installing Using Pip</h2>
+<h2 id="installing-using-docker">Installing Using Docker</h2>
+<p>ConFindr can also be used via Docker, which will take care of installing all of ConFindr's dependencies for you. If you do not have Docker installed, instructions on how to install it
+can be found <a href="https://docs.docker.com/engine/installation/">here</a>.</p>
+<p>With Docker installed, all you have to do to install ConFindr is enter the following command, which will pull the ConFindr image from the Docker Hub and put it on your machine:</p>
+<p><code>docker pull olcbioinformatics/confindr</code></p>
+<p>You can verify that the pull was successful by entering the command <code>docker images</code>. You should see <code>olcbioinformatics/confindr</code> in the list. For instructions on using the image, see 
+the <a href="../usage/">Usage</a> section.</p>
+<h2 id="manual-install-using-pip">Manual Install Using Pip</h2>
 <h4 id="executable">Executable</h4>
 <p>ConFindr can also be installed using pip. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:</p>
 <ul>
