@@ -1,6 +1,7 @@
-# Usage with a Pip Install
+# Usage with a Pip/Conda Install
 
-If you used pip to install, all you need to do is type `confindr.py` on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.
+If you used pip or conda to install, all you need to do is activate your ConFindr virtualenv/type `confindr.py` on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.
+
 
 ## Example Dataset
 
@@ -45,6 +46,15 @@ You can use absolute or relative paths, and trailing slashes are also acceptable
 
 The run shouldn't take too long - depending on how powerful your machine is, it will most likely take 2 or 3 minutes. Once the run is done, you'll be able to inspect your results.
 The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value somewhere around 40.
+
+# Usage with a Docker Install
+
+If you used Docker to install ConFindr, usage will be slightly different. Assuming you have the `databases` from the [Installation](install.md) step and `example-data` from above in your current working
+directory, the command to run ConFindr would be:
+
+`docker run -it -v /path/to/current/directory/:/data olcbioinformatics/confindr confindr.py -i /data/example-data -o /data/output -d /data/databases`
+
+You should see the same output to the terminal that was mentioned above, and have the same output files in a folder called `output` in your current working directory.
 
 ## Interpreting ConFindr Results
 

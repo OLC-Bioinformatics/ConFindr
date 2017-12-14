@@ -1,13 +1,13 @@
 # System Requirements
 
 ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time,
-but Windows users may be able to use the ConFindr Docker image (coming soon!) in order to run ConFindr.
+but Windows users may be able to use the ConFindr Docker image in order to run ConFindr.
 
 To run ConFindr, your PC should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.
 
 ## Downloading ConFindr Databases
 
-The databases necessary for making ConFindr run are available for download from FigShare.
+The databases necessary for making ConFindr run are available for download from FigShare. __**These databases must be downloaded, no matter which install method you choose to use.**__
 
 Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
 
@@ -29,8 +29,19 @@ You should then be able to enter the conda environment:
 
 Within the environment, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 
+## Installing Using Docker
 
-## Installing Using Pip
+ConFindr can also be used via Docker, which will take care of installing all of ConFindr's dependencies for you. If you do not have Docker installed, instructions on how to install it
+can be found [here](https://docs.docker.com/engine/installation/).
+
+With Docker installed, all you have to do to install ConFindr is enter the following command, which will pull the ConFindr image from the Docker Hub and put it on your machine:
+
+`docker pull olcbioinformatics/confindr`
+
+You can verify that the pull was successful by entering the command `docker images`. You should see `olcbioinformatics/confindr` in the list. For instructions on using the image, see 
+the [Usage](usage.md) section.
+
+## Manual Install Using Pip
 
 #### Executable
 
