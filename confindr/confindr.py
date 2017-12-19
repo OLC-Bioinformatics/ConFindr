@@ -19,6 +19,7 @@ from biotools import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
 from accessoryFunctions.accessoryFunctions import printtime
 
+# TODO: Support non-paired reads.
 
 def write_to_logfile(logfile, out, err, cmd):
     with open(logfile, 'a+') as outfile:
@@ -54,6 +55,30 @@ def find_paired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
         if forward_id in name and os.path.isfile(name.replace(forward_id, reverse_id)):
             pair_list.append([name, name.replace(forward_id, reverse_id)])
     return pair_list
+
+
+def find_unpaired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
+    """
+    Looks at a directory to find unpaired fastq files.
+    :param fastq_directory: Complete path to directory containing fastq files.
+    :param forward_id: Identifier for forward reads. Default _R1.
+    :param reverse_id: Identifier for forward reads. Default _R2.
+    :return: List of files that appear to be unpaired reads.
+    """
+    read_list = list()
+    fastq_files = glob.glob(fastq_directory + '/*.f*q*')
+    for name in fastq_files:
+        # Iterate through files, adding them to our list of unpaired reads if:
+        # 1) They don't have the forward identifier or the reverse identifier in their name.
+        # 2) They have forward but the reverse isn't there.
+        # 3) They have reverse but the forward isn't there.
+        if forward_id not in name and reverse_id not in name:
+            read_list.append(name)
+        elif forward_id in name and not os.path.isfile(name.replace(forward_id, reverse_id)):
+            read_list.append(name)
+        elif reverse_id in name and not os.path.isfile(name.replace(reverse_id, forward_id)):
+            read_list.append(name)
+    return read_list
 
 
 def run_mashsippr(sequence_dir, output_dir, database_dir, logfile=None):
@@ -470,6 +495,124 @@ def find_contamination(pair, args, genus):
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
 
+def find_contamination_unpaired(reads, args, genus):
+    # Setup log file.
+    log = os.path.join(args.output_name, 'confindr_log.txt')
+    sample_start = time.time()
+    # snv_list and max_kmers will be used later for contam detection - get them set up here.
+    snv_list = list()
+    max_kmers = 0
+    # Setup a sample name - may want to improve this at some point, currently takes everything before the .fastq.gz
+    sample_name = os.path.split(reads)[-1].split('.')[0]
+    # Setup a genusspecfic database, if necessary.
+    if genus != 'NA':
+        sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
+        if not os.path.isfile(os.path.join(args.databases, '{}_db.fasta'.format(genus))):
+            printtime('Setting up genus-specific database for genus {}...'.format(genus), sample_start)
+            genes_to_excude = find_genusspecific_alleles(os.path.join(args.databases, 'profiles.txt'), genus)
+            setup_genusspecific_database(args.databases, genus, genes_to_excude)
+    else:
+        sample_database = os.path.join(args.databases, 'rMLST_combined.fasta')
+    # Get tmpdir for this sample created.
+    sample_tmp_dir = os.path.join(args.output_name, sample_name)
+    if not os.path.isdir(sample_tmp_dir):
+        os.makedirs(sample_tmp_dir)
+    # With everything set up, time to start the workflow.
+    # First thing to do: Extract rMLST genes.
+    printtime('Extracting rMLST genes...', sample_start)
+    out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=reads,
+                                       forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                       returncmd=True, threads=args.threads)
+    write_to_logfile(log, out, err, cmd)
+    # With rMLST genes extracted, get our quality trimming done.
+    out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                       forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                       returncmd=True, threads=args.threads)
+    write_to_logfile(log, out, err, cmd)
+    # Now we go through our contamination detection cycle the number of times specified.
+    for i in range(args.number_subsamples):
+        printtime('Working on cycle {} of {}...'.format(str(i + 1), str(args.number_subsamples)), sample_start, '\033[0;35m')
+        # Find number of bases we need to subsample.
+        num_bases = 35000 * args.subsample_depth
+        out, err, cmd = bbtools.subsample_reads(forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                forward_out=os.path.join(sample_tmp_dir, 'subsample_{}.fastq.gz'.format(str(i))),
+                                                bases_target=num_bases, returncmd=True,
+                                                threads=args.threads)
+        write_to_logfile(log, out, err, cmd)
+        # Kmerize the reads using jellyfish.
+        jellyfish.count(forward_in=os.path.join(sample_tmp_dir, 'subsample_{}.fastq.gz'.format(str(i))),
+                        count_file=os.path.join(sample_tmp_dir, 'mer_counts.jf'),
+                        options='--bf-size 100M', kmer_size=args.kmer_size)
+        jellyfish.dump(os.path.join(sample_tmp_dir, 'mer_counts.jf'),
+                       os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))))
+        # With jellyfish done, rename our kmers.
+        num_kmers = rename_kmers(input_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
+                                 output_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
+                                 cutoff=args.kmer_cutoff)
+        # Update the maximum kmer count.
+        if num_kmers > max_kmers:
+            max_kmers = num_kmers
+        # Now find mismatches. TODO: Get this modularized more, you're currently copy-pasting a shameful amount of code.
+        # Step 1 of mismatch finding: Run bbmap with the kmer file.
+        out, err, cmd = bbtools.bbmap(reference=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
+                                      forward_in=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
+                                      ambig='all',
+                                      overwrite='true',
+                                      out_bam=os.path.join(sample_tmp_dir, 'subsample_{}.bam'.format(str(i))),
+                                      threads=str(args.threads), returncmd=True)
+        write_to_logfile(log, out, err, cmd)
+
+        # Step 2 of mismatch finding: Parse the bamfile created by bbmap to find one mismatch kmers.
+        fasta_ids = parse_bamfile(os.path.join(sample_tmp_dir, 'subsample_{}.bam'.format(str(i))), args.kmer_size)
+        # Step 2.5: Create a dictionary so you know which ID goes with which sequence.
+        mer_dict = dict()
+        with open(os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i)))) as f:
+            mers = f.readlines()
+        for j in range(0, len(mers), 2):
+            key = mers[j].replace('>', '')
+            key = key.replace('\n', '')
+            mer_dict[key] = mers[j + 1]
+
+        # Step 3 of mismatch finding: Blast kmers found from parsing against database to make sure they're
+        # not overhangs into non-RMLST regions that could cause false positives.
+        # First part of this step: Check that the blast database is actually present. If it isn't, make one.
+        if not check_db_presence(sample_database):
+            make_blast_database(sample_database, logfile=log)
+        # Now set up the blast.
+        # Create list of sequences to blast.
+        to_blast = list()
+        for fasta_id in fasta_ids:
+            to_blast.append(mer_dict[fasta_id])
+        # Setup the multiprocessing pool.
+        pool = multiprocessing.Pool(processes=args.threads)
+        db_list = [sample_database] * len(fasta_ids)
+        kmer_size_list = [args.kmer_size] * len(fasta_ids)
+        results = pool.starmap(present_in_db, zip(to_blast, db_list, kmer_size_list))
+        pool.close()
+        pool.join()
+        snv_count = 0
+        for result in results:
+            if result:
+                snv_count += 1
+        snv_list.append(snv_count)
+    # Need to add in the cross-contamination check for unpaired reads. This is a # TODO for tomorrow.
+    cross_contam = 'asdf'
+    genera_present = 'NA'
+    if statistics.median(snv_list) > 2 or cross_contam or max_kmers > 45000:
+        contamination = True
+    else:
+        contamination = False
+    with open(os.path.join(args.output_name, 'confindr_report.csv'), 'a+') as f:
+        f.write('{samplename},{genus},{numcontamsnvs},{numuniquekmers},{crosscontamination},'
+                '{contamstatus}\n'.format(samplename=sample_name,
+                                          genus=genus,
+                                          numcontamsnvs=statistics.median(snv_list),
+                                          numuniquekmers=max_kmers,
+                                          crosscontamination=genera_present,
+                                          contamstatus=contamination))
+    shutil.rmtree(sample_tmp_dir)
+    printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
+
 if __name__ == '__main__':
     start = time.time()
     cpu_count = multiprocessing.cpu_count()
@@ -534,10 +677,11 @@ if __name__ == '__main__':
     printtime('Determining genus of each sample...', start)
     run_mashsippr(args.input_directory, args.output_name, args.databases)
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
+    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.forward_id)
     cleanup_mashsippr_files(paired_reads, args)
     for pair in paired_reads:
         sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
-        print('\n\n')
+        print('\n')
         printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
         genus = read_mashsippr_output(os.path.join(args.output_name, 'reports/mash.csv'), sample_name)
         find_contamination(pair, args, genus)

@@ -31,6 +31,10 @@ def test_empty_fastqs():
     assert find_paired_reads('tests/fake_fastqs/', forward_id='_asdf', reverse_id='_fdsa') == []
 
 
+def test_unpaired_fastq():
+    assert 'tests/fake_fastqs/test_alone.fastq.gz' in find_unpaired_reads('tests/fake_fastqs')
+
+
 # def test_mashsippr_run():
 #    assert run_mashsippr('mashsippr', 'mashsippr/mashsippr_results', 'databases') is True
 #    shutil.rmtree('mashsippr/O157')
