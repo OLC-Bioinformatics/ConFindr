@@ -19,7 +19,6 @@ from biotools import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
 from accessoryFunctions.accessoryFunctions import printtime
 
-# TODO: Support non-paired reads.
 
 def write_to_logfile(logfile, out, err, cmd):
     with open(logfile, 'a+') as outfile:
@@ -335,7 +334,7 @@ def present_in_db(query_sequence, database, kmer_size):
         return False
 
 
-def find_cross_contamination(databases, tmpdir='tmp', log='log.txt', threads=1):
+def find_cross_contamination(databases, pair, tmpdir='tmp', log='log.txt', threads=1):
     """
     Usese mash to find out whether or not a sample has more than one genus present, indicating cross-contamination.
     :param databases: A databases folder, which must contain refseq.msh, a mash sketch that has one representative
@@ -351,6 +350,43 @@ def find_cross_contamination(databases, tmpdir='tmp', log='log.txt', threads=1):
     genera_present = list()
     out, err, cmd = mash.screen('{}/refseq.msh'.format(databases), pair[0],
                                 pair[1], threads=threads, w='', i='0.95',
+                                output_file=os.path.join(tmpdir, 'screen.tab'), returncmd=True)
+    write_to_logfile(log, out, err, cmd)
+    screen_output = mash.read_mash_screen(os.path.join(tmpdir, 'screen.tab'))
+    for item in screen_output:
+        mash_genus = item.query_id.split('/')[-3]
+        if mash_genus == 'Shigella':
+            mash_genus = 'Escherichia'
+        if mash_genus not in genera_present:
+            genera_present.append(mash_genus)
+    if len(genera_present) <= 1:
+        genera_present = 'NA'
+        cross_contam = False
+    else:
+        tmpstr = ''
+        for mash_genus in genera_present:
+            tmpstr += mash_genus + ':'
+        genera_present = tmpstr[:-1]
+        cross_contam = True
+    return cross_contam, genera_present
+
+
+def find_cross_contamination_unpaired(databases, reads, tmpdir='tmp', log='log.txt', threads=1):
+    """
+    Usese mash to find out whether or not a sample has more than one genus present, indicating cross-contamination.
+    :param databases: A databases folder, which must contain refseq.msh, a mash sketch that has one representative
+    per genus from refseq.
+    :param tmpdir: Temporary directory to store mash result files in.
+    :param log: Logfile to write to.
+    :param threads: Number of threads to run mash wit.
+    :return: cross_contam: a bool that is True if more than one genus is found, and False otherwise.
+    :return: genera_present: A string. If only one genus is found, string is NA. If more than one genus is found,
+    the string is a list of genera present, separated by colons (i.e. for Escherichia and Salmonella found, string would
+    be 'Escherichia:Salmonella'
+    """
+    genera_present = list()
+    out, err, cmd = mash.screen('{}/refseq.msh'.format(databases), reads,
+                                threads=threads, w='', i='0.95',
                                 output_file=os.path.join(tmpdir, 'screen.tab'), returncmd=True)
     write_to_logfile(log, out, err, cmd)
     screen_output = mash.read_mash_screen(os.path.join(tmpdir, 'screen.tab'))
@@ -476,7 +512,7 @@ def find_contamination(pair, args, genus):
 
     # Find cross contamination.
     printtime('Finding cross contamination...', sample_start)
-    cross_contam, genera_present = find_cross_contamination(args.databases, log=log,
+    cross_contam, genera_present = find_cross_contamination(args.databases, pair, log=log,
                                                             threads=args.threads, tmpdir=sample_tmp_dir)
     # Create contamination report.
     if statistics.median(snv_list) > 2 or cross_contam or max_kmers > 45000:
@@ -495,7 +531,7 @@ def find_contamination(pair, args, genus):
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
 
-def find_contamination_unpaired(reads, args, genus):
+def find_contamination_unpaired(args, reads, genus):
     # Setup log file.
     log = os.path.join(args.output_name, 'confindr_log.txt')
     sample_start = time.time()
@@ -535,12 +571,12 @@ def find_contamination_unpaired(reads, args, genus):
         # Find number of bases we need to subsample.
         num_bases = 35000 * args.subsample_depth
         out, err, cmd = bbtools.subsample_reads(forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                                forward_out=os.path.join(sample_tmp_dir, 'subsample_{}.fastq.gz'.format(str(i))),
-                                                bases_target=num_bases, returncmd=True,
+                                                forward_out=os.path.join(sample_tmp_dir, 'subsample_{}.fastq'.format(str(i))),
+                                                num_bases=num_bases, returncmd=True,
                                                 threads=args.threads)
         write_to_logfile(log, out, err, cmd)
         # Kmerize the reads using jellyfish.
-        jellyfish.count(forward_in=os.path.join(sample_tmp_dir, 'subsample_{}.fastq.gz'.format(str(i))),
+        jellyfish.count(forward_in=os.path.join(sample_tmp_dir, 'subsample_{}.fastq'.format(str(i))),
                         count_file=os.path.join(sample_tmp_dir, 'mer_counts.jf'),
                         options='--bf-size 100M', kmer_size=args.kmer_size)
         jellyfish.dump(os.path.join(sample_tmp_dir, 'mer_counts.jf'),
@@ -596,8 +632,8 @@ def find_contamination_unpaired(reads, args, genus):
                 snv_count += 1
         snv_list.append(snv_count)
     # Need to add in the cross-contamination check for unpaired reads. This is a # TODO for tomorrow.
-    cross_contam = 'asdf'
-    genera_present = 'NA'
+    cross_contam, genera_present = find_cross_contamination_unpaired(args.databases, reads, log=log,
+                                                                     threads=args.threads, tmpdir=sample_tmp_dir)
     if statistics.median(snv_list) > 2 or cross_contam or max_kmers > 45000:
         contamination = True
     else:
@@ -677,7 +713,7 @@ if __name__ == '__main__':
     printtime('Determining genus of each sample...', start)
     run_mashsippr(args.input_directory, args.output_name, args.databases)
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
-    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.forward_id)
+    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
     cleanup_mashsippr_files(paired_reads, args)
     for pair in paired_reads:
         sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
@@ -685,4 +721,11 @@ if __name__ == '__main__':
         printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
         genus = read_mashsippr_output(os.path.join(args.output_name, 'reports/mash.csv'), sample_name)
         find_contamination(pair, args, genus)
+    for reads in unpaired_reads:
+        sample_name = os.path.split(reads)[-1].split('.')[0]
+        print('\n')
+        genus = read_mashsippr_output(os.path.join(args.output_name, 'reports/mash.csv'), sample_name)
+        printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
+        find_contamination_unpaired(args, reads, genus)
+
     printtime('Contamination detection complete!', start, '\033[0;32m')
