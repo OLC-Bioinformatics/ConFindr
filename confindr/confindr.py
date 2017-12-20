@@ -19,6 +19,7 @@ from biotools import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
 from accessoryFunctions.accessoryFunctions import printtime
 
+# TODO: Make paired and unpaired reads share more functions - they're currently not very share-y.
 
 def write_to_logfile(logfile, out, err, cmd):
     with open(logfile, 'a+') as outfile:
@@ -360,15 +361,13 @@ def find_cross_contamination(databases, pair, tmpdir='tmp', log='log.txt', threa
         if mash_genus not in genera_present:
             genera_present.append(mash_genus)
     if len(genera_present) <= 1:
-        genera_present = 'NA'
-        cross_contam = False
+        genera_present = genera_present[0]
     else:
         tmpstr = ''
         for mash_genus in genera_present:
             tmpstr += mash_genus + ':'
         genera_present = tmpstr[:-1]
-        cross_contam = True
-    return cross_contam, genera_present
+    return genera_present
 
 
 def find_cross_contamination_unpaired(databases, reads, tmpdir='tmp', log='log.txt', threads=1):
@@ -397,24 +396,36 @@ def find_cross_contamination_unpaired(databases, reads, tmpdir='tmp', log='log.t
         if mash_genus not in genera_present:
             genera_present.append(mash_genus)
     if len(genera_present) <= 1:
-        genera_present = 'NA'
-        cross_contam = False
+        genera_present = genera_present[0]
     else:
         tmpstr = ''
         for mash_genus in genera_present:
             tmpstr += mash_genus + ':'
         genera_present = tmpstr[:-1]
-        cross_contam = True
-    return cross_contam, genera_present
+    return genera_present
 
 
-def find_contamination(pair, args, genus):
+def find_contamination(pair, args):
     log = os.path.join(args.output_name, 'confindr_log.txt')
     sample_start = time.time()
     snv_list = list()
     max_kmers = 0
-    # Main method for finding contamination - works on one pair at a time.
     sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
+    sample_tmp_dir = os.path.join(args.output_name, sample_name)
+    if not os.path.isdir(sample_tmp_dir):
+        os.makedirs(sample_tmp_dir)
+    printtime('Checking for cross-species contamination...', sample_start)
+    genus = find_cross_contamination(args.databases, pair, tmpdir=sample_tmp_dir, log=log, threads=args.threads)
+    if len(genus.split(':')) > 1:
+        snv_list = [0]
+        write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                     sample_name=sample_name,
+                     snv_list=snv_list,
+                     genus=genus,
+                     max_kmers=max_kmers)
+        printtime('Found cross-contamination! Skipping rest of analysis...', sample_start)
+        return
+    # Main method for finding contamination - works on one pair at a time.
     # Need to:
     # Setup genus-specific databases, if necessary.
     if genus != 'NA':
@@ -426,9 +437,6 @@ def find_contamination(pair, args, genus):
     else:
         sample_database = os.path.join(args.databases, 'rMLST_combined.fasta')
     # Extract rMLST reads and quality trim.
-    sample_tmp_dir = os.path.join(args.output_name, sample_name)
-    if not os.path.isdir(sample_tmp_dir):
-        os.makedirs(sample_tmp_dir)
     printtime('Extracting rMLST genes...', sample_start)
     extract_rmlst_genes(pair, sample_database,
                         forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
@@ -510,28 +518,31 @@ def find_contamination(pair, args, genus):
                 snv_count += 1
         snv_list.append(snv_count)
 
-    # Find cross contamination.
-    printtime('Finding cross contamination...', sample_start)
-    cross_contam, genera_present = find_cross_contamination(args.databases, pair, log=log,
-                                                            threads=args.threads, tmpdir=sample_tmp_dir)
     # Create contamination report.
-    if statistics.median(snv_list) > 2 or cross_contam or max_kmers > 45000:
-        contamination = True
-    else:
-        contamination = False
-    with open(os.path.join(args.output_name, 'confindr_report.csv'), 'a+') as f:
-        f.write('{samplename},{genus},{numcontamsnvs},{numuniquekmers},{crosscontamination},'
-                '{contamstatus}\n'.format(samplename=sample_name,
-                                          genus=genus,
-                                          numcontamsnvs=statistics.median(snv_list),
-                                          numuniquekmers=max_kmers,
-                                          crosscontamination=genera_present,
-                                          contamstatus=contamination))
+    write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                 sample_name=sample_name,
+                 snv_list=snv_list,
+                 genus=genus,
+                 max_kmers=max_kmers)
     shutil.rmtree(sample_tmp_dir)
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
 
-def find_contamination_unpaired(args, reads, genus):
+def write_output(output_report, sample_name, snv_list, genus, max_kmers):
+    if statistics.median(snv_list) > 2 or len(genus.split(':')) > 1 or max_kmers > 45000:
+        contaminated = True
+    else:
+        contaminated = False
+    with open(output_report, 'a+') as f:
+        f.write('{samplename},{genus},{numcontamsnvs},{numuniquekmers},'
+                '{contamstatus}\n'.format(samplename=sample_name,
+                                          genus=genus,
+                                          numcontamsnvs=statistics.median(snv_list),
+                                          numuniquekmers=max_kmers,
+                                          contamstatus=contaminated))
+
+
+def find_contamination_unpaired(args, reads):
     # Setup log file.
     log = os.path.join(args.output_name, 'confindr_log.txt')
     sample_start = time.time()
@@ -540,6 +551,20 @@ def find_contamination_unpaired(args, reads, genus):
     max_kmers = 0
     # Setup a sample name - may want to improve this at some point, currently takes everything before the .fastq.gz
     sample_name = os.path.split(reads)[-1].split('.')[0]
+    sample_tmp_dir = os.path.join(args.output_name, sample_name)
+    if not os.path.isdir(sample_tmp_dir):
+        os.makedirs(sample_tmp_dir)
+    printtime('Checking for cross-species contamination...', sample_start)
+    genus = find_cross_contamination_unpaired(args.databases, reads, tmpdir=sample_tmp_dir, log=log, threads=args.threads)
+    if len(genus.split(':')) > 1:
+        snv_list = [0]
+        write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                     sample_name=sample_name,
+                     snv_list=snv_list,
+                     genus=genus,
+                     max_kmers=max_kmers)
+        printtime('Found cross-contamination! Skipping rest of analysis...', sample_start)
+        return
     # Setup a genusspecfic database, if necessary.
     if genus != 'NA':
         sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
@@ -588,7 +613,7 @@ def find_contamination_unpaired(args, reads, genus):
         # Update the maximum kmer count.
         if num_kmers > max_kmers:
             max_kmers = num_kmers
-        # Now find mismatches. TODO: Get this modularized more, you're currently copy-pasting a shameful amount of code.
+        # Now find mismatches.
         # Step 1 of mismatch finding: Run bbmap with the kmer file.
         out, err, cmd = bbtools.bbmap(reference=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
                                       forward_in=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
@@ -631,21 +656,13 @@ def find_contamination_unpaired(args, reads, genus):
             if result:
                 snv_count += 1
         snv_list.append(snv_count)
-    # Need to add in the cross-contamination check for unpaired reads. This is a # TODO for tomorrow.
-    cross_contam, genera_present = find_cross_contamination_unpaired(args.databases, reads, log=log,
-                                                                     threads=args.threads, tmpdir=sample_tmp_dir)
-    if statistics.median(snv_list) > 2 or cross_contam or max_kmers > 45000:
-        contamination = True
-    else:
-        contamination = False
-    with open(os.path.join(args.output_name, 'confindr_report.csv'), 'a+') as f:
-        f.write('{samplename},{genus},{numcontamsnvs},{numuniquekmers},{crosscontamination},'
-                '{contamstatus}\n'.format(samplename=sample_name,
-                                          genus=genus,
-                                          numcontamsnvs=statistics.median(snv_list),
-                                          numuniquekmers=max_kmers,
-                                          crosscontamination=genera_present,
-                                          contamstatus=contamination))
+
+    write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                 sample_name=sample_name,
+                 snv_list=snv_list,
+                 genus=genus,
+                 max_kmers=max_kmers)
+
     shutil.rmtree(sample_tmp_dir)
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
@@ -708,24 +725,21 @@ if __name__ == '__main__':
         os.makedirs(args.output_name)
     # Open the output report file.
     with open(os.path.join(args.output_name, 'confindr_report.csv'), 'w') as f:
-        f.write('Sample,Genus,NumContamSNVs,NumUniqueKmers,CrossContamination,ContamStatus\n')
-    # Run mashsippr on all sample, and then read the file individually for each sample.
-    printtime('Determining genus of each sample...', start)
-    run_mashsippr(args.input_directory, args.output_name, args.databases)
+        f.write('Sample,Genus,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
+    # Figure out what pairs of reads, as well as unpaired reads, are present.
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
     unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
-    cleanup_mashsippr_files(paired_reads, args)
+    # Process paired reads, one sample at a time.
     for pair in paired_reads:
         sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
         print('\n')
         printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
-        genus = read_mashsippr_output(os.path.join(args.output_name, 'reports/mash.csv'), sample_name)
-        find_contamination(pair, args, genus)
+        find_contamination(pair, args)
+    # Process unpaired reads, also one sample at a time.
     for reads in unpaired_reads:
         sample_name = os.path.split(reads)[-1].split('.')[0]
         print('\n')
-        genus = read_mashsippr_output(os.path.join(args.output_name, 'reports/mash.csv'), sample_name)
         printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
-        find_contamination_unpaired(args, reads, genus)
+        find_contamination_unpaired(args, reads)
 
     printtime('Contamination detection complete!', start, '\033[0;32m')
