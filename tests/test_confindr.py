@@ -41,12 +41,6 @@ def test_unpaired_fastq():
 #    shutil.rmtree('mashsippr/mashsippr_results')
 
 
-def test_mashsippr_read():
-    assert read_mashsippr_output('tests/mash.csv', 'O157') == 'Escherichia'
-
-
-def test_mashsippr_read_fail():
-    assert read_mashsippr_output('tests/mash.csv', 'NotInTheFile') == 'NA'
 
 
 def test_genus_exclusion_positive():
@@ -120,3 +114,43 @@ def test_blast_positive():
 
 def test_blast_negative():
     assert present_in_db('CATGCTACGATCGAGTGGGGGGGGG', 'tests/bait_fasta.fasta', 31) is False
+
+
+def test_result_file_not_contaminated():
+    write_output('tests/report.csv', 'sample', [0, 2, 1], 'Escherichia', 22222)
+    with open('tests/report.csv') as f:
+        lines = f.readlines()
+    assert lines[0].split(',')[4] == 'False\n'
+    os.remove('tests/report.csv')
+
+
+def test_result_file_contaminated_snvs():
+    write_output('tests/report.csv', 'sample', [0, 3, 5], 'Escherichia', 22222)
+    with open('tests/report.csv') as f:
+        lines = f.readlines()
+    assert lines[0].split(',')[4] == 'True\n'
+    os.remove('tests/report.csv')
+
+
+def test_result_file_contaminated_kmers():
+    write_output('tests/report.csv', 'sample', [0, 1, 1], 'Escherichia', 52222)
+    with open('tests/report.csv') as f:
+        lines = f.readlines()
+    assert lines[0].split(',')[4] == 'True\n'
+    os.remove('tests/report.csv')
+
+
+def test_result_file_contaminated_cross():
+    write_output('tests/report.csv', 'sample', [0, 1, 1], 'Escherichia:Listeria', 22222)
+    with open('tests/report.csv') as f:
+        lines = f.readlines()
+    assert lines[0].split(',')[4] == 'True\n'
+    os.remove('tests/report.csv')
+
+
+def test_result_file_contaminated_all():
+    write_output('tests/report.csv', 'sample', [12, 4, 8], 'Escherichia:Listeria', 52222)
+    with open('tests/report.csv') as f:
+        lines = f.readlines()
+    assert lines[0].split(',')[4] == 'True\n'
+    os.remove('tests/report.csv')

@@ -81,72 +81,6 @@ def find_unpaired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
     return read_list
 
 
-def run_mashsippr(sequence_dir, output_dir, database_dir, logfile=None):
-    """
-    Runs the mashsippr on a directory containing fastq files. Creates a report in output_dir/reports/mash.csv that
-    contains information on what genus each sample in the directory is.
-    :param sequence_dir: Path to a directory containing fastq files.
-    :param output_dir: Path to an output directory. Created if it doesn't exist.
-    :param database_dir: Path to the directory where RefSeqSketchesDefault.msh is found.
-    :return: True if mash.csv was created, False if not created.
-    """
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    cmd = 'python -m confindr.mashsippr -s {sequence_dir} -t {database_dir} {output_dir}'.format(sequence_dir=sequence_dir,
-                                                                                                 database_dir=database_dir,
-                                                                                                 output_dir=output_dir)
-    if logfile:
-        write_to_logfile(logfile, '', '', cmd)
-        with open(logfile, 'a+') as f:
-            subprocess.call(cmd, shell=True, stdout=f, stderr=f)
-    else:
-        with open(os.devnull, 'w') as f:
-            subprocess.call(cmd, shell=True, stdout=f, stderr=f)
-
-    if os.path.isfile(os.path.join(output_dir, 'reports/mash.csv')):
-        return True
-    else:
-        return False
-
-
-def read_mashsippr_output(mashsippr_result_file, sample):
-    """
-    Method to read the output of a mashsippr run. Given a sample name and a result file, finds out what genus the sample
-    is from.
-    :param mashsippr_result_file: Path to a mashsippr result csv.
-    :param sample: Sample name, as seen in first column of the mash.csv file
-    :return: A string containing the genus the sample belongs to. If the sample can't be found in the csv file, returns
-    NA
-    """
-    genus = 'NA'
-    try:
-        with open(mashsippr_result_file) as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                if row['Strain'] == sample:
-                    genus = row['ReferenceGenus']
-    except FileNotFoundError:
-        print('WARNING: Could not find Mash result file for genus determination. Will proceed with generic database.')
-    if genus == 'Shigella':  # We'll pretened that Shigella doesn't exist since poeple can't make up their minds
-        # about what it is.
-        genus = 'Escherichia'
-    return genus
-
-
-def cleanup_mashsippr_files(pairs, args):
-    """
-    Cleans up mashsippr files that get left behind when mashsippr runs.
-    :param pairs: The paired files found using find_paired_reads.
-    :param args: List of arguments.
-    """
-    samples = list()
-    for pair in pairs:  # Get the sample name for each pair.
-        samples.append(os.path.split(pair[0])[-1].split(args.forward_id)[0])
-    # For each sample, find the folder left over by mashsippr and get rid of it.
-    for sample in samples:
-        shutil.rmtree(os.path.join(args.input_directory, sample))
-
-
 def find_genusspecific_alleles(profiles_file, target_genus):
     """
     Given a genus name, will parse a custom-made profiles file to find which alleles should be excluded for a target
@@ -528,7 +462,7 @@ def find_contamination(pair, args):
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
 
-def write_output(output_report, sample_name, snv_list, genus, max_kmers):
+def write_output(output_report, sample_name, snv_list, genus, max_kmers):  # Should write a test or three for this.
     if statistics.median(snv_list) > 2 or len(genus.split(':')) > 1 or max_kmers > 45000:
         contaminated = True
     else:
@@ -715,7 +649,7 @@ if __name__ == '__main__':
                         default='_R2',
                         help='Identifier for reverse reads.')
     # Check for dependencies.
-    dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash']
+    dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             print('WARNING: Dependency {} not found. ConFindr will likely crash!'.format(dependency))
