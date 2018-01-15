@@ -21,6 +21,7 @@ from accessoryFunctions.accessoryFunctions import printtime
 
 # TODO: Make paired and unpaired reads share more functions - they're currently not very share-y.
 
+
 def write_to_logfile(logfile, out, err, cmd):
     with open(logfile, 'a+') as outfile:
         outfile.write('Command used: {}\n\n'.format(cmd))
@@ -278,9 +279,9 @@ def find_cross_contamination(databases, pair, tmpdir='tmp', log='log.txt', threa
     :param log: Logfile to write to.
     :param threads: Number of threads to run mash wit.
     :return: cross_contam: a bool that is True if more than one genus is found, and False otherwise.
-    :return: genera_present: A string. If only one genus is found, string is NA. If more than one genus is found,
+    :return: genera_present: A string. If only one genus is found, string is just genus. If more than one genus is found,
     the string is a list of genera present, separated by colons (i.e. for Escherichia and Salmonella found, string would
-    be 'Escherichia:Salmonella'
+    be 'Escherichia:Salmonella'. If no genus found, return 'NA'
     """
     genera_present = list()
     out, err, cmd = mash.screen('{}/refseq.msh'.format(databases), pair[0],
@@ -294,8 +295,10 @@ def find_cross_contamination(databases, pair, tmpdir='tmp', log='log.txt', threa
             mash_genus = 'Escherichia'
         if mash_genus not in genera_present:
             genera_present.append(mash_genus)
-    if len(genera_present) <= 1:
+    if len(genera_present) == 1:
         genera_present = genera_present[0]
+    elif len(genera_present) == 0:
+        genera_present = 'NA'
     else:
         tmpstr = ''
         for mash_genus in genera_present:
@@ -462,7 +465,7 @@ def find_contamination(pair, args):
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
 
-def write_output(output_report, sample_name, snv_list, genus, max_kmers):  # Should write a test or three for this.
+def write_output(output_report, sample_name, snv_list, genus, max_kmers):
     if statistics.median(snv_list) > 2 or len(genus.split(':')) > 1 or max_kmers > 45000:
         contaminated = True
     else:
