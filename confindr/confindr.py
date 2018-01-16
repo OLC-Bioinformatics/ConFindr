@@ -671,12 +671,20 @@ if __name__ == '__main__':
         sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
         print('\n')
         printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
-        find_contamination(pair, args)
+        try:
+            find_contamination(pair, args)
+        except subprocess.CalledProcessError:
+            print('Encountered error when attempting to run ConFindr on sample '
+                  '{sample}. Skipping...'.format(sample=sample_name))
     # Process unpaired reads, also one sample at a time.
     for reads in unpaired_reads:
         sample_name = os.path.split(reads)[-1].split('.')[0]
         print('\n')
         printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
-        find_contamination_unpaired(args, reads)
+        try:
+            find_contamination_unpaired(args, reads)
+        except subprocess.CalledProcessError:
+            print('Encountered error when attempting to run ConFindr on sample '
+                  '{sample}. Skipping...'.format(sample=sample_name))
 
     printtime('Contamination detection complete!', start, '\033[0;32m')
