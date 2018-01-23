@@ -361,6 +361,7 @@ def find_contamination(pair, args):
                      genus=genus,
                      max_kmers=max_kmers)
         printtime('Found cross-contamination! Skipping rest of analysis...', sample_start)
+        shutil.rmtree(sample_tmp_dir)
         return
     # Main method for finding contamination - works on one pair at a time.
     # Need to:
@@ -501,6 +502,7 @@ def find_contamination_unpaired(args, reads):
                      genus=genus,
                      max_kmers=max_kmers)
         printtime('Found cross-contamination! Skipping rest of analysis...', sample_start)
+        shutil.rmtree(sample_tmp_dir)
         return
     # Setup a genusspecfic database, if necessary.
     if genus != 'NA':
