@@ -332,8 +332,10 @@ def find_cross_contamination_unpaired(databases, reads, tmpdir='tmp', log='log.t
             mash_genus = 'Escherichia'
         if mash_genus not in genera_present:
             genera_present.append(mash_genus)
-    if len(genera_present) <= 1:
+    if len(genera_present) == 1:
         genera_present = genera_present[0]
+    elif len(genera_present) == 0:
+        genera_present = 'NA'
     else:
         tmpstr = ''
         for mash_genus in genera_present:
@@ -629,7 +631,7 @@ if __name__ == '__main__':
                         help='Number of threads to run analysis with.')
     parser.add_argument('-n', '--number_subsamples',
                         type=int,
-                        default=5,
+                        default=3,
                         help='Number of times to subsample.')
     parser.add_argument('-k', '--kmer-size',
                         type=int,
