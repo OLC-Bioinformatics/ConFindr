@@ -19,8 +19,6 @@ from biotools import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
 from accessoryFunctions.accessoryFunctions import printtime
 
-# TODO: Make paired and unpaired reads share more functions - they're currently not very share-y.
-
 
 def write_to_logfile(logfile, out, err, cmd):
     with open(logfile, 'a+') as outfile:
@@ -413,6 +411,8 @@ def find_contamination(pair, args):
                                  cutoff=args.kmer_cutoff)
         if num_kmers > max_kmers:
             max_kmers = num_kmers
+        elif num_kmers == 0:
+            continue
         # Find mismatches.
 
         # Step 1 of mismatch finding: Run bbmap with the kmer file.
@@ -469,6 +469,8 @@ def find_contamination(pair, args):
 
 
 def write_output(output_report, sample_name, snv_list, genus, max_kmers):
+    if len(snv_list) == 0:
+        snv_list.append(0)
     if statistics.median(snv_list) > 2 or len(genus.split(':')) > 1 or max_kmers > 45000:
         contaminated = True
     else:
@@ -552,7 +554,9 @@ def find_contamination_unpaired(args, reads):
                                  output_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
                                  cutoff=args.kmer_cutoff)
         # Update the maximum kmer count.
-        if num_kmers > max_kmers:
+        if num_kmers == 0:
+            continue
+        elif num_kmers > max_kmers:
             max_kmers = num_kmers
         # Now find mismatches.
         # Step 1 of mismatch finding: Run bbmap with the kmer file.
