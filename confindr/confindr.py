@@ -682,8 +682,19 @@ if __name__ == '__main__':
         try:
             find_contamination(pair, args)
         except subprocess.CalledProcessError:
+            # If something unforeseen goes wrong, traceback will be printed to screen.
+            # We then add the sample to the report with a note that it failed.
+            snv_list = [0]
+            genus = 'Error processing sample'
+            max_kmers = 0
+            write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                         sample_name=sample_name,
+                         snv_list=snv_list,
+                         genus=genus,
+                         max_kmers=max_kmers)
             print('Encountered error when attempting to run ConFindr on sample '
                   '{sample}. Skipping...'.format(sample=sample_name))
+            shutil.rmtree(os.path.join(args.output_name, sample_name))
     # Process unpaired reads, also one sample at a time.
     for reads in unpaired_reads:
         sample_name = os.path.split(reads)[-1].split('.')[0]
@@ -692,7 +703,18 @@ if __name__ == '__main__':
         try:
             find_contamination_unpaired(args, reads)
         except subprocess.CalledProcessError:
+            # If something unforeseen goes wrong, traceback will be printed to screen.
+            # We then add the sample to the report with a note that it failed.
+            snv_list = [0]
+            genus = 'Error processing sample'
+            max_kmers = 0
+            write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                         sample_name=sample_name,
+                         snv_list=snv_list,
+                         genus=genus,
+                         max_kmers=max_kmers)
             print('Encountered error when attempting to run ConFindr on sample '
                   '{sample}. Skipping...'.format(sample=sample_name))
+            shutil.rmtree(os.path.join(args.output_name, sample_name))
 
     printtime('Contamination detection complete!', start, '\033[0;32m')
