@@ -528,6 +528,7 @@ def find_contamination_unpaired(args, reads):
                                        forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                        returncmd=True, threads=args.threads)
     write_to_logfile(log, out, err, cmd)
+    printtime('Quality trimming...', sample_start)
     # With rMLST genes extracted, get our quality trimming done.
     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                        forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
@@ -544,11 +545,14 @@ def find_contamination_unpaired(args, reads):
                                                 threads=args.threads)
         write_to_logfile(log, out, err, cmd)
         # Kmerize the reads using jellyfish.
-        jellyfish.count(forward_in=os.path.join(sample_tmp_dir, 'subsample_{}.fastq'.format(str(i))),
-                        count_file=os.path.join(sample_tmp_dir, 'mer_counts.jf'),
-                        options='--bf-size 100M', kmer_size=args.kmer_size)
-        jellyfish.dump(os.path.join(sample_tmp_dir, 'mer_counts.jf'),
-                       os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))))
+        out, err, cmd = jellyfish.count(forward_in=os.path.join(sample_tmp_dir, 'subsample_{}.fastq'.format(str(i))),
+                                        count_file=os.path.join(sample_tmp_dir, 'mer_counts.jf'),
+                                        options='--bf-size 100M', kmer_size=args.kmer_size, returncmd=True)
+        write_to_logfile(log, out, err, cmd)
+        out, err, cmd = jellyfish.dump(os.path.join(sample_tmp_dir, 'mer_counts.jf'),
+                                       os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
+                                       returncmd=True)
+        write_to_logfile(log, out, err, cmd)
         # With jellyfish done, rename our kmers.
         num_kmers = rename_kmers(input_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
                                  output_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
