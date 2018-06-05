@@ -101,6 +101,35 @@ def find_genusspecific_alleles(profiles_file, target_genus):
     return genes_to_exclude
 
 
+def find_genusspecific_allele_list(profiles_file, target_genus):
+    """
+    A new way of making our specific databases: Make our profiles file have lists of every gene/allele present for
+    each genus instead of just excluding a few genes for each. This way, should have much smaller databases
+    while managing to make ConFindr a decent bit faster (maybe)
+    :param profiles_file: Path to profiles file.
+    :param target_genus:
+    :return: List of gene/allele combinations that should be part of species-specific database.
+    """
+    alleles = list()
+    with open(profiles_file) as f:
+        lines = f.readlines()
+    for line in lines:
+        line = line.rstrip()
+        genus = line.split(':')[0]
+        if genus == target_genus:
+            alleles = line.split(':')[1].split(',')[:-1]
+    return alleles
+
+
+def setup_allelespecific_database(database_folder, genus, allele_list):
+    with open(os.path.join(database_folder, '{}_db.fasta'.format(genus)), 'w') as f:
+        sequences = SeqIO.parse(os.path.join(database_folder, 'rMLST_combined.fasta'), 'fasta')
+        for item in sequences:
+            if item.id in allele_list:
+                f.write('>' + item.id + '\n')
+                f.write(str(item.seq) + '\n')
+
+
 def setup_genusspecific_database(database_folder, genus, genes_to_exclude):
     """
     Sets up genus-specific databases (aka databases that exclude genes that are known to have multiple copies, such as
@@ -370,8 +399,10 @@ def find_contamination(pair, args):
         sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
         if not os.path.isfile(os.path.join(args.databases, '{}_db.fasta'.format(genus))):
             printtime('Setting up genus-specific database for genus {}...'.format(genus), sample_start)
-            genes_to_excude = find_genusspecific_alleles(os.path.join(args.databases, 'profiles.txt'), genus)
-            setup_genusspecific_database(args.databases, genus, genes_to_excude)
+            # genes_to_excude = find_genusspecific_alleles(os.path.join(args.databases, 'profiles.txt'), genus)
+            # setup_genusspecific_database(args.databases, genus, genes_to_excude)
+            allele_list = find_genusspecific_allele_list(os.path.join(args.databases, 'gene_allele.txt'), genus)
+            setup_allelespecific_database(args.databases, genus, allele_list)
     else:
         sample_database = os.path.join(args.databases, 'rMLST_combined.fasta')
     # Extract rMLST reads and quality trim.
