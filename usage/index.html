@@ -180,7 +180,7 @@ genus is present in the sample, this column will read <code>NA</code>.</li>
 <p>ConFindr has a few optional arguments that allow you to modify its other parameters. Optional arguments are:</p>
 <ul>
 <li><code>-t, --threads</code>: The number of threads to run ConFindr analysis with. The default is to use all threads available on your machine, and ConFindr scales very well with more threads, so it's recommended that this option be left at the default unless you need the computational resources for something else.</li>
-<li><code>-n, --number_subsamples</code>: The number of times you want ConFindr to sample your rMLST reads to try to detect contamination. By default this is set to 5.</li>
+<li><code>-n, --number_subsamples</code>: The number of times you want ConFindr to sample your rMLST reads to try to detect contamination. By default this is set to 3.</li>
 <li><code>-k, --kmer-size</code>: The kmer size ConFindr uses to try to detect contamination. Default is 31. Usage with other values may produce very unreliable results and is <em>not</em> recommended.</li>
 <li><code>-s, --subsample_depth</code>: Coverage depth to subsample to. Default value is 20, which provides a good tradeoff between sensitvity and specificity. Going any lower will make it very difficult to detect contamination, and going higher will increase the false positive rate.</li>
 <li><code>-c, --kmer_cutoff</code>: The cutoff for the number of times a kmer must be seen before it is considered trustworthy and is included in the analysis. By default set to 2. Setting any lower this this essentially guarantees that your analysis will be overrun by false positives called by sequencing errors.</li>
