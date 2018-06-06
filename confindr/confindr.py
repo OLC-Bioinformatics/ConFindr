@@ -8,7 +8,6 @@ import argparse
 import shutil
 import glob
 import time
-import csv
 import os
 import pysam
 from Bio import SeqIO
@@ -18,6 +17,8 @@ from Bio.Blast import NCBIXML
 from biotools import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
 from accessoryFunctions.accessoryFunctions import printtime
+
+# TODO: change to logging module instead of using printtime for user output.
 
 
 def write_to_logfile(logfile, out, err, cmd):
@@ -399,8 +400,6 @@ def find_contamination(pair, args):
         sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
         if not os.path.isfile(os.path.join(args.databases, '{}_db.fasta'.format(genus))):
             printtime('Setting up genus-specific database for genus {}...'.format(genus), sample_start)
-            # genes_to_excude = find_genusspecific_alleles(os.path.join(args.databases, 'profiles.txt'), genus)
-            # setup_genusspecific_database(args.databases, genus, genes_to_excude)
             allele_list = find_genusspecific_allele_list(os.path.join(args.databases, 'gene_allele.txt'), genus)
             setup_allelespecific_database(args.databases, genus, allele_list)
     else:
@@ -544,8 +543,8 @@ def find_contamination_unpaired(args, reads):
         sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
         if not os.path.isfile(os.path.join(args.databases, '{}_db.fasta'.format(genus))):
             printtime('Setting up genus-specific database for genus {}...'.format(genus), sample_start)
-            genes_to_excude = find_genusspecific_alleles(os.path.join(args.databases, 'profiles.txt'), genus)
-            setup_genusspecific_database(args.databases, genus, genes_to_excude)
+            allele_list = find_genusspecific_allele_list(os.path.join(args.databases, 'gene_allele.txt'), genus)
+            setup_allelespecific_database(args.databases, genus, allele_list)
     else:
         sample_database = os.path.join(args.databases, 'rMLST_combined.fasta')
     # Get tmpdir for this sample created.
@@ -646,6 +645,7 @@ def find_contamination_unpaired(args, reads):
     shutil.rmtree(sample_tmp_dir)
     printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
 
+
 if __name__ == '__main__':
     start = time.time()
     cpu_count = multiprocessing.cpu_count()
@@ -663,7 +663,7 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='Databases folder. Should contain rMLST_combined.fasta, profiles.txt, '
-                             'and refseq.msh as well as RefSeqSketchesDefaults.msh')
+                             'and refseq.msh and gene_allele.txt. Genus-specific databases will be created as needed.')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=cpu_count,
@@ -694,6 +694,9 @@ if __name__ == '__main__':
                         type=str,
                         default='_R2',
                         help='Identifier for reverse reads.')
+    parser.add_argument('-v', '--version',
+                        action='version',
+                        version='ConFindr v0.3.0')
     # Check for dependencies.
     dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
     for dependency in dependencies:

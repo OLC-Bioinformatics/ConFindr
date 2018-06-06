@@ -1,4 +1,5 @@
 [![Build status](https://travis-ci.org/lowandrew/ConFindr.svg?master)](https://travis-ci.org/lowandrew)
+[![PyPI version](https://badge.fury.io/py/confindr.svg)](https://badge.fury.io/py/confindr)
 
 # ConFindr
 

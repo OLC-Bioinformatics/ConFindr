@@ -11,7 +11,7 @@ The databases necessary for making ConFindr run are available for download from 
 
 Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
 
-`wget https://ndownloader.figshare.com/files/9827251 && tar xf 9827251`
+`wget https://ndownloader.figshare.com/files/11864267 && tar xf 11864267 && rm 11864267`
 
 These commands should create a folder called `databases` in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the `-d` option.
 
