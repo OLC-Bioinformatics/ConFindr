@@ -5,6 +5,7 @@ import multiprocessing
 import statistics
 import subprocess
 import argparse
+import logging
 import shutil
 import glob
 import time
@@ -16,9 +17,6 @@ from biotools import bbtools
 from Bio.Blast import NCBIXML
 from biotools import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
-from accessoryFunctions.accessoryFunctions import printtime
-
-# TODO: change to logging module instead of using printtime for user output.
 
 
 def write_to_logfile(logfile, out, err, cmd):
@@ -374,14 +372,13 @@ def find_cross_contamination_unpaired(databases, reads, tmpdir='tmp', log='log.t
 
 def find_contamination(pair, args):
     log = os.path.join(args.output_name, 'confindr_log.txt')
-    sample_start = time.time()
     snv_list = list()
     max_kmers = 0
     sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
     sample_tmp_dir = os.path.join(args.output_name, sample_name)
     if not os.path.isdir(sample_tmp_dir):
         os.makedirs(sample_tmp_dir)
-    printtime('Checking for cross-species contamination...', sample_start)
+    logging.info('Checking for cross-species contamination...')
     genus = find_cross_contamination(args.databases, pair, tmpdir=sample_tmp_dir, log=log, threads=args.threads)
     if len(genus.split(':')) > 1:
         snv_list = [0]
@@ -390,7 +387,7 @@ def find_contamination(pair, args):
                      snv_list=snv_list,
                      genus=genus,
                      max_kmers=max_kmers)
-        printtime('Found cross-contamination! Skipping rest of analysis...', sample_start)
+        logging.info('Found cross-contamination! Skipping rest of analysis...')
         shutil.rmtree(sample_tmp_dir)
         return
     # Main method for finding contamination - works on one pair at a time.
@@ -399,18 +396,18 @@ def find_contamination(pair, args):
     if genus != 'NA':
         sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
         if not os.path.isfile(os.path.join(args.databases, '{}_db.fasta'.format(genus))):
-            printtime('Setting up genus-specific database for genus {}...'.format(genus), sample_start)
+            logging.info('Setting up genus-specific database for genus {}...'.format(genus))
             allele_list = find_genusspecific_allele_list(os.path.join(args.databases, 'gene_allele.txt'), genus)
             setup_allelespecific_database(args.databases, genus, allele_list)
     else:
         sample_database = os.path.join(args.databases, 'rMLST_combined.fasta')
     # Extract rMLST reads and quality trim.
-    printtime('Extracting rMLST genes...', sample_start)
+    logging.info('Extracting rMLST genes...')
     extract_rmlst_genes(pair, sample_database,
                         forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
                         reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
                         threads=args.threads, logfile=log)
-    printtime('Quality trimming...', sample_start)
+    logging.info('Quality trimming...')
     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
                                        reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
                                        forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
@@ -418,9 +415,9 @@ def find_contamination(pair, args):
                                        threads=str(args.threads), returncmd=True)
     write_to_logfile(log, out, err, cmd)
     # Now do the actual contamination detection cycle the number of times specified by arguments.
-    printtime('Beginning {} cycles of contamination detection...'.format(str(args.number_subsamples)), sample_start)
+    logging.info('Beginning {} cycles of contamination detection...'.format(args.number_subsamples))
     for i in range(args.number_subsamples):
-        printtime('Working on cycle {} of {}...'.format(str(i + 1), str(args.number_subsamples)), sample_start, '\033[0;35m')
+        logging.info('Working on cycle {} of {}...'.format(i + 1, args.number_subsamples))
         # Subsample
         subsample_reads(forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
                         reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
@@ -495,7 +492,7 @@ def find_contamination(pair, args):
                  genus=genus,
                  max_kmers=max_kmers)
     shutil.rmtree(sample_tmp_dir)
-    printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
+    logging.info('Finished analysis of sample {}!'.format(sample_name))
 
 
 def write_output(output_report, sample_name, snv_list, genus, max_kmers):
@@ -517,7 +514,6 @@ def write_output(output_report, sample_name, snv_list, genus, max_kmers):
 def find_contamination_unpaired(args, reads):
     # Setup log file.
     log = os.path.join(args.output_name, 'confindr_log.txt')
-    sample_start = time.time()
     # snv_list and max_kmers will be used later for contam detection - get them set up here.
     snv_list = list()
     max_kmers = 0
@@ -526,7 +522,7 @@ def find_contamination_unpaired(args, reads):
     sample_tmp_dir = os.path.join(args.output_name, sample_name)
     if not os.path.isdir(sample_tmp_dir):
         os.makedirs(sample_tmp_dir)
-    printtime('Checking for cross-species contamination...', sample_start)
+    logging.info('Checking for cross-species contamination...')
     genus = find_cross_contamination_unpaired(args.databases, reads, tmpdir=sample_tmp_dir, log=log, threads=args.threads)
     if len(genus.split(':')) > 1:
         snv_list = [0]
@@ -535,14 +531,14 @@ def find_contamination_unpaired(args, reads):
                      snv_list=snv_list,
                      genus=genus,
                      max_kmers=max_kmers)
-        printtime('Found cross-contamination! Skipping rest of analysis...', sample_start)
+        logging.info('Found cross-contamination! Skipping rest of analysis...')
         shutil.rmtree(sample_tmp_dir)
         return
     # Setup a genusspecfic database, if necessary.
     if genus != 'NA':
         sample_database = os.path.join(args.databases, '{}_db.fasta'.format(genus))
         if not os.path.isfile(os.path.join(args.databases, '{}_db.fasta'.format(genus))):
-            printtime('Setting up genus-specific database for genus {}...'.format(genus), sample_start)
+            logging.info('Setting up genus-specific database for genus {}...'.format(genus))
             allele_list = find_genusspecific_allele_list(os.path.join(args.databases, 'gene_allele.txt'), genus)
             setup_allelespecific_database(args.databases, genus, allele_list)
     else:
@@ -553,12 +549,12 @@ def find_contamination_unpaired(args, reads):
         os.makedirs(sample_tmp_dir)
     # With everything set up, time to start the workflow.
     # First thing to do: Extract rMLST genes.
-    printtime('Extracting rMLST genes...', sample_start)
+    logging.info('Extracting rMLST genes...')
     out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=reads,
                                        forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                        returncmd=True, threads=args.threads)
     write_to_logfile(log, out, err, cmd)
-    printtime('Quality trimming...', sample_start)
+    logging.info('Quality trimming...')
     # With rMLST genes extracted, get our quality trimming done.
     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                        forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
@@ -566,7 +562,7 @@ def find_contamination_unpaired(args, reads):
     write_to_logfile(log, out, err, cmd)
     # Now we go through our contamination detection cycle the number of times specified.
     for i in range(args.number_subsamples):
-        printtime('Working on cycle {} of {}...'.format(str(i + 1), str(args.number_subsamples)), sample_start, '\033[0;35m')
+        logging.info('Working on cycle {} of {}...'.format(i + 1, args.number_subsamples))
         # Find number of bases we need to subsample.
         num_bases = 35000 * args.subsample_depth
         out, err, cmd = bbtools.subsample_reads(forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
@@ -643,11 +639,15 @@ def find_contamination_unpaired(args, reads):
                  max_kmers=max_kmers)
 
     shutil.rmtree(sample_tmp_dir)
-    printtime('Finished analysis of sample {}!'.format(sample_name), sample_start)
+    logging.info('Finished analysis of sample {}!'.format(sample_name))
 
 
 if __name__ == '__main__':
-    start = time.time()
+    version = 'ConFindr 0.3.1'
+    # Setup the logger.
+    logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
+                        level=logging.INFO,
+                        datefmt='%Y-%m-%d %H:%M:%S')
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -696,13 +696,20 @@ if __name__ == '__main__':
                         help='Identifier for reverse reads.')
     parser.add_argument('-v', '--version',
                         action='version',
-                        version='ConFindr v0.3.0')
+                        version=version)
     # Check for dependencies.
+    args = parser.parse_args()
+    logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
+    all_depedencies_present = True
     dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
-            print('WARNING: Dependency {} not found. ConFindr will likely crash!'.format(dependency))
-    args = parser.parse_args()
+            logging.ERROR('Dependency {} not found. Please make sure it is installed and present'
+                          ' on your $PATH.'.format(dependency))
+            all_depedencies_present = False
+    if not all_depedencies_present:
+        quit()
+
     # Make the output directory.
     if not os.path.isdir(args.output_name):
         os.makedirs(args.output_name)
@@ -715,8 +722,7 @@ if __name__ == '__main__':
     # Process paired reads, one sample at a time.
     for pair in paired_reads:
         sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
-        print('\n')
-        printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
+        logging.info('Beginning analysis of sample {}...'.format(sample_name))
         try:
             find_contamination(pair, args)
         except subprocess.CalledProcessError:
@@ -736,8 +742,7 @@ if __name__ == '__main__':
     # Process unpaired reads, also one sample at a time.
     for reads in unpaired_reads:
         sample_name = os.path.split(reads)[-1].split('.')[0]
-        print('\n')
-        printtime('Beginning analysis of sample {}...\n'.format(sample_name), start, '\033[1;34m')
+        logging.info('Beginning analysis of sample {}...'.format(sample_name))
         try:
             find_contamination_unpaired(args, reads)
         except subprocess.CalledProcessError:
@@ -751,8 +756,8 @@ if __name__ == '__main__':
                          snv_list=snv_list,
                          genus=genus,
                          max_kmers=max_kmers)
-            print('Encountered error when attempting to run ConFindr on sample '
-                  '{sample}. Skipping...'.format(sample=sample_name))
+            logging.ERROR('Encountered error when attempting to run ConFindr on sample '
+                          '{sample}. Skipping...'.format(sample=sample_name))
             shutil.rmtree(os.path.join(args.output_name, sample_name))
 
-    printtime('Contamination detection complete!', start, '\033[0;32m')
+    logging.info('Contamination detection complete!')
