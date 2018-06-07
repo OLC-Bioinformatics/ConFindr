@@ -26,26 +26,23 @@ So, if the `databases` and `example-data` folders were downloaded to your curren
 You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified. If ConFindr is properly installed, you should see something similar to the following appear on your terminal:
 
 ```bash
- [Elapsed Time: 0.00 seconds] Determining genus of each sample... 
-
-
-
- [Elapsed Time: 14.38 seconds] Beginning analysis of sample example...
- 
- [Elapsed Time: 0.00 seconds] Extracting rMLST genes... 
- [Elapsed Time: 19.88 seconds] Quality trimming... 
- [Elapsed Time: 20.43 seconds] Beginning 5 cycles of contamination detection... 
- [Elapsed Time: 20.43 seconds] Working on cycle 1 of 5... 
- [Elapsed Time: 30.40 seconds] Working on cycle 2 of 5... 
- [Elapsed Time: 41.05 seconds] Working on cycle 3 of 5... 
- [Elapsed Time: 52.03 seconds] Working on cycle 4 of 5... 
- [Elapsed Time: 63.27 seconds] Working on cycle 5 of 5... 
- [Elapsed Time: 73.72 seconds] Finding cross contamination... 
- [Elapsed Time: 84.94 seconds] Finished analysis of sample example! 
+  2018-06-07 12:41:11  Welcome to ConFindr 0.3.1! Beginning analysis of your samples...
+  2018-06-07 12:41:11  Beginning analysis of sample example...
+  2018-06-07 12:41:11  Checking for cross-species contamination...
+  2018-06-07 12:41:23  Extracting rMLST genes...
+  2018-06-07 12:41:27  Quality trimming...
+  2018-06-07 12:41:27  Beginning 3 cycles of contamination detection...
+  2018-06-07 12:41:27  Working on cycle 1 of 3...
+  2018-06-07 12:41:35  Working on cycle 2 of 3...
+  2018-06-07 12:41:43  Working on cycle 3 of 3...
+  2018-06-07 12:41:51  Finished analysis of sample example!
+  2018-06-07 12:41:51  Contamination detection complete!
 ```
 
-The run shouldn't take too long - depending on how powerful your machine is, it will most likely take 2 or 3 minutes. Once the run is done, you'll be able to inspect your results.
-The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value somewhere around 40.
+The run shouldn't take too long - depending on how powerful your machine is, it should be done in
+one to two minutes (slightly longer if an *Escherichia* specific database has not yet been set up.
+Once the run is done, you'll be able to inspect your results.
+The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value somewhere between 30 and 40.
 
 # Usage with a Docker Install
 
@@ -65,13 +62,12 @@ is contaminated, and `False` if a sample is not contaminated. Detailed descripti
 
 - `Sample`: The name of the sample. ConFindr will take everything before the first underscore (\_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.
 - `Genus`: The genus that ConFindr thinks your sample is. If ConFindr couldn't figure out what genus your sample is from, this will be NA.
+If multiple genera were found, they will all be listed here, separated by a `:`
 - `NumContamSNVs`: The number of times ConFindr found a kmer that had a mismatch, indicating the potential for multiple alleles of one gene being present. Completely clean samples should have a value of 0.
 - `NumUniqueKmers`: The number of unique kmers found by ConFindr for a sample. Numbers substantially above the total length of the rMLST genes (~35000 base pairs) can indicate contamination.
-- `CrossContamination`: If ConFindr has detected contamination due to multiple genera being present, this is where you'll see it, in the form of a list of genera present separated by colons. If only one
-genus is present in the sample, this column will read `NA`.
-- `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met: 
+- `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met:
 	- 3 or more contaminating SNVs are found. 
-	- More than 40000 unique rMLST kmers are found.
+	- More than 45000 unique rMLST kmers are found.
 	- There is cross contamination between genera.
 
 
@@ -86,6 +82,7 @@ ConFindr has a few optional arguments that allow you to modify its other paramet
 - `-c, --kmer_cutoff`: The cutoff for the number of times a kmer must be seen before it is considered trustworthy and is included in the analysis. By default set to 2. Setting any lower this this essentially guarantees that your analysis will be overrun by false positives called by sequencing errors.
 - `-fid, --forward_id`: The identifier for forward reads in your input FASTQ folder. By default, this is `_R1`. If you follow a different naming scheme, this is the parameter to change.
 - `-rid, --reverse_id`: The identifier for reverse reads in your input FASTQ folder. By default, this is `_R2`. If you follow a different naming scheme, this is the parameter to change. 
+- `-v, --version`: Display ConFindr version and exit.
 
 Generally speaking, none of these parameters should be changed; ConFindr has been tested extensively with its default parameters and been found to work very well. 
 

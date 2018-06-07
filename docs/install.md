@@ -17,6 +17,8 @@ These commands should create a folder called `databases` in your current working
 
 ## Installing Using Conda (Recommended)
 
+ConFindr should be added to bioconda shortly - until then, follow the below steps.
+
 The easiest way to install the ConFindr script and all of its dependencies is using conda. If you don't already have conda installed, instructions can be found [on the conda ReadTheDocs page](https://conda.io/docs/user-guide/install/index.html).
 
 With conda installed, all you'll need to do is download the ConFindr environment, which as been uploaded to the Anaconda cloud. To do this, use this command:
@@ -66,7 +68,7 @@ Before using ConFindr, you'll need to download and add the following programs to
 
 Instructions on adding programs to your $PATH can be found [here](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix).
 
-If ConFindr can't find these dependencies when you try to run it, you will see an error message. ConFindr will continue to attempt to run, but will likely crash at some point in the process.
+If ConFindr can't find these dependencies when you try to run it, you will see an error message and the program will quit.
 
 
 
