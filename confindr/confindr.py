@@ -642,7 +642,7 @@ def find_contamination_unpaired(args, reads):
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.3.1'
+    version = 'ConFindr 0.3.2'
     # Setup the logger.
     logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
                         level=logging.INFO,
