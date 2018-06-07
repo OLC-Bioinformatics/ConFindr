@@ -1,6 +1,5 @@
 biopython==1.70
 numpy==1.13.3
-OLCTools==0.3.55
 py==1.5.2
 pysam==0.13
 pytest==3.2.5

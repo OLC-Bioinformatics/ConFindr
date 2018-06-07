@@ -8,14 +8,13 @@ import argparse
 import logging
 import shutil
 import glob
-import time
 import os
 import pysam
 from Bio import SeqIO
-from biotools import mash
-from biotools import bbtools
+from confindr_wrappers import mash
+from confindr_wrappers import bbtools
 from Bio.Blast import NCBIXML
-from biotools import jellyfish
+from confindr_wrappers import jellyfish
 from Bio.Blast.Applications import NcbiblastnCommandline
 
 
