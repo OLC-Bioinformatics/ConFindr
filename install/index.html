@@ -125,6 +125,7 @@ but Windows users may be able to use the ConFindr Docker image in order to run C
 <p><code>wget https://ndownloader.figshare.com/files/11864267 &amp;&amp; tar xf 11864267 &amp;&amp; rm 11864267</code></p>
 <p>These commands should create a folder called <code>databases</code> in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the <code>-d</code> option.</p>
 <h2 id="installing-using-conda-recommended">Installing Using Conda (Recommended)</h2>
+<p>ConFindr should be added to bioconda shortly - until then, follow the below steps.</p>
 <p>The easiest way to install the ConFindr script and all of its dependencies is using conda. If you don't already have conda installed, instructions can be found <a href="https://conda.io/docs/user-guide/install/index.html">on the conda ReadTheDocs page</a>.</p>
 <p>With conda installed, all you'll need to do is download the ConFindr environment, which as been uploaded to the Anaconda cloud. To do this, use this command:</p>
 <p><code>conda env create lowandrew/confindr</code></p>
@@ -158,7 +159,7 @@ the <a href="../usage/">Usage</a> section.</p>
 <li><a href="https://www.python.org/downloads/">Python (&gt;=3.5)</a></li>
 </ul>
 <p>Instructions on adding programs to your $PATH can be found <a href="https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix">here</a>.</p>
-<p>If ConFindr can't find these dependencies when you try to run it, you will see an error message. ConFindr will continue to attempt to run, but will likely crash at some point in the process.</p></div>
+<p>If ConFindr can't find these dependencies when you try to run it, you will see an error message and the program will quit.</p></div>
         </div>
 
         <footer class="col-md-12">

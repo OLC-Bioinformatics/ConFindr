@@ -133,26 +133,23 @@ information will be created in this folder</li>
 <p>So, if the <code>databases</code> and <code>example-data</code> folders were downloaded to your current working directory and you want to have an output folder called <code>output</code>, the command to run ConFindr would be:</p>
 <p><code>confindr.py -i example-data -o output -d databases</code></p>
 <p>You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified. If ConFindr is properly installed, you should see something similar to the following appear on your terminal:</p>
-<pre><code class="bash"> [Elapsed Time: 0.00 seconds] Determining genus of each sample... 
-
-
-
- [Elapsed Time: 14.38 seconds] Beginning analysis of sample example...
-
- [Elapsed Time: 0.00 seconds] Extracting rMLST genes... 
- [Elapsed Time: 19.88 seconds] Quality trimming... 
- [Elapsed Time: 20.43 seconds] Beginning 5 cycles of contamination detection... 
- [Elapsed Time: 20.43 seconds] Working on cycle 1 of 5... 
- [Elapsed Time: 30.40 seconds] Working on cycle 2 of 5... 
- [Elapsed Time: 41.05 seconds] Working on cycle 3 of 5... 
- [Elapsed Time: 52.03 seconds] Working on cycle 4 of 5... 
- [Elapsed Time: 63.27 seconds] Working on cycle 5 of 5... 
- [Elapsed Time: 73.72 seconds] Finding cross contamination... 
- [Elapsed Time: 84.94 seconds] Finished analysis of sample example! 
+<pre><code class="bash">  2018-06-07 12:41:11  Welcome to ConFindr 0.3.1! Beginning analysis of your samples...
+  2018-06-07 12:41:11  Beginning analysis of sample example...
+  2018-06-07 12:41:11  Checking for cross-species contamination...
+  2018-06-07 12:41:23  Extracting rMLST genes...
+  2018-06-07 12:41:27  Quality trimming...
+  2018-06-07 12:41:27  Beginning 3 cycles of contamination detection...
+  2018-06-07 12:41:27  Working on cycle 1 of 3...
+  2018-06-07 12:41:35  Working on cycle 2 of 3...
+  2018-06-07 12:41:43  Working on cycle 3 of 3...
+  2018-06-07 12:41:51  Finished analysis of sample example!
+  2018-06-07 12:41:51  Contamination detection complete!
 </code></pre>
 
-<p>The run shouldn't take too long - depending on how powerful your machine is, it will most likely take 2 or 3 minutes. Once the run is done, you'll be able to inspect your results.
-The <code>ContamStatus</code> column should read <code>True</code>, and the <code>NumContamSNVs</code> column should have a value somewhere around 40.</p>
+<p>The run shouldn't take too long - depending on how powerful your machine is, it should be done in
+one to two minutes (slightly longer if an <em>Escherichia</em> specific database has not yet been set up.
+Once the run is done, you'll be able to inspect your results.
+The <code>ContamStatus</code> column should read <code>True</code>, and the <code>NumContamSNVs</code> column should have a value somewhere between 30 and 40.</p>
 <h1 id="usage-with-a-docker-install">Usage with a Docker Install</h1>
 <p>If you used Docker to install ConFindr, usage will be slightly different. Assuming you have the <code>databases</code> from the <a href="../install/">Installation</a> step and <code>example-data</code> from above in your current working
 directory, the command to run ConFindr would be:</p>
@@ -164,14 +161,13 @@ directory, the command to run ConFindr would be:</p>
 is contaminated, and <code>False</code> if a sample is not contaminated. Detailed descriptions of each header follow.</p>
 <ul>
 <li><code>Sample</code>: The name of the sample. ConFindr will take everything before the first underscore (_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.</li>
-<li><code>Genus</code>: The genus that ConFindr thinks your sample is. If ConFindr couldn't figure out what genus your sample is from, this will be NA.</li>
+<li><code>Genus</code>: The genus that ConFindr thinks your sample is. If ConFindr couldn't figure out what genus your sample is from, this will be NA.
+If multiple genera were found, they will all be listed here, separated by a <code>:</code></li>
 <li><code>NumContamSNVs</code>: The number of times ConFindr found a kmer that had a mismatch, indicating the potential for multiple alleles of one gene being present. Completely clean samples should have a value of 0.</li>
 <li><code>NumUniqueKmers</code>: The number of unique kmers found by ConFindr for a sample. Numbers substantially above the total length of the rMLST genes (~35000 base pairs) can indicate contamination.</li>
-<li><code>CrossContamination</code>: If ConFindr has detected contamination due to multiple genera being present, this is where you'll see it, in the form of a list of genera present separated by colons. If only one
-genus is present in the sample, this column will read <code>NA</code>.</li>
-<li><code>ContamStatus</code>: The most important of all! Will read <code>True</code> if contamination is present in the sample, and <code>False</code> if contamination is not present. The result will be <code>True</code> if any of the following conditions are met: <ul>
+<li><code>ContamStatus</code>: The most important of all! Will read <code>True</code> if contamination is present in the sample, and <code>False</code> if contamination is not present. The result will be <code>True</code> if any of the following conditions are met:<ul>
 <li>3 or more contaminating SNVs are found. </li>
-<li>More than 40000 unique rMLST kmers are found.</li>
+<li>More than 45000 unique rMLST kmers are found.</li>
 <li>There is cross contamination between genera.</li>
 </ul>
 </li>
@@ -186,6 +182,7 @@ genus is present in the sample, this column will read <code>NA</code>.</li>
 <li><code>-c, --kmer_cutoff</code>: The cutoff for the number of times a kmer must be seen before it is considered trustworthy and is included in the analysis. By default set to 2. Setting any lower this this essentially guarantees that your analysis will be overrun by false positives called by sequencing errors.</li>
 <li><code>-fid, --forward_id</code>: The identifier for forward reads in your input FASTQ folder. By default, this is <code>_R1</code>. If you follow a different naming scheme, this is the parameter to change.</li>
 <li><code>-rid, --reverse_id</code>: The identifier for reverse reads in your input FASTQ folder. By default, this is <code>_R2</code>. If you follow a different naming scheme, this is the parameter to change. </li>
+<li><code>-v, --version</code>: Display ConFindr version and exit.</li>
 </ul>
 <p>Generally speaking, none of these parameters should be changed; ConFindr has been tested extensively with its default parameters and been found to work very well. </p></div>
         </div>
