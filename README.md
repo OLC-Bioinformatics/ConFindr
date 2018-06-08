@@ -1,5 +1,6 @@
 [![Build status](https://travis-ci.org/lowandrew/ConFindr.svg?master)](https://travis-ci.org/lowandrew)
 [![PyPI version](https://badge.fury.io/py/confindr.svg)](https://badge.fury.io/py/confindr)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/confindr/README.html)
 
 # ConFindr
 

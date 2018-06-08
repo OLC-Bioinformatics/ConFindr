@@ -17,19 +17,18 @@ These commands should create a folder called `databases` in your current working
 
 ## Installing Using Conda (Recommended)
 
-ConFindr should be added to bioconda shortly - until then, follow the below steps.
+ConFindr is available within bioconda - to get bioconda installed and running see instructions [here](https://bioconda.github.io/).
 
-The easiest way to install the ConFindr script and all of its dependencies is using conda. If you don't already have conda installed, instructions can be found [on the conda ReadTheDocs page](https://conda.io/docs/user-guide/install/index.html).
+With bioconda running, you can install ConFindr with the following command:
 
-With conda installed, all you'll need to do is download the ConFindr environment, which as been uploaded to the Anaconda cloud. To do this, use this command:
+`conda install -c bioconda confindr`
 
-`conda env create lowandrew/confindr`
+You may need to update the version of bbmap within the ConFindr install as the most recent version isn't always used
+(this will be fixed in the near future) - to do so:
 
-You should then be able to enter the conda environment:
+`conda update bbmap`
 
-`source activate confindr`
-
-Within the environment, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
+With that done, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 
 ## Installing Using Docker
 
@@ -43,7 +42,7 @@ With Docker installed, all you have to do to install ConFindr is enter the follo
 You can verify that the pull was successful by entering the command `docker images`. You should see `olcbioinformatics/confindr` in the list. For instructions on using the image, see 
 the [Usage](usage.md) section.
 
-## Manual Install Using Pip
+## Manual Install
 
 #### Executable
 
