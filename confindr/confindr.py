@@ -669,8 +669,9 @@ if __name__ == '__main__':
                         help='Number of threads to run analysis with.')
     parser.add_argument('-n', '--number_subsamples',
                         type=int,
-                        default=3,
-                        help='Number of times to subsample.')
+                        default=5,
+                        help='Number of times to subsample. Default is 5. Any less than that can cause variation'
+                             ' between runs.')
     parser.add_argument('-k', '--kmer-size',
                         type=int,
                         default=31,
