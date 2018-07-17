@@ -470,6 +470,8 @@ def find_contamination(pair, args):
         # Create list of sequences to blast.
         to_blast = list()
         for fasta_id in fasta_ids:
+            logging.debug(fasta_id)
+            logging.debug(mer_dict[fasta_id])
             to_blast.append(mer_dict[fasta_id])
         # Setup the multiprocessing pool.
         pool = multiprocessing.Pool(processes=args.threads)
@@ -482,6 +484,7 @@ def find_contamination(pair, args):
         for result in results:
             if result:
                 snv_count += 1
+        logging.debug('Found {} contaminating SNVs...'.format(snv_count))
         snv_list.append(snv_count)
 
     # Create contamination report.
@@ -643,10 +646,6 @@ def find_contamination_unpaired(args, reads):
 
 if __name__ == '__main__':
     version = 'ConFindr 0.3.2'
-    # Setup the logger.
-    logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
-                        level=logging.INFO,
-                        datefmt='%Y-%m-%d %H:%M:%S')
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -697,8 +696,27 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version',
                         action='version',
                         version=version)
-    # Check for dependencies.
+    parser.add_argument('-verbosity', '--verbosity',
+                        choices=['debug', 'info', 'warning'],
+                        default='info',
+                        help='Amount of output you want printed to the screen. Defaults to info, which should be good'
+                             ' for most users.')
+
     args = parser.parse_args()
+    # Setup the logger.
+    if args.verbosity == 'info':
+        logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
+                            level=logging.INFO,
+                            datefmt='%Y-%m-%d %H:%M:%S')
+    elif args.verbosity == 'debug':
+        logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
+                            level=logging.DEBUG,
+                            datefmt='%Y-%m-%d %H:%M:%S')
+    elif args.verbosity == 'warning':
+        logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
+                            level=logging.WARNING,
+                            datefmt='%Y-%m-%d %H:%M:%S')
+    # Check for dependencies.
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     all_depedencies_present = True
     dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
@@ -736,8 +754,8 @@ if __name__ == '__main__':
                          snv_list=snv_list,
                          genus=genus,
                          max_kmers=max_kmers)
-            print('Encountered error when attempting to run ConFindr on sample '
-                  '{sample}. Skipping...'.format(sample=sample_name))
+            logging.warning('Encountered error when attempting to run ConFindr on sample '
+                            '{sample}. Skipping...'.format(sample=sample_name))
             shutil.rmtree(os.path.join(args.output_name, sample_name))
     # Process unpaired reads, also one sample at a time.
     for reads in unpaired_reads:
@@ -756,8 +774,8 @@ if __name__ == '__main__':
                          snv_list=snv_list,
                          genus=genus,
                          max_kmers=max_kmers)
-            logging.ERROR('Encountered error when attempting to run ConFindr on sample '
-                          '{sample}. Skipping...'.format(sample=sample_name))
+            logging.warning('Encountered error when attempting to run ConFindr on sample '
+                            '{sample}. Skipping...'.format(sample=sample_name))
             shutil.rmtree(os.path.join(args.output_name, sample_name))
 
     logging.info('Contamination detection complete!')
