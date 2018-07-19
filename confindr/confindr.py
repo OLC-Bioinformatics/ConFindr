@@ -412,6 +412,7 @@ def find_contamination(pair, args):
                                        forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
                                        reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
                                        threads=str(args.threads), returncmd=True)
+    logging.debug('Quality trim command used was: {}'.format(cmd))
     write_to_logfile(log, out, err, cmd)
     # Now do the actual contamination detection cycle the number of times specified by arguments.
     logging.info('Beginning {} cycles of contamination detection...'.format(args.number_subsamples))
@@ -435,6 +436,7 @@ def find_contamination(pair, args):
         num_kmers = rename_kmers(input_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
                                  output_kmers=os.path.join(sample_tmp_dir, 'kmer_counts_{}.fasta'.format(str(i))),
                                  cutoff=args.kmer_cutoff)
+        logging.debug('Found {} kmers'.format(num_kmers))
         if num_kmers > max_kmers:
             max_kmers = num_kmers
         elif num_kmers == 0:
@@ -448,6 +450,7 @@ def find_contamination(pair, args):
                                       overwrite='true',
                                       out_bam=os.path.join(sample_tmp_dir, 'subsample_{}.bam'.format(str(i))),
                                       threads=str(args.threads), returncmd=True)
+        logging.debug('BBmap command used was {}'.format(cmd))
         write_to_logfile(log, out, err, cmd)
 
         # Step 2 of mismatch finding: Parse the bamfile created by bbmap to find one mismatch kmers.
@@ -470,8 +473,6 @@ def find_contamination(pair, args):
         # Create list of sequences to blast.
         to_blast = list()
         for fasta_id in fasta_ids:
-            logging.debug(fasta_id)
-            logging.debug(mer_dict[fasta_id])
             to_blast.append(mer_dict[fasta_id])
         # Setup the multiprocessing pool.
         pool = multiprocessing.Pool(processes=args.threads)
@@ -488,11 +489,13 @@ def find_contamination(pair, args):
         snv_list.append(snv_count)
 
     # Create contamination report.
+    logging.debug('Writing output to {}'.format(os.path.join(args.output_name, 'confindr_report.csv')))
     write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
                  sample_name=sample_name,
                  snv_list=snv_list,
                  genus=genus,
                  max_kmers=max_kmers)
+    logging.debug('Removing temporary directory {}'.format(sample_tmp_dir))
     shutil.rmtree(sample_tmp_dir)
     logging.info('Finished analysis of sample {}!'.format(sample_name))
 
@@ -555,12 +558,14 @@ def find_contamination_unpaired(args, reads):
     out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=reads,
                                        forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                        returncmd=True, threads=args.threads)
+    logging.debug('rMLST extraction command used: {}'.format(cmd))
     write_to_logfile(log, out, err, cmd)
     logging.info('Quality trimming...')
     # With rMLST genes extracted, get our quality trimming done.
     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                        forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
                                        returncmd=True, threads=args.threads)
+    logging.debug('Quality trim command used: {}'.format(cmd))
     write_to_logfile(log, out, err, cmd)
     # Now we go through our contamination detection cycle the number of times specified.
     for i in range(args.number_subsamples):
@@ -598,6 +603,7 @@ def find_contamination_unpaired(args, reads):
                                       overwrite='true',
                                       out_bam=os.path.join(sample_tmp_dir, 'subsample_{}.bam'.format(str(i))),
                                       threads=str(args.threads), returncmd=True)
+        logging.debug('BBMap command used: {}'.format(cmd))
         write_to_logfile(log, out, err, cmd)
 
         # Step 2 of mismatch finding: Parse the bamfile created by bbmap to find one mismatch kmers.
@@ -632,20 +638,23 @@ def find_contamination_unpaired(args, reads):
         for result in results:
             if result:
                 snv_count += 1
+        logging.debug('Found {} contaminating SNVs...'.format(snv_count))
         snv_list.append(snv_count)
 
+    logging.debug('Writing output to {}'.format(os.path.join(args.output_name, 'confindr_report.csv')))
     write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
                  sample_name=sample_name,
                  snv_list=snv_list,
                  genus=genus,
                  max_kmers=max_kmers)
 
+    logging.debug('Removing temporary directory {}'.format(sample_tmp_dir))
     shutil.rmtree(sample_tmp_dir)
     logging.info('Finished analysis of sample {}!'.format(sample_name))
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.3.2'
+    version = 'ConFindr 0.3.3'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -668,9 +677,8 @@ if __name__ == '__main__':
                         help='Number of threads to run analysis with.')
     parser.add_argument('-n', '--number_subsamples',
                         type=int,
-                        default=5,
-                        help='Number of times to subsample. Default is 5. Any less than that can cause variation'
-                             ' between runs.')
+                        default=3,
+                        help='Number of times to subsample. Default is 3, which should be sufficient.')
     parser.add_argument('-k', '--kmer-size',
                         type=int,
                         default=31,
@@ -682,9 +690,10 @@ if __name__ == '__main__':
                              'rate. Default is 20.')
     parser.add_argument('-c', '--kmer_cutoff',
                         type=int,
-                        default=2,
+                        default=3,
                         help='Number of times you need to see a kmer before it is considered trustworthy.'
-                             ' Kmers with counts below this number will be discarded.')
+                             ' Kmers with counts below this number will be discarded. Default is 3, which provides'
+                             ' a good trade-off between sensitivity and specificity.')
     parser.add_argument('-fid', '--forward_id',
                         type=str,
                         default='_R1',
@@ -726,7 +735,7 @@ if __name__ == '__main__':
                           ' on your $PATH.'.format(dependency))
             all_depedencies_present = False
     if not all_depedencies_present:
-        quit()
+        quit(code=1)
 
     # Make the output directory.
     if not os.path.isdir(args.output_name):
