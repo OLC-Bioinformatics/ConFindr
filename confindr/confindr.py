@@ -731,7 +731,7 @@ if __name__ == '__main__':
     dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
-            logging.ERROR('Dependency {} not found. Please make sure it is installed and present'
+            logging.error('Dependency {} not found. Please make sure it is installed and present'
                           ' on your $PATH.'.format(dependency))
             all_depedencies_present = False
     if not all_depedencies_present:
