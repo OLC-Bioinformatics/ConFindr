@@ -3,11 +3,18 @@
 ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time,
 but Windows users may be able to use the ConFindr Docker image in order to run ConFindr.
 
-To run ConFindr, your PC should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.
+To run ConFindr, your computer should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.
 
 ## Downloading ConFindr Databases
 
-The databases necessary for making ConFindr run are available for download from FigShare. __**These databases must be downloaded, no matter which install method you choose to use.**__
+#### Automatic Download
+
+As of ConFindr 0.3.4, ConFindr databases will automatically downloaded (by default to ~/.confindr_db - this location can be changed
+by setting the environmental variable $CONFINDR_DB). You may still manually download the databases and supply the path
+as done for previous versions.
+
+#### Manual Download
+The databases necessary for making ConFindr run are available for download from FigShare.
 
 Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
 
@@ -22,11 +29,6 @@ ConFindr is available within bioconda - to get bioconda installed and running se
 With bioconda running, you can install ConFindr with the following command:
 
 `conda install -c bioconda confindr`
-
-You may need to update the version of bbmap within the ConFindr install as the most recent version isn't always used
-(this will be fixed in the near future) - to do so:
-
-`conda update bbmap`
 
 With that done, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 

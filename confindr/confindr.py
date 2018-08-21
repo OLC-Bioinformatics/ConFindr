@@ -2,9 +2,11 @@
 
 from io import StringIO
 import multiprocessing
+import urllib.request
 import statistics
 import subprocess
 import argparse
+import tarfile
 import logging
 import shutil
 import glob
@@ -653,8 +655,36 @@ def find_contamination_unpaired(args, reads):
     logging.info('Finished analysis of sample {}!'.format(sample_name))
 
 
+def check_for_databases_and_download(database_location, tmpdir):
+    # Check for the files necessary - should have rMLST_combined.fasta, gene_allele.txt, profiles.txt, and refseq.msh
+    necessary_files = ['rMLST_combined.fasta', 'gene_allele.txt', 'profiles.txt', 'refseq.msh']
+    all_files_present = True
+    for necessary_file in necessary_files:
+        if not os.path.isfile(os.path.join(database_location, necessary_file)):
+            all_files_present = False
+
+    if not all_files_present:
+        logging.info('Databases not present. Downloading to {}. This may take a few minutes...'.format(database_location))
+        if not os.path.isdir(tmpdir):
+            os.makedirs(tmpdir)
+        # Download
+        # TODO: Progress bar?
+        urllib.request.urlretrieve('https://ndownloader.figshare.com/files/11864267', os.path.join(tmpdir, 'confindr_db.tar.gz'))
+        # Extract.
+        tar = tarfile.open(os.path.join(tmpdir, 'confindr_db.tar.gz'))
+        tar.extractall(path=database_location)
+        tar.close()
+        # We now have the files extracted to database_location/databases - move them to database_location
+        for item in glob.glob(os.path.join(database_location, 'databases', '*')):
+            shutil.move(item, database_location)
+        # Cleanup!
+        shutil.rmtree(os.path.join(database_location, 'databases'))
+        os.remove(os.path.join(tmpdir, 'confindr_db.tar.gz'))
+        logging.info('Databases successfully downloaded...')
+
+
 if __name__ == '__main__':
-    version = 'ConFindr 0.3.3'
+    version = 'ConFindr 0.3.4'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -668,9 +698,9 @@ if __name__ == '__main__':
                         help='Base name for output/temporary directories.')
     parser.add_argument('-d', '--databases',
                         type=str,
-                        required=True,
-                        help='Databases folder. Should contain rMLST_combined.fasta, profiles.txt, '
-                             'and refseq.msh and gene_allele.txt. Genus-specific databases will be created as needed.')
+                        default=os.environ.get('CONFINDR_DB', os.path.expanduser('~/.confindr_db')),
+                        help='Databases folder. If you don\'t already have databases, they will be downloaded '
+                             'automatically. You may also specify the full path to the databases.')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=cpu_count,
@@ -708,8 +738,8 @@ if __name__ == '__main__':
     parser.add_argument('-verbosity', '--verbosity',
                         choices=['debug', 'info', 'warning'],
                         default='info',
-                        help='Amount of output you want printed to the screen. Defaults to info, which should be good'
-                             ' for most users.')
+                        help='Amount of output you want printed to the screen. Defaults to info, which should be good '
+                             'for most users.')
 
     args = parser.parse_args()
     # Setup the logger.
@@ -727,19 +757,24 @@ if __name__ == '__main__':
                             datefmt='%Y-%m-%d %H:%M:%S')
     # Check for dependencies.
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
-    all_depedencies_present = True
+    all_dependencies_present = True
     dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             logging.error('Dependency {} not found. Please make sure it is installed and present'
                           ' on your $PATH.'.format(dependency))
-            all_depedencies_present = False
-    if not all_depedencies_present:
+            all_dependencies_present = False
+    if not all_dependencies_present:
         quit(code=1)
 
     # Make the output directory.
     if not os.path.isdir(args.output_name):
         os.makedirs(args.output_name)
+
+    # Check if databases necessary to run are present, and download them if they aren't
+    check_for_databases_and_download(database_location=args.databases,
+                                     tmpdir=args.output_name)
+
     # Open the output report file.
     with open(os.path.join(args.output_name, 'confindr_report.csv'), 'w') as f:
         f.write('Sample,Genus,NumContamSNVs,NumUniqueKmers,ContamStatus\n')
