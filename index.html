@@ -122,13 +122,9 @@
 <li>Use Mash to determine the genus of each sample so that genus-specific rMLST databases can be constructed
 and check for interspecies contamination.</li>
 <li>Perform stringent quality trimming and bait out reads that contain rMLST gene sequence, using BBDuk.</li>
-<li>Subsample rMLST reads to a depth of approximately 20X.</li>
-<li>Split reads into kmers using jellyfish - typically to a size of k=31. </li>
-<li>Compare all of the kmers found to all other kmers found, looking for pairs of kmers that differ only by one substitution</li>
-<li>these are assumed to represent multiple alleles of the same gene, and therefore contamination, since
- these genes are only single copy.</li>
-<li>Repeat steps 3-5 a few times (typically 3) and take the median number of contaminating kmers from these repetitions,
-in order to avoid any issues with an incredibly unlucky subsample.</li>
+<li>Align reads back to the rMLST genes.</li>
+<li>Look at the alignment to find <code>Contaminating SNVs</code> - those that have sites where more than one base is present, indicating
+that multiple alleles are present, indicating contamination.</li>
 </ol>
 <h2 id="confindr-intra-species-contamination-detection-performance">ConFindr Intra-species Contamination Detection Performance</h2>
 <p>The below graph shows the magnitude of contamination detected for several synthetic datasets in <em>Escherichia coli</em>.
