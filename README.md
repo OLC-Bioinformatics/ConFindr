@@ -18,6 +18,6 @@ To get an example dataset, use this command: `wget https://ndownloader.figshare.
 
 To run confindr on that dataset: `confindr.py -i example-data -o example-out`
 
-This will download the databases ConFindr needs and run ConFindr on the example dataset (a intraspecies _Escherichia coli_ mix_), and put the results in a folder
+This will download the databases ConFindr needs and run ConFindr on the example dataset (a intraspecies _Escherichia coli_ mix), and put the results in a folder
 called `example-out` in your current working directory. Take a look at `confindr_report.csv` in that directory to see
 the ConFindr results, which will show the sample is contaminated.
