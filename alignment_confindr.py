@@ -348,7 +348,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                      sample_name=sample_name,
                      multi_positions=0,
                      genus=genus)
-        logging.info('Found cross-contamination! Skipping rest of analysis...')
+        logging.info('Found cross-contamination! Skipping rest of analysis...\n')
         shutil.rmtree(sample_tmp_dir)
         return
     # Main method for finding contamination - works on one pair at a time.
@@ -392,10 +392,10 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                                         sorted_bam=os.path.join(sample_tmp_dir, 'sorted.bam'))
+                                                         sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'sorted.bam'))
+    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
 
@@ -425,10 +425,10 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                                                         sorted_bam=os.path.join(sample_tmp_dir, 'sorted_2.bam'))
+                                                         sorted_bam=os.path.join(sample_tmp_dir, 'contamination.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'sorted_2.bam'))
+    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'contamination.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     # Now find number of multi-positions for each rMLST gene/allele combination
@@ -441,7 +441,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     multi_positions = 0
     for contig_name in gene_alleles:
         multibase_position_dict = read_contig(contig_name=contig_name,
-                                              bamfile_name=os.path.join(sample_tmp_dir, 'sorted_2.bam'),
+                                              bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
                                               reference_fasta=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                               report_file=report_file)
         multi_positions += len(multibase_position_dict)
@@ -483,7 +483,7 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
                      sample_name=sample_name,
                      multi_positions=multi_positions,
                      genus=genus)
-        logging.info('Found cross-contamination! Skipping rest of analysis...')
+        logging.info('Found cross-contamination! Skipping rest of analysis...\n')
         shutil.rmtree(sample_tmp_dir)
         return
     # Setup a genusspecfic database, if necessary.
@@ -529,10 +529,10 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                                         sorted_bam=os.path.join(sample_tmp_dir, 'sorted.bam'))
+                                                         sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'sorted.bam'))
+    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
 
@@ -561,10 +561,10 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                                                         sorted_bam=os.path.join(sample_tmp_dir, 'sorted_2.bam'))
+                                                         sorted_bam=os.path.join(sample_tmp_dir, 'contamination.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'sorted_2.bam'))
+    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'contamiation.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     # Now find number of multi-positions for each rMLST gene/allele combination
@@ -577,7 +577,7 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     multi_positions = 0
     for contig_name in gene_alleles:
         multibase_position_dict = read_contig(contig_name=contig_name,
-                                              bamfile_name=os.path.join(sample_tmp_dir, 'sorted_2.bam'),
+                                              bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
                                               reference_fasta=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                               report_file=report_file)
         multi_positions += len(multibase_position_dict)
@@ -679,7 +679,7 @@ if __name__ == '__main__':
     # Check for dependencies.
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     all_dependencies_present = True
-    dependencies = ['jellyfish', 'bbmap.sh', 'bbduk.sh', 'blastn', 'mash', 'reformat.sh']
+    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             logging.error('Dependency {} not found. Please make sure it is installed and present'

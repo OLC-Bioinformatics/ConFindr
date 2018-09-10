@@ -1,9 +1,8 @@
 # System Requirements
 
-ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time,
-but Windows users may be able to use the ConFindr Docker image in order to run ConFindr.
+ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time.
 
-To run ConFindr, your computer should have a minimum of 8GB of RAM, and at least 10GB of disk space. Any number of processors will work, with more generally being better.
+ConFindr should run on any regular desktop/laptop with 8 GB or RAM or more.
 
 ## Downloading ConFindr Databases
 
@@ -62,8 +61,6 @@ With this done, you'll need to make sure that any necessary dependencies are ins
 Before using ConFindr, you'll need to download and add the following programs to your $PATH:
 
 - [BBTools (>=37.23)](https://jgi.doe.gov/data-and-tools/bbtools/)
-- [Jellyfish (>= 2.2.6)](https://github.com/gmarcais/Jellyfish/releases)
-- [NCBI BLAST+ (>=2.2.31](https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download)
 - [Mash (>=2.0)](https://github.com/marbl/Mash/releases)
 - [Python (>=3.5)](https://www.python.org/downloads/)
 

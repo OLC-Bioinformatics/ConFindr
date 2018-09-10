@@ -10,13 +10,9 @@ ConFindr works by looking at rMLST genes. These 53 genes are known to be single 
 1. Use Mash to determine the genus of each sample so that genus-specific rMLST databases can be constructed
 and check for interspecies contamination.
 2. Perform stringent quality trimming and bait out reads that contain rMLST gene sequence, using BBDuk.
-3. Subsample rMLST reads to a depth of approximately 20X.
-4. Split reads into kmers using jellyfish - typically to a size of k=31. 
-5. Compare all of the kmers found to all other kmers found, looking for pairs of kmers that differ only by one substitution
- - these are assumed to represent multiple alleles of the same gene, and therefore contamination, since
- these genes are only single copy.
-6. Repeat steps 3-5 a few times (typically 3) and take the median number of contaminating kmers from these repetitions,
-in order to avoid any issues with an incredibly unlucky subsample.
+3. Align reads back to the rMLST genes.
+4. Look at the alignment to find `Contaminating SNVs` - those that have sites where more than one base is present, indicating
+that multiple alleles are present, indicating contamination.
 
 ## ConFindr Intra-species Contamination Detection Performance
 

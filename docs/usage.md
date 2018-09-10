@@ -22,38 +22,17 @@ So, if the `example-data` folder were downloaded to your current working directo
 
 `confindr.py -i example-data -o output`
 
-You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified. If ConFindr is properly installed, you should see something similar to the following appear on your terminal:
+You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified.
+If ConFindr is properly installed, you should see something similar to the following appear on your terminal:
 
 ```bash
-  2018-08-21 15:39:31  Welcome to ConFindr 0.3.4! Beginning analysis of your samples...
-  2018-08-21 15:39:31  Databases not present. Downloading to /home/user/.confindr_db...
-  2018-08-21 15:43:00  Databases successfully downloaded...
-  2018-08-21 15:43:00  Beginning analysis of sample example...
-  2018-08-21 15:43:00  Checking for cross-species contamination...
-  2018-08-21 15:43:33  Setting up genus-specific database for genus Escherichia...
-  2018-08-21 15:44:58  Extracting rMLST genes...
-  2018-08-21 15:45:08  Quality trimming...
-  2018-08-21 15:45:10  Beginning 3 cycles of contamination detection...
-  2018-08-21 15:45:10  Working on cycle 1 of 3...
-  2018-08-21 15:45:18  Working on cycle 2 of 3...
-  2018-08-21 15:45:26  Working on cycle 3 of 3...
-  2018-08-21 15:45:34  Finished analysis of sample example!
-  2018-08-21 15:45:34  Contamination detection complete!
+
 ```
 
 The run shouldn't take too long - depending on how powerful your machine is, it should be done in
-one to two minutes (slightly longer if an *Escherichia* specific database has not yet been set up.
-Once the run is done, you'll be able to inspect your results.
-The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value somewhere between 30 and 40.
-
-# Usage with a Docker Install
-
-If you used Docker to install ConFindr, usage will be slightly different. Assuming you have the `databases` from the [Installation](install.md) step and `example-data` from above in your current working
-directory, the command to run ConFindr would be:
-
-`docker run -it -v /path/to/current/directory/:/data olcbioinformatics/confindr confindr.py -i /data/example-data -o /data/output -d /data/databases`
-
-You should see the same output to the terminal that was mentioned above, and have the same output files in a folder called `output` in your current working directory.
+one to two minutes (slightly longer if an *Escherichia* specific database has not yet been set up).
+Once the run is done, you'll be able to inspect your results. Take a look at `output/confindr_report.csv`:
+The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value of 13.
 
 ## Interpreting ConFindr Results
 
@@ -65,12 +44,13 @@ is contaminated, and `False` if a sample is not contaminated. Detailed descripti
 - `Sample`: The name of the sample. ConFindr will take everything before the first underscore (\_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.
 - `Genus`: The genus that ConFindr thinks your sample is. If ConFindr couldn't figure out what genus your sample is from, this will be NA.
 If multiple genera were found, they will all be listed here, separated by a `:`
-- `NumContamSNVs`: The number of times ConFindr found a kmer that had a mismatch, indicating the potential for multiple alleles of one gene being present. Completely clean samples should have a value of 0.
-- `NumUniqueKmers`: The number of unique kmers found by ConFindr for a sample. Numbers substantially above the total length of the rMLST genes (~35000 base pairs) can indicate contamination.
+- `NumContamSNVs`: The number of times ConFindr found sites with more than one base present.
 - `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met:
 	- 3 or more contaminating SNVs are found. 
-	- More than 45000 unique rMLST kmers are found.
 	- There is cross contamination between genera.
+
+ConFindr will also produce two CSV files for each sample - one called `samplename_contamination.csv`, which shows the contaminating
+sites, and one called `samplename_rmlst.csv`, which shows ConFindr's guess at which allele is present for each rMLST gene.
 
 
 ## Optional Arguments
@@ -78,13 +58,13 @@ If multiple genera were found, they will all be listed here, separated by a `:`
 ConFindr has a few optional arguments that allow you to modify its other parameters. Optional arguments are:
 
 - `-t, --threads`: The number of threads to run ConFindr analysis with. The default is to use all threads available on your machine, and ConFindr scales very well with more threads, so it's recommended that this option be left at the default unless you need the computational resources for something else.
-- `-n, --number_subsamples`: The number of times you want ConFindr to sample your rMLST reads to try to detect contamination. By default this is set to 3.
-- `-k, --kmer-size`: The kmer size ConFindr uses to try to detect contamination. Default is 31. Usage with other values may produce very unreliable results and is _not_ recommended.
-- `-s, --subsample_depth`: Coverage depth to subsample to. Default value is 20, which provides a good tradeoff between sensitvity and specificity. Going any lower will make it very difficult to detect contamination, and going higher will increase the false positive rate.
-- `-c, --kmer_cutoff`: The cutoff for the number of times a kmer must be seen before it is considered trustworthy and is included in the analysis. By default set to 2. Setting any lower this this essentially guarantees that your analysis will be overrun by false positives called by sequencing errors.
+- `-d`, --databases`: Path to ConFindr databases. These will be downloaded automatically if not present.
+- `-k`, --keep_files`: Set this flag to keep intermediate files. Useful if you want to do manual inspection of the BAM files
+that ConFindr creates, which are deleted by default.
 - `-fid, --forward_id`: The identifier for forward reads in your input FASTQ folder. By default, this is `_R1`. If you follow a different naming scheme, this is the parameter to change.
 - `-rid, --reverse_id`: The identifier for reverse reads in your input FASTQ folder. By default, this is `_R2`. If you follow a different naming scheme, this is the parameter to change. 
 - `-v, --version`: Display ConFindr version and exit.
+- `-verbosity, --verbosity`: How much you want printed to the screen. Choose `debug` to get some extra, or `warning` to
+get almost nothing. Default is `info`.
 
-Generally speaking, none of these parameters should be changed; ConFindr has been tested extensively with its default parameters and been found to work very well. 
 

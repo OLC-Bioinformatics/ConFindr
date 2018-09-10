@@ -1,12 +1,12 @@
 import shutil
 import os
 import sys
-from Bio import SeqIO
 
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
 from confindr.confindr import *
 
+# TODO: Make these far more useful than they currently are.
 
 def test_present_dependency():
     assert dependency_check('ls') is True
@@ -35,22 +35,6 @@ def test_unpaired_fastq():
     assert 'tests/fake_fastqs/test_alone.fastq.gz' in find_unpaired_reads('tests/fake_fastqs')
 
 
-# def test_mashsippr_run():
-#    assert run_mashsippr('mashsippr', 'mashsippr/mashsippr_results', 'databases') is True
-#    shutil.rmtree('mashsippr/O157')
-#    shutil.rmtree('mashsippr/mashsippr_results')
-
-
-
-
-def test_genus_exclusion_positive():
-    assert find_genusspecific_alleles('databases/profiles.txt', 'Escherichia') == ['BACT000060', 'BACT000065']
-
-
-def test_genus_exclusion_negative():
-    assert find_genusspecific_alleles('databases/profiles.txt', 'NotARealGenus') == []
-
-
 def test_rmlst_bait():
     pair = ['tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz']
     actual_result = 'AAAAAAACAGCAAATCCGGTGGTCGTAACAACAATGGCCGTATCACCACTCGTCATATCGGTGGTGGCCA' \
@@ -64,93 +48,4 @@ def test_rmlst_bait():
     os.remove('asdf_R2.fasta')
 
 
-def test_read_subsampling():
-    subsample_reads('tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz', 2, 1000, 'asdf_R1.fasta', 'asdf_R2.fasta')
-    thing = SeqIO.parse('asdf_R1.fasta', 'fasta')
-    bases = 0
-    for record in thing:
-        bases += len(record.seq)
-    assert 1000 <= bases <= 1250
-    os.remove('asdf_R1.fasta')
-    os.remove('asdf_R2.fasta')
 
-
-def test_kmerization():
-    pair = ['tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz']
-    generate_kmers(pair[0], pair[1], 'counts.fasta', 31, 'tmp')
-    expected_num_kmers = 23871
-    thing = SeqIO.parse('counts.fasta', 'fasta')
-    i = 0
-    for item in thing:
-        i += 1
-    assert i == expected_num_kmers
-    os.remove('counts.fasta')
-
-
-def test_kmer_rename():
-    rename_kmers('tests/kmers.fasta', 'counts.fasta', 2)
-    with open('counts.fasta') as f:
-        lines = f.readlines()
-    assert lines == ['>3_1\n', 'GCTAGCTAGCTAGCTAGCATGCTACT\n', '>2_2\n', 'ATTCTAGCTACTAGCATGCAGTGGGG\n']
-    os.remove('counts.fasta')
-
-
-def test_bam_parsing():
-    fasta_ids = parse_bamfile('tests/subsample_0.bam', 31)
-    assert len(fasta_ids) == 32
-
-
-def test_present_database():
-    assert check_db_presence('tests/fake_database.fasta') is True
-
-
-def test_nonexistent_database():
-    assert check_db_presence('tests/not_a_database.fasta') is False
-
-
-def test_blast_positive():
-    assert present_in_db('CAAGCAGGCTTACCGTATTGTTGACTTCAAA', 'tests/bait_fasta.fasta', 31) is True
-
-
-def test_blast_negative():
-    assert present_in_db('CATGCTACGATCGAGTGGGGGGGGG', 'tests/bait_fasta.fasta', 31) is False
-
-
-def test_result_file_not_contaminated():
-    write_output('tests/report.csv', 'sample', [0, 2, 1], 'Escherichia', 22222)
-    with open('tests/report.csv') as f:
-        lines = f.readlines()
-    assert lines[0].split(',')[4] == 'False\n'
-    os.remove('tests/report.csv')
-
-
-def test_result_file_contaminated_snvs():
-    write_output('tests/report.csv', 'sample', [0, 3, 5], 'Escherichia', 22222)
-    with open('tests/report.csv') as f:
-        lines = f.readlines()
-    assert lines[0].split(',')[4] == 'True\n'
-    os.remove('tests/report.csv')
-
-
-def test_result_file_contaminated_kmers():
-    write_output('tests/report.csv', 'sample', [0, 1, 1], 'Escherichia', 52222)
-    with open('tests/report.csv') as f:
-        lines = f.readlines()
-    assert lines[0].split(',')[4] == 'True\n'
-    os.remove('tests/report.csv')
-
-
-def test_result_file_contaminated_cross():
-    write_output('tests/report.csv', 'sample', [0, 1, 1], 'Escherichia:Listeria', 22222)
-    with open('tests/report.csv') as f:
-        lines = f.readlines()
-    assert lines[0].split(',')[4] == 'True\n'
-    os.remove('tests/report.csv')
-
-
-def test_result_file_contaminated_all():
-    write_output('tests/report.csv', 'sample', [12, 4, 8], 'Escherichia:Listeria', 52222)
-    with open('tests/report.csv') as f:
-        lines = f.readlines()
-    assert lines[0].split(',')[4] == 'True\n'
-    os.remove('tests/report.csv')
