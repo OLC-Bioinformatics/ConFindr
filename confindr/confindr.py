@@ -65,7 +65,7 @@ def find_paired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
     pair_list = list()
 
     fastq_files = glob.glob(os.path.join(fastq_directory, '*.f*q*'))
-    for name in fastq_files:
+    for name in sorted(fastq_files):
         if forward_id in name and os.path.isfile(name.replace(forward_id, reverse_id)):
             pair_list.append([name, name.replace(forward_id, reverse_id)])
     return pair_list
@@ -81,7 +81,7 @@ def find_unpaired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
     """
     read_list = list()
     fastq_files = glob.glob(os.path.join(fastq_directory, '*.f*q*'))
-    for name in fastq_files:
+    for name in sorted(fastq_files):
         # Iterate through files, adding them to our list of unpaired reads if:
         # 1) They don't have the forward identifier or the reverse identifier in their name.
         # 2) They have forward but the reverse isn't there.
@@ -152,6 +152,7 @@ def find_cross_contamination(databases, pair, tmpdir='tmp', log='log.txt', threa
     :param databases: A databases folder, which must contain refseq.msh, a mash sketch that has one representative
     per genus from refseq.
     :param tmpdir: Temporary directory to store mash result files in.
+    :param pair: Array with path to forward reads at index 0 and path to reverse reads at index o
     :param log: Logfile to write to.
     :param threads: Number of threads to run mash wit.
     :return: cross_contam: a bool that is True if more than one genus is found, and False otherwise.
@@ -318,7 +319,7 @@ def read_contig(contig_name, bamfile_name, reference_fasta, report_file):
     return multibase_position_dict
 
 
-def find_rmlst_type(bamfile, database_dir, genus, rmlst_report):
+def find_rmlst_type(bamfile, sample_database, rmlst_report):
     """
     Approximates finding the rMLST type by counting the number of reads aligned to each allele and reporting
     which allele has the most reads aligned.
@@ -332,7 +333,7 @@ def find_rmlst_type(bamfile, database_dir, genus, rmlst_report):
     # Find which rMLST allele has the most reads mapped back to it for each gene.
     gene_alleles_to_use = dict()
     bamfile = pysam.AlignmentFile(os.path.join(bamfile), 'rb')
-    contig_names = get_contig_names(fasta_file=os.path.join(database_dir, '{}_db.fasta'.format(genus)))
+    contig_names = get_contig_names(fasta_file=sample_database)
     for contig in contig_names:
         gene = contig.split('_')[0]
         allele = contig.split('_')[1]
@@ -414,11 +415,11 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
     # with only the most likely allele for each gene.
-    cmd = 'samtools faidx {}'.format(os.path.join(databases_folder, genus + '_db.fasta'))
+    cmd = 'samtools faidx {}'.format(sample_database)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} ' \
-          'nodisk ambig=all threads={threads}'.format(ref=os.path.join(databases_folder, genus + '_db.fasta'),
+          'nodisk ambig=all threads={threads}'.format(ref=sample_database,
                                                       forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
                                                       reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
                                                       outbam=os.path.join(sample_tmp_dir, 'out.bam'),
@@ -435,12 +436,11 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
 
     rmlst_report = os.path.join(output_folder, sample_name + '_rmlst.csv')
     gene_alleles = find_rmlst_type(bamfile=os.path.join(sample_tmp_dir, 'rmlst.bam'),
-                                   database_dir=databases_folder,
-                                   genus=genus,
+                                   sample_database=sample_database,
                                    rmlst_report=rmlst_report)
 
     with open(os.path.join(sample_tmp_dir, 'rmlst.fasta'), 'w') as f:
-        for contig in SeqIO.parse(os.path.join(databases_folder, '{}_db.fasta'.format(genus)), 'fasta'):
+        for contig in SeqIO.parse(sample_database, 'fasta'):
             if contig.id in gene_alleles:
                 f.write('>{}\n'.format(contig.id))
                 f.write(str(contig.seq) + '\n')
@@ -552,11 +552,11 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
     # with only the most likely allele for each gene.
-    cmd = 'samtools faidx {}'.format(os.path.join(databases_folder, genus + '_db.fasta'))
+    cmd = 'samtools faidx {}'.format(sample_database)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
-          'nodisk ambig=all'.format(ref=os.path.join(databases_folder, genus + '_db.fasta'),
+          'nodisk ambig=all'.format(ref=sample_database,
                                     forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
                                     outbam=os.path.join(sample_tmp_dir, 'out.bam'),
                                     threads=threads)
@@ -572,12 +572,11 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
 
     rmlst_report = os.path.join(output_folder, sample_name + '_rmlst.csv')
     gene_alleles = find_rmlst_type(bamfile=os.path.join(sample_tmp_dir, 'rmlst.bam'),
-                                   database_dir=databases_folder,
-                                   genus=genus,
+                                   sample_database=sample_database,
                                    rmlst_report=rmlst_report)
 
     with open(os.path.join(sample_tmp_dir, 'rmlst.fasta'), 'w') as f:
-        for contig in SeqIO.parse(os.path.join(databases_folder, '{}_db.fasta'.format(genus)), 'fasta'):
+        for contig in SeqIO.parse(sample_database, 'fasta'):
             if contig.id in gene_alleles:
                 f.write('>{}\n'.format(contig.id))
                 f.write(str(contig.seq) + '\n')
@@ -653,7 +652,7 @@ def check_for_databases_and_download(database_location, tmpdir):
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.4.0'
+    version = 'ConFindr 0.4.1'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
