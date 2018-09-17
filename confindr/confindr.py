@@ -13,6 +13,9 @@ import pysam
 from Bio import SeqIO
 from confindr_wrappers import mash
 from confindr_wrappers import bbtools
+from confindr_wrappers import nanopore_methods
+
+# TODO: Current methodology is not going to work on nanopore reads - get that functionality implemented.
 
 
 def run_cmd(cmd):
@@ -325,8 +328,7 @@ def find_rmlst_type(bamfile, sample_database, rmlst_report):
     which allele has the most reads aligned.
     :param bamfile: Path to bamfile where reads where aligned to rmlst file. It's assumed these reads were aligned
     using bbmap, with ambig=all set as an option.
-    :param database_dir: ConFindr database directory.
-    :param genus: Genus, as a string
+    :param sample_database: Path to fasta-formatted sample database (usually a genus-specific rMLST)
     :param rmlst_report: Path to file where rmlst report (what allele each gene is) is written.
     :return: gene_alleles: Dictionary where keys are genes, and values are alleles
     """
@@ -501,7 +503,7 @@ def write_output(output_report, sample_name, multi_positions, genus):
                                           contamstatus=contaminated))
 
 
-def find_contamination_unpaired(reads, output_folder, databases_folder, threads=1, keep_files=False):
+def find_contamination_unpaired(reads, output_folder, databases_folder, threads=1, keep_files=False, read_type='Illumina'):
     # Setup log file.
     log = os.path.join(output_folder, 'confindr_log.txt')
     # Setup a sample name - may want to improve this at some point, currently takes everything before the .fastq.gz
@@ -541,13 +543,14 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
                                        returncmd=True, threads=threads)
     logging.debug('rMLST extraction command used: {}'.format(cmd))
     write_to_logfile(log, out, err, cmd)
-    logging.info('Quality trimming...')
-    # With rMLST genes extracted, get our quality trimming done.
-    out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                       forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                       returncmd=True, threads=threads)
-    logging.debug('Quality trim command used: {}'.format(cmd))
-    write_to_logfile(log, out, err, cmd)
+    if read_type == 'Illumina':
+        logging.info('Quality trimming...')
+        # With rMLST genes extracted, get our quality trimming done.
+        out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                           forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                           returncmd=True, threads=threads)
+        logging.debug('Quality trim command used: {}'.format(cmd))
+        write_to_logfile(log, out, err, cmd)
     logging.info('Detecting contamination...')
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
@@ -555,11 +558,18 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     cmd = 'samtools faidx {}'.format(sample_database)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
-          'nodisk ambig=all'.format(ref=sample_database,
-                                    forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                    outbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                    threads=threads)
+    if read_type == 'Nanopore':
+        cmd = 'minimap2 -ax map-ont -t {threads} {reference} {reads} | samtools view -bS > ' \
+              '{output_bam}'.format(threads=threads,
+                                    reference=sample_database,
+                                    reads=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                    output_bam=os.path.join(sample_tmp_dir, 'out.bam'))
+    elif read_type == 'Illumina':
+        cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+              'nodisk ambig=all'.format(ref=sample_database,
+                                        forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                        outbam=os.path.join(sample_tmp_dir, 'out.bam'),
+                                        threads=threads)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out.bam'),
@@ -586,11 +596,18 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     cmd = 'samtools faidx {}'.format(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
-          'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                          forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                          outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                          threads=threads)
+    if read_type == 'Nanopore':
+        cmd = 'minimap2 -c -ax map-ont -t {threads} {reference} {reads} | samtools view -bS > ' \
+              '{output_bam}'.format(threads=threads,
+                                    reference=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                                    reads=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                    output_bam=os.path.join(sample_tmp_dir, 'out_2.bam'))
+    elif read_type == 'Illumina':
+        cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+              'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                              forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                              outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
+                              threads=threads)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
@@ -609,6 +626,7 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
                                                                      coverage='Coverage'))
     multi_positions = 0
     for contig_name in gene_alleles:
+        logging.debug(contig_name)
         multibase_position_dict = read_contig(contig_name=contig_name,
                                               bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
                                               reference_fasta=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
@@ -689,6 +707,10 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version',
                         action='version',
                         version=version)
+    parser.add_argument('-dt', '--data_type',
+                        choices=['Illumina', 'Nanopore', 'auto'],
+                        default='auto',
+                        help='Type of input data. Default is to guess which type of data based on read length.')
     parser.add_argument('-verbosity', '--verbosity',
                         choices=['debug', 'info', 'warning'],
                         default='info',
@@ -712,7 +734,7 @@ if __name__ == '__main__':
     # Check for dependencies.
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     all_dependencies_present = True
-    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
+    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash', 'minimap2']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             logging.error('Dependency {} not found. Please make sure it is installed and present'
@@ -747,6 +769,8 @@ if __name__ == '__main__':
                                databases_folder=args.databases,
                                keep_files=args.keep_files)
         except subprocess.CalledProcessError:
+            # TODO: This does not always catch things like I think it should.
+            # Figure out why and get a fix made.
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
             multi_positions = 0
@@ -764,11 +788,17 @@ if __name__ == '__main__':
         sample_name = os.path.split(reads)[-1].split('.')[0]
         logging.info('Beginning analysis of sample {}...'.format(sample_name))
         try:
+            if args.data_type == 'auto':
+                data_type = nanopore_methods.nanopore_or_illumina(fastq_file=reads)
+                logging.debug('Determined reads to be of type {}...'.format(data_type))
+            else:
+                data_type = args.data_type
             find_contamination_unpaired(reads=reads,
                                         threads=args.threads,
                                         output_folder=args.output_name,
                                         databases_folder=args.databases,
-                                        keep_files=args.keep_files)
+                                        keep_files=args.keep_files,
+                                        read_type=data_type)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
