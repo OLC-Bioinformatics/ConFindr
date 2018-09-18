@@ -16,8 +16,6 @@ from confindr_wrappers import mash
 from confindr_wrappers import bbtools
 from confindr_wrappers import nanopore_methods
 
-# TODO: Current methodology is not going to work on nanopore reads - get that functionality implemented.
-
 
 def run_cmd(cmd):
     """
@@ -427,10 +425,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                        Xmx=xmx,
                                        returncmd=True)
     write_to_logfile(log, out, err, cmd)
-    # extract_rmlst_genes(pair, sample_database,
-    #                     forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
-    #                     reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
-    #                     threads=threads, logfile=log)
     logging.info('Quality trimming...')
     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
                                        reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
@@ -564,9 +558,11 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     # With everything set up, time to start the workflow.
     # First thing to do: Extract rMLST genes.
     logging.info('Extracting rMLST genes...')
+    xmx = set_bbduk_memory(genus=genus)
     out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=reads,
                                        forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                       returncmd=True, threads=threads)
+                                       returncmd=True, threads=threads,
+                                       Xmx=xmx)
     logging.debug('rMLST extraction command used: {}'.format(cmd))
     write_to_logfile(log, out, err, cmd)
     if read_type == 'Illumina':
@@ -652,6 +648,8 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
                                                                      coverage='Coverage'))
     multi_positions = 0
     for contig_name in gene_alleles:
+        # TODO: This should be parallelizable (and ConFindr on MinION data is slooow). Get this done at some
+        # point
         logging.debug(contig_name)
         multibase_position_dict = read_contig(contig_name=contig_name,
                                               bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
