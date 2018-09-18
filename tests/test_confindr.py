@@ -5,8 +5,10 @@ import sys
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
 from confindr.confindr import *
+from Bio import SeqIO
 
 # TODO: Make these far more useful than they currently are.
+
 
 def test_present_dependency():
     assert dependency_check('ls') is True
@@ -35,17 +37,16 @@ def test_unpaired_fastq():
     assert 'tests/fake_fastqs/test_alone.fastq.gz' in find_unpaired_reads('tests/fake_fastqs')
 
 
-def test_rmlst_bait():
-    pair = ['tests/mashsippr/O157_R1.fastq.gz', 'tests/mashsippr/O157_R2.fastq.gz']
-    actual_result = 'AAAAAAACAGCAAATCCGGTGGTCGTAACAACAATGGCCGTATCACCACTCGTCATATCGGTGGTGGCCA' \
-                    'CAAGCAGGCTTACCGTATTGTTGACTTCAAACGCAACAAAGACGGTATCCCGGCAGTTGTTGAACGTCTT' \
-                    'GAGTACGATCCGAACCGTTCCGCGAACATCGCGCTGGTTCTGTACAAAGACGGTGAACGCCGTTACATCC' \
-                    'TGGCCCCTAAAGGCCTGAAAGCTGGCGACCAGATTCAGTC'
-    extract_rmlst_genes(pair, 'tests/bait_fasta.fasta', 'asdf_R1.fasta', 'asdf_R2.fasta')
-    thing = SeqIO.read('asdf_R1.fasta', 'fasta')
-    assert str(thing.seq) == actual_result
-    os.remove('asdf_R1.fasta')
-    os.remove('asdf_R2.fasta')
-
-
-
+def test_correct_num_multipositions():
+    contig_names = list()
+    for contig in SeqIO.parse('tests/rmlst.fasta', 'fasta'):
+        contig_names.append(contig.id)
+    multi_positions = 0
+    for contig_name in contig_names:
+        multi_position_dict = read_contig(contig_name=contig_name,
+                                          bamfile_name='tests/contamination.bam',
+                                          reference_fasta='tests/rmlst.fasta',
+                                          report_file='tests/dummy_report')
+        multi_positions += len(multi_position_dict)
+    os.remove('tests/dummy_report')
+    assert multi_positions == 15
