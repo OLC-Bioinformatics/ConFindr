@@ -10,5 +10,8 @@ setup(
     author="Andrew Low",
     author_email="andrew.low@inspection.gc.ca",
     url="https://github.com/lowandrew/ConFindr",
-    install_requires=['biopython', 'pysam', 'pytest']
+    install_requires=['biopython',
+                      'pysam',
+                      'pytest',
+                      'psutil']
 )

@@ -6,6 +6,7 @@ import subprocess
 import argparse
 import tarfile
 import logging
+import psutil
 import shutil
 import glob
 import os
@@ -231,7 +232,7 @@ def has_two_high_quality_bases(list_of_scores):
     :param list_of_scores: List of quality scores as integers.
     :return: True if site has at least two bases >= 20 phred score, false otherwise
     """
-    # TODO: This is a very inelegant way of doing this. Refine.
+    # TODO: Allow base quality and number of bases needed to be user-defined.
     quality_bases_count = 0
     for score in list_of_scores:
         if score >= 20:
@@ -372,6 +373,18 @@ def base_dict_to_string(base_dict):
     return outstr[:-1]
 
 
+def set_bbduk_memory(genus):
+    available_memory = psutil.virtual_memory()[1]
+    if genus == 'NA':
+        required_memory = 12000000000
+    else:
+        required_memory = 6000000000
+    if available_memory < required_memory:
+        logging.warning('WARNING: You appear to have insufficient memory to run read baiting. ConFindr '
+                        'will likely crash.')
+    return required_memory
+
+
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False):
     log = os.path.join(output_folder, 'confindr_log.txt')
     sample_name = os.path.split(pair[0])[-1].split(forward_id)[0]
@@ -401,10 +414,23 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         sample_database = os.path.join(databases_folder, 'rMLST_combined.fasta')
     # Extract rMLST reads and quality trim.
     logging.info('Extracting rMLST genes...')
-    extract_rmlst_genes(pair, sample_database,
-                        forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
-                        reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
-                        threads=threads, logfile=log)
+    # On certain systems (OS related? Not sure.), BBDuk isn't reserving enough memory for baiting when a genus
+    # can't be found and the entire rMLST fasta file has to be used.
+    # Solution: Check our available memory, and assign the memory to BBDuk as necessary.
+    xmx = set_bbduk_memory(genus=genus)
+    out, err, cmd = bbtools.bbduk_bait(reference=sample_database,
+                                       forward_in=pair[0],
+                                       reverse_in=pair[1],
+                                       forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
+                                       reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
+                                       threads=threads,
+                                       Xmx=xmx,
+                                       returncmd=True)
+    write_to_logfile(log, out, err, cmd)
+    # extract_rmlst_genes(pair, sample_database,
+    #                     forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
+    #                     reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
+    #                     threads=threads, logfile=log)
     logging.info('Quality trimming...')
     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
                                        reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
@@ -597,7 +623,7 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     if read_type == 'Nanopore':
-        cmd = 'minimap2 -c -ax map-ont -t {threads} {reference} {reads} | samtools view -bS > ' \
+        cmd = 'minimap2 -L -ax map-ont -t {threads} {reference} {reads} | samtools view -bS > ' \
               '{output_bam}'.format(threads=threads,
                                     reference=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                     reads=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
@@ -734,7 +760,9 @@ if __name__ == '__main__':
     # Check for dependencies.
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     all_dependencies_present = True
-    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash', 'minimap2']
+    # Re-enable minimap2 as dependency once nanopore stuff actually works.
+    # dependencies = ['bbmap.sh', 'bbduk.sh', 'mash', 'minimap2']
+    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             logging.error('Dependency {} not found. Please make sure it is installed and present'
