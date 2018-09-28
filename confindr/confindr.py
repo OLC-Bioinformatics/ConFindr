@@ -6,7 +6,6 @@ import subprocess
 import argparse
 import tarfile
 import logging
-import psutil
 import shutil
 import glob
 import os
@@ -27,6 +26,8 @@ def run_cmd(cmd):
     out, err = p.communicate()
     out = out.decode('utf-8')
     err = err.decode('utf-8')
+    if p.returncode != 0:
+        raise subprocess.CalledProcessError(p.returncode, cmd=cmd)
     return out, err
 
 
@@ -371,18 +372,6 @@ def base_dict_to_string(base_dict):
     return outstr[:-1]
 
 
-def set_bbduk_memory(genus):
-    available_memory = psutil.virtual_memory()[1]
-    if genus == 'NA':
-        required_memory = 12000000000
-    else:
-        required_memory = 6000000000
-    if available_memory < required_memory:
-        logging.warning('WARNING: You appear to have insufficient memory to run read baiting. ConFindr '
-                        'will likely crash.')
-    return required_memory
-
-
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False):
     log = os.path.join(output_folder, 'confindr_log.txt')
     sample_name = os.path.split(pair[0])[-1].split(forward_id)[0]
@@ -415,14 +404,12 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # On certain systems (OS related? Not sure.), BBDuk isn't reserving enough memory for baiting when a genus
     # can't be found and the entire rMLST fasta file has to be used.
     # Solution: Check our available memory, and assign the memory to BBDuk as necessary.
-    xmx = set_bbduk_memory(genus=genus)
     out, err, cmd = bbtools.bbduk_bait(reference=sample_database,
                                        forward_in=pair[0],
                                        reverse_in=pair[1],
                                        forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
                                        reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
                                        threads=threads,
-                                       Xmx=xmx,
                                        returncmd=True)
     write_to_logfile(log, out, err, cmd)
     logging.info('Quality trimming...')
@@ -558,11 +545,9 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
     # With everything set up, time to start the workflow.
     # First thing to do: Extract rMLST genes.
     logging.info('Extracting rMLST genes...')
-    xmx = set_bbduk_memory(genus=genus)
     out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=reads,
                                        forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                       returncmd=True, threads=threads,
-                                       Xmx=xmx)
+                                       returncmd=True, threads=threads)
     logging.debug('rMLST extraction command used: {}'.format(cmd))
     write_to_logfile(log, out, err, cmd)
     if read_type == 'Illumina':
@@ -795,8 +780,6 @@ if __name__ == '__main__':
                                databases_folder=args.databases,
                                keep_files=args.keep_files)
         except subprocess.CalledProcessError:
-            # TODO: This does not always catch things like I think it should.
-            # Figure out why and get a fix made.
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
             multi_positions = 0
