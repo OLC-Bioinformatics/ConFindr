@@ -18,9 +18,6 @@ from confindr_wrappers import bbtools
 from confindr_wrappers import nanopore_methods
 
 
-# TODO: Actually get around to combining the paired and unpaired methods.
-
-
 def run_cmd(cmd):
     """
     Runs a command using subprocess, and returns both the stdout and stderr from that command
@@ -96,11 +93,11 @@ def find_unpaired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
         # 2) They have forward but the reverse isn't there.
         # 3) They have reverse but the forward isn't there.
         if forward_id not in name and reverse_id not in name:
-            read_list.append(name)
+            read_list.append([name])
         elif forward_id in name and not os.path.isfile(name.replace(forward_id, reverse_id)):
-            read_list.append(name)
+            read_list.append([name])
         elif reverse_id in name and not os.path.isfile(name.replace(reverse_id, forward_id)):
-            read_list.append(name)
+            read_list.append([name])
     return read_list
 
 
@@ -405,17 +402,29 @@ def estimate_percent_contamination(contamination_report_file):
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
                        quality_cutoff=20, base_cutoff=2):
     log = os.path.join(output_folder, 'confindr_log.txt')
-    sample_name = os.path.split(pair[0])[-1].split(forward_id)[0]
+    if len(pair) == 2:
+        sample_name = os.path.split(pair[0])[-1].split(forward_id)[0]
+        paired = True
+        logging.debug('Sample is paired. Sample name is {}'.format(sample_name))
+    else:
+        sample_name = os.path.split(pair[0])[-1].split('.')[0]
+        paired = False
+        logging.debug('Sample is unpaired. Sample name is {}'.format(sample_name))
     sample_tmp_dir = os.path.join(output_folder, sample_name)
     if not os.path.isdir(sample_tmp_dir):
         os.makedirs(sample_tmp_dir)
     logging.info('Checking for cross-species contamination...')
-    genus = find_cross_contamination(databases_folder, pair, tmpdir=sample_tmp_dir, log=log, threads=threads)
+    if paired:
+        genus = find_cross_contamination(databases_folder, pair, tmpdir=sample_tmp_dir, log=log, threads=threads)
+    else:
+        genus = find_cross_contamination_unpaired(databases_folder, reads=pair[0], tmpdir=sample_tmp_dir, log=log, threads=threads)
     if len(genus.split(':')) > 1:
         write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
                      sample_name=sample_name,
                      multi_positions=0,
-                     genus=genus)
+                     genus=genus,
+                     percent_contam='NA',
+                     contam_stddev='NA')
         logging.info('Found cross-contamination! Skipping rest of analysis...\n')
         shutil.rmtree(sample_tmp_dir)
         return
@@ -435,20 +444,30 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # On certain systems (OS related? Not sure.), BBDuk isn't reserving enough memory for baiting when a genus
     # can't be found and the entire rMLST fasta file has to be used.
     # Solution: Check our available memory, and assign the memory to BBDuk as necessary.
-    out, err, cmd = bbtools.bbduk_bait(reference=sample_database,
-                                       forward_in=pair[0],
-                                       reverse_in=pair[1],
-                                       forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
-                                       reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
-                                       threads=threads,
-                                       returncmd=True)
+    if paired:
+        out, err, cmd = bbtools.bbduk_bait(reference=sample_database,
+                                           forward_in=pair[0],
+                                           reverse_in=pair[1],
+                                           forward_out=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
+                                           reverse_out=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
+                                           threads=threads,
+                                           returncmd=True)
+    else:
+        out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=pair[0],
+                                           forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                           returncmd=True, threads=threads)
     write_to_logfile(log, out, err, cmd)
     logging.info('Quality trimming...')
-    out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
-                                       reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
-                                       forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                                       reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
-                                       threads=str(threads), returncmd=True)
+    if paired:
+        out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
+                                           reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
+                                           forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                                           reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
+                                           threads=str(threads), returncmd=True)
+    else:
+        out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                           forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                           returncmd=True, threads=threads)
     write_to_logfile(log, out, err, cmd)
 
     logging.info('Detecting contamination...')
@@ -458,12 +477,19 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     cmd = 'samtools faidx {}'.format(sample_database)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} ' \
-          'nodisk ambig=all threads={threads}'.format(ref=sample_database,
-                                                      forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                                                      reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
-                                                      outbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                                      threads=threads)
+    if paired:
+        cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} ' \
+              'nodisk ambig=all threads={threads}'.format(ref=sample_database,
+                                                          forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                                                          reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
+                                                          outbam=os.path.join(sample_tmp_dir, 'out.bam'),
+                                                          threads=threads)
+    else:
+        cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+              'nodisk ambig=all'.format(ref=sample_database,
+                                        forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                        outbam=os.path.join(sample_tmp_dir, 'out.bam'),
+                                        threads=threads)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out.bam'),
@@ -490,12 +516,19 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     cmd = 'samtools faidx {}'.format(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
-    cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} ' \
-          'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                          forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                          reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
-                          outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                          threads=threads)
+    if paired:
+        cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} ' \
+              'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                              forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                              reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
+                              outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
+                              threads=threads)
+    else:
+        cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+              'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                              forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                              outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
+                              threads=threads)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
@@ -552,6 +585,7 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
                                                                            contam_stddev=contam_stddev))
 
 
+# TODO: This can be deleted soon, as it's no longer used. Keep it around until nanopore stuff gets tested more.
 def find_contamination_unpaired(reads, output_folder, databases_folder, threads=1, keep_files=False, read_type='Illumina'):
     # Setup log file.
     log = os.path.join(output_folder, 'confindr_log.txt')
@@ -847,21 +881,18 @@ if __name__ == '__main__':
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
     # Process unpaired reads, also one sample at a time.
-    for reads in unpaired_reads:
-        sample_name = os.path.split(reads)[-1].split('.')[0]
+    for pair in unpaired_reads:
+        sample_name = os.path.split(pair[0])[-1].split('.')[0]
         logging.info('Beginning analysis of sample {}...'.format(sample_name))
         try:
-            if args.data_type == 'auto':
-                data_type = nanopore_methods.nanopore_or_illumina(fastq_file=reads)
-                logging.debug('Determined reads to be of type {}...'.format(data_type))
-            else:
-                data_type = args.data_type
-            find_contamination_unpaired(reads=reads,
-                                        threads=args.threads,
-                                        output_folder=args.output_name,
-                                        databases_folder=args.databases,
-                                        keep_files=args.keep_files,
-                                        read_type=data_type)
+            find_contamination(pair=pair,
+                               forward_id=args.forward_id,
+                               threads=args.threads,
+                               output_folder=args.output_name,
+                               databases_folder=args.databases,
+                               keep_files=args.keep_files,
+                               quality_cutoff=args.quality_cutoff,
+                               base_cutoff=args.base_cutoff)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -870,10 +901,12 @@ if __name__ == '__main__':
             write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
                          sample_name=sample_name,
                          multi_positions=multi_positions,
-                         genus=genus)
+                         genus=genus,
+                         percent_contam='NA',
+                         contam_stddev='NA')
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
-
+    # Process unpaired reads, also one sample at a time.
     logging.info('Contamination detection complete!')
