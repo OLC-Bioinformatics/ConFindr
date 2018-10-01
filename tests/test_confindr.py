@@ -34,7 +34,7 @@ def test_empty_fastqs():
 
 
 def test_unpaired_fastq():
-    assert 'tests/fake_fastqs/test_alone.fastq.gz' in find_unpaired_reads('tests/fake_fastqs')
+    assert ['tests/fake_fastqs/test_alone.fastq.gz'] == find_unpaired_reads('tests/fake_fastqs')[2]
 
 
 def test_correct_num_multipositions():
