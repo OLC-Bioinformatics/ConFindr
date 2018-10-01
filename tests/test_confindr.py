@@ -46,7 +46,15 @@ def test_correct_num_multipositions():
         multi_position_dict = read_contig(contig_name=contig_name,
                                           bamfile_name='tests/contamination.bam',
                                           reference_fasta='tests/rmlst.fasta',
-                                          report_file='tests/dummy_report')
+                                          report_file='tests/dummy_report',
+                                          quality_cutoff=20,
+                                          base_cutoff=2)
         multi_positions += len(multi_position_dict)
     os.remove('tests/dummy_report')
     assert multi_positions == 15
+
+
+def test_correct_percent_contam():
+    percent_contam, stddev = estimate_percent_contamination('tests/example_contamination.csv')
+    assert percent_contam == '18.20'
+    assert stddev == '5.89'

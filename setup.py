@@ -13,5 +13,5 @@ setup(
     install_requires=['biopython',
                       'pysam',
                       'pytest',
-                      'psutil']
+                      'numpy']
 )
