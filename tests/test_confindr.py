@@ -1,6 +1,6 @@
-import shutil
 import os
-import sys
+import subprocess
+import pytest
 
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
@@ -58,3 +58,31 @@ def test_correct_percent_contam():
     percent_contam, stddev = estimate_percent_contamination('tests/example_contamination.csv')
     assert percent_contam == '18.20'
     assert stddev == '5.89'
+
+
+def test_run_cmd_success():
+    cmd = 'echo asdf'
+    out, err = run_cmd(cmd)
+    assert out == 'asdf\n'
+    assert err == ''
+
+
+def test_run_cmd_failure_exit_code():
+    with pytest.raises(subprocess.CalledProcessError):
+        run_cmd('garbagecommandthatdoesnotwork')
+
+
+def test_two_quality_bases_present():
+    assert has_two_high_quality_bases([20, 20]) is True
+
+
+def test_two_quality_bases_not_present():
+    assert has_two_high_quality_bases([10, 22, 3]) is False
+
+
+def test_quality_bases_success_custom_params():
+    assert has_two_high_quality_bases([30, 22, 44], quality_cutoff=22, base_count_cutoff=3) is True
+
+
+def test_quality_bases_fail_custom_params():
+    assert has_two_high_quality_bases([30, 22, 44], quality_cutoff=30, base_count_cutoff=3) is False
