@@ -403,6 +403,25 @@ def estimate_percent_contamination(contamination_report_file):
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
                        quality_cutoff=20, base_cutoff=2):
+    """
+    This needs some documentation fairly badly, so here we go.
+    :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
+    with the full filepath to forward reads at index 0 and full path to reverse reads at index 1.
+    If reads are unpaired, should be a list of length 1 with the only entry being the full filepath to read set.
+    :param output_folder: Folder where outputs (confindr log and report, and other stuff) will be stored.
+    This will be created if it does not exist. (I think - should write a test that double checks this).
+    :param databases_folder: Full path to folder where ConFindr's databases live. These files can be
+    downloaded from figshare in .tar.gz format (https://ndownloader.figshare.com/files/11864267), and
+    will be automatically downloaded if the script is run from the command line.
+    :param forward_id: Identifier that marks reads as being in the forward direction for paired reads.
+    Defaults to _R1
+    :param threads: Number of threads to run analyses with. All parts of this pipeline scale pretty well,
+    so more is better.
+    :param keep_files: Boolean that says whether or not to keep temporary files.
+    :param quality_cutoff: Integer of the phred score required to have a base count towards a multiallelic site.
+    :param base_cutoff: Integer of number of bases needed to have a base be part of a multiallelic site.
+    :return:
+    """
     log = os.path.join(output_folder, 'confindr_log.txt')
     if len(pair) == 2:
         sample_name = os.path.split(pair[0])[-1].split(forward_id)[0]
@@ -415,6 +434,11 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     sample_tmp_dir = os.path.join(output_folder, sample_name)
     if not os.path.isdir(sample_tmp_dir):
         os.makedirs(sample_tmp_dir)
+
+    # Get the output report file set up
+    if not os.path.isfile(os.path.join(output_folder, 'confindr_report.csv')):
+        with open(os.path.join(output_folder, 'confindr_report.csv'), 'w') as f:
+            f.write('Sample,Genus,NumContamSNVs,ContamStatus,PercentContam,PercentContamStandardDeviation\n')
     logging.info('Checking for cross-species contamination...')
     if paired:
         genus = find_cross_contamination(databases_folder, pair, tmpdir=sample_tmp_dir, log=log, threads=threads)
@@ -848,9 +872,6 @@ if __name__ == '__main__':
     check_for_databases_and_download(database_location=args.databases,
                                      tmpdir=args.output_name)
 
-    # Get the output report file set up
-    with open(os.path.join(args.output_name, 'confindr_report.csv'), 'w') as f:
-        f.write('Sample,Genus,NumContamSNVs,ContamStatus,PercentContam,PercentContamStandardDeviation\n')
     # Figure out what pairs of reads, as well as unpaired reads, are present.
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
     unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
