@@ -106,8 +106,6 @@
         
             <li><a href="#installing-using-conda-recommended">Installing Using Conda (Recommended)</a></li>
         
-            <li><a href="#installing-using-docker">Installing Using Docker</a></li>
-        
             <li><a href="#manual-install">Manual Install</a></li>
         
     
@@ -133,13 +131,6 @@ as done for previous versions.</p>
 <p>With bioconda running, you can install ConFindr with the following command:</p>
 <p><code>conda install -c bioconda confindr</code></p>
 <p>With that done, typing <code>confindr.py</code> will bring access the ConFindr pipeline. See the <a href="../usage/">Usage</a> section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.</p>
-<h2 id="installing-using-docker">Installing Using Docker</h2>
-<p>ConFindr can also be used via Docker, which will take care of installing all of ConFindr's dependencies for you. If you do not have Docker installed, instructions on how to install it
-can be found <a href="https://docs.docker.com/engine/installation/">here</a>.</p>
-<p>With Docker installed, all you have to do to install ConFindr is enter the following command, which will pull the ConFindr image from the Docker Hub and put it on your machine:</p>
-<p><code>docker pull olcbioinformatics/confindr</code></p>
-<p>You can verify that the pull was successful by entering the command <code>docker images</code>. You should see <code>olcbioinformatics/confindr</code> in the list. For instructions on using the image, see 
-the <a href="../usage/">Usage</a> section.</p>
 <h2 id="manual-install">Manual Install</h2>
 <h4 id="executable">Executable</h4>
 <p>ConFindr can also be installed using pip. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:</p>

@@ -164,6 +164,10 @@ If multiple genera were found, they will all be listed here, separated by a <cod
 </ul>
 </li>
 </ul>
+<p>As of version 0.4.2, ConFindr will also attempt to guess at the percentage contamination
+in your sample. This can be found in the <code>PercentContam</code> column in <code>confindr_report.csv</code>, and
+seems to be fairly reliable - on simulated data, the actual percentage contamination always falls within
+the estimated contamination plus or minus the standard deviation.</p>
 <p>ConFindr will also produce two CSV files for each sample - one called <code>samplename_contamination.csv</code>, which shows the contaminating
 sites, and one called <code>samplename_rmlst.csv</code>, which shows ConFindr's guess at which allele is present for each rMLST gene.</p>
 <h2 id="optional-arguments">Optional Arguments</h2>
@@ -178,6 +182,12 @@ that ConFindr creates, which are deleted by default.</li>
 <li><code>-v, --version</code>: Display ConFindr version and exit.</li>
 <li><code>-verbosity, --verbosity</code>: How much you want printed to the screen. Choose <code>debug</code> to get some extra, or <code>warning</code> to
 get almost nothing. Default is <code>info</code>.</li>
+<li><code>-b</code>, <code>--base_cutoff</code>: The number of high-quality bases needed to call a site as multiallelic, and therefore 
+contributing to contamination. Defaults to 2, which is sensitive without producing false positives.
+If you have a very high depth (&gt;100X) sample, you may want to increase this number.</li>
+<li><code>-q</code>, <code>--quality_cutoff</code>: The phred score a base needs to have before it's considered
+trustworthy enough to contribute to a site being multiallelic. Defaults to 20, which should
+be suitable for most purposes. </li>
 </ul></div>
         </div>
 
