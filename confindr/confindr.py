@@ -467,9 +467,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         sample_database = os.path.join(databases_folder, 'rMLST_combined.fasta')
     # Extract rMLST reads and quality trim.
     logging.info('Extracting rMLST genes...')
-    # On certain systems (OS related? Not sure.), BBDuk isn't reserving enough memory for baiting when a genus
-    # can't be found and the entire rMLST fasta file has to be used.
-    # Solution: Check our available memory, and assign the memory to BBDuk as necessary.
     if paired:
         out, err, cmd = bbtools.bbduk_bait(reference=sample_database,
                                            forward_in=pair[0],
@@ -781,7 +778,7 @@ def check_for_databases_and_download(database_location, tmpdir):
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.4.1'
+    version = 'ConFindr 0.4.2'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -829,7 +826,9 @@ if __name__ == '__main__':
     parser.add_argument('-dt', '--data_type',
                         choices=['Illumina', 'Nanopore', 'auto'],
                         default='auto',
-                        help='Type of input data. Default is to guess which type of data based on read length.')
+                        help='Type of input data. Default is to guess which type of data based on read length. '
+                             'Currently has no effect, but future versions of ConFindr will support nanopore data '
+                             'as well.')
     parser.add_argument('-verbosity', '--verbosity',
                         choices=['debug', 'info', 'warning'],
                         default='info',

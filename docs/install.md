@@ -31,18 +31,6 @@ With bioconda running, you can install ConFindr with the following command:
 
 With that done, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 
-## Installing Using Docker
-
-ConFindr can also be used via Docker, which will take care of installing all of ConFindr's dependencies for you. If you do not have Docker installed, instructions on how to install it
-can be found [here](https://docs.docker.com/engine/installation/).
-
-With Docker installed, all you have to do to install ConFindr is enter the following command, which will pull the ConFindr image from the Docker Hub and put it on your machine:
-
-`docker pull olcbioinformatics/confindr`
-
-You can verify that the pull was successful by entering the command `docker images`. You should see `olcbioinformatics/confindr` in the list. For instructions on using the image, see 
-the [Usage](usage.md) section.
-
 ## Manual Install
 
 #### Executable

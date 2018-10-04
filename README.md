@@ -12,12 +12,23 @@ For complete instructions on installation and usage, please visit [the ConFindr 
 
 ## Quickstart
 
-To install ConFindr, use conda: `conda install -c bioconda confindr`
+To install ConFindr, use conda: 
 
-To get an example dataset, use this command: `wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
+`conda install -c bioconda confindr`
 
-To run confindr on that dataset: `confindr.py -i example-data -o example-out`
+To get an example dataset, use this command: 
+
+`wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
+
+To run confindr on that dataset: 
+
+`confindr.py -i example-data -o example-out`
 
 This will download the databases ConFindr needs and run ConFindr on the example dataset (a intraspecies _Escherichia coli_ mix), and put the results in a folder
 called `example-out` in your current working directory. Take a look at `confindr_report.csv` in that directory to see
 the ConFindr results, which will show the sample is contaminated.
+
+## Reporting Issues
+
+If you have any problems installing or running ConFindr, or have feature request,
+please open an issue here on GitHub.

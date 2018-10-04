@@ -45,6 +45,7 @@ one to two minutes (slightly longer if an *Escherichia* specific database has no
 Once the run is done, you'll be able to inspect your results. Take a look at `output/confindr_report.csv`:
 The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value of something close to 15.
 
+
 In any future uses of ConFindr, databases will not need to be re-downloaded.
 
 ## Interpreting ConFindr Results
@@ -61,6 +62,12 @@ If multiple genera were found, they will all be listed here, separated by a `:`
 - `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met:
 	- 3 or more contaminating SNVs are found. 
 	- There is cross contamination between genera.
+
+As of version 0.4.2, ConFindr will also attempt to guess at the percentage contamination
+in your sample. This can be found in the `PercentContam` column in `confindr_report.csv`, and
+seems to be fairly reliable - on simulated data, the actual percentage contamination always falls within
+the estimated contamination plus or minus the standard deviation.
+
 
 ConFindr will also produce two CSV files for each sample - one called `samplename_contamination.csv`, which shows the contaminating
 sites, and one called `samplename_rmlst.csv`, which shows ConFindr's guess at which allele is present for each rMLST gene.
@@ -79,5 +86,10 @@ that ConFindr creates, which are deleted by default.
 - `-v, --version`: Display ConFindr version and exit.
 - `-verbosity, --verbosity`: How much you want printed to the screen. Choose `debug` to get some extra, or `warning` to
 get almost nothing. Default is `info`.
-
+- `-b`, `--base_cutoff`: The number of high-quality bases needed to call a site as multiallelic, and therefore 
+contributing to contamination. Defaults to 2, which is sensitive without producing false positives.
+If you have a very high depth (>100X) sample, you may want to increase this number.
+- `-q`, `--quality_cutoff`: The phred score a base needs to have before it's considered
+trustworthy enough to contribute to a site being multiallelic. Defaults to 20, which should
+be suitable for most purposes. 
 
