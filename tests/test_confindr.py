@@ -100,6 +100,12 @@ def test_two_out_of_three_hq_bases_above_threshold():
 def test_two_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 80, 'A': 20}, base_fraction_cutoff=0.05) == 2
 
+def test_two_hq_bases_above_fraction_threshold_low_coverage():
+    assert number_of_bases_above_threshold({'G': 9, 'A': 1}, base_fraction_cutoff=0.05) == 1
+
+def test_two_hq_bases_above_fraction_threshold_low_coverage_one_base_counts():
+    assert number_of_bases_above_threshold({'G': 9, 'A': 1}, base_count_cutoff=1, base_fraction_cutoff=0.05) == 2
+
 def test_just_one_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 99, 'A': 1}, base_fraction_cutoff=0.05) == 1
 
