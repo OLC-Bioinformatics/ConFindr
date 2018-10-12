@@ -245,7 +245,7 @@ def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2
     else:
         bases_above_threshold = {base:count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
 
-    logging.debug('HQ base count: {0}, Bases above threshold: {1}'.format(high_quality_base_count, bases_above_threshold))
+    # logging.debug('HQ base count: {0}, Bases above threshold: {1}'.format(high_quality_base_count, bases_above_threshold))
     
     # True is equal to 1 so sum of the number of Trues in the bases_above_threshold dict is the number of bases passing threhold
     return sum(bases_above_threshold.values())
@@ -287,13 +287,13 @@ def find_if_multibase(column, quality_cutoff, base_cutoff, base_fraction_cutoff)
     if len(filtered_base_qualities) < 2:
         return dict()
 
-    logging.debug('base qualities before filtering: {0}'.format(unfiltered_base_qualities))
-    logging.debug('base qualities after filtering: {0}'.format(filtered_base_qualities))
     # Now that filtered_base_qualities only contains bases with more than one HQ base, make just a dict with base counts with dict comprehension
     high_quality_base_count = {base:len(scores) for (base,scores) in filtered_base_qualities.items()}
     
     if number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=base_cutoff, base_fraction_cutoff=base_fraction_cutoff) > 1:
-        # logging.debug('SNVs found\n')
+        logging.debug('base qualities before filtering: {0}'.format(unfiltered_base_qualities))
+        logging.debug('base qualities after filtering: {0}'.format(filtered_base_qualities))
+        logging.debug('SNVs found at position {0}: {1}\n'.format(column.pos, high_quality_base_count))
         return high_quality_base_count
     else:
         # logging.debug('No SNVs\n')
