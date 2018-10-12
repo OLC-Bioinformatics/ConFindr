@@ -49,9 +49,9 @@ def test_correct_num_multipositions():
                                           report_file='tests/dummy_report',
                                           quality_cutoff=20,
                                           base_cutoff=2)
-        multi_positions += len(multi_position_dict)
+        multi_positions += sum([len(snp_positions) for snp_positions in multi_position_dict.values()])
     os.remove('tests/dummy_report')
-    assert multi_positions == 15
+    assert multi_positions == 24
 
 
 def test_correct_percent_contam():
@@ -114,3 +114,23 @@ def test_three_hq_bases_above_fraction_threshold():
 
 def test_two_out_of_three_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 90, 'A': 9, 'T': 1}, base_fraction_cutoff=0.05) == 2
+
+
+def test_valid_base_fraction_none():
+    assert check_valid_base_fraction(None) is True
+
+
+def test_valid_base_fraction_zero():
+    assert check_valid_base_fraction(0.0) is True
+
+
+def test_valid_base_fraction_one():
+    assert check_valid_base_fraction(1.0) is True
+
+
+def test_valid_base_fraction_between_zero_one():
+    assert check_valid_base_fraction(0.2) is True
+
+
+def test_invalid_base_fraction():
+    assert check_valid_base_fraction(1.2) is False

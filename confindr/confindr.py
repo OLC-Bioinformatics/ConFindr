@@ -227,7 +227,7 @@ def find_cross_contamination_unpaired(databases, reads, tmpdir='tmp', log='log.t
     return genera_present
 
 
-def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2, base_fraction_cutoff=None ):
+def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2, base_fraction_cutoff=None):
     """
     Finds if a site has at least two bases of  high quality, enough that it can be considered
     fairly safe to say that base is actually there.
@@ -241,12 +241,10 @@ def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2
     # Method differs depending on whether absolute or fraction cutoff is specified
     if base_fraction_cutoff:
         total_hq_base_count = sum(high_quality_base_count.values())
-        bases_above_threshold = {base:float(count)/total_hq_base_count >= base_fraction_cutoff and count >= base_count_cutoff for (base,count) in high_quality_base_count.items()}
+        bases_above_threshold = {base: float(count)/total_hq_base_count >= base_fraction_cutoff and count >= base_count_cutoff for (base,count) in high_quality_base_count.items()}
     else:
-        bases_above_threshold = {base:count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
+        bases_above_threshold = {base: count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
 
-    # logging.debug('HQ base count: {0}, Bases above threshold: {1}'.format(high_quality_base_count, bases_above_threshold))
-    
     # True is equal to 1 so sum of the number of Trues in the bases_above_threshold dict is the number of bases passing threhold
     return sum(bases_above_threshold.values())
 
@@ -289,7 +287,7 @@ def find_if_multibase(column, quality_cutoff, base_cutoff, base_fraction_cutoff)
         return dict()
 
     # Now that filtered_base_qualities only contains bases with more than one HQ base, make just a dict with base counts with dict comprehension
-    high_quality_base_count = {base:len(scores) for (base,scores) in filtered_base_qualities.items()}
+    high_quality_base_count = {base: len(scores) for (base, scores) in filtered_base_qualities.items()}
     
     if number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=base_cutoff, base_fraction_cutoff=base_fraction_cutoff) > 1:
         logging.debug('base qualities before filtering: {0}'.format(unfiltered_base_qualities))
@@ -333,13 +331,15 @@ def read_contig(contig_name, bamfile_name, reference_fasta, report_file, quality
         base_dict = find_if_multibase(column, quality_cutoff=quality_cutoff, base_cutoff=base_cutoff, base_fraction_cutoff=base_fraction_cutoff)
 
         if base_dict:
+            # Pysam starts counting at 0, whereas we actually want to start counting at 1.
+            actual_position = column.pos + 1
             if column.reference_name in multibase_position_dict:
-                multibase_position_dict[column.reference_name].append(column.pos)
+                multibase_position_dict[column.reference_name].append(actual_position)
             else:
-                multibase_position_dict[column.reference_name] = [column.pos]
+                multibase_position_dict[column.reference_name] = [actual_position]
             with open(report_file, 'a+') as r:
                 r.write('{reference},{position},{bases},{coverage}\n'.format(reference=column.reference_name,
-                                                                             position=column.pos,
+                                                                             position=actual_position,
                                                                              bases=base_dict_to_string(base_dict),
                                                                              coverage=sum(base_dict.values())))
     bamfile.close()
@@ -418,7 +418,7 @@ def estimate_percent_contamination(contamination_report_file):
 
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
-                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff = None):
+                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=None):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -436,7 +436,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     :param keep_files: Boolean that says whether or not to keep temporary files.
     :param quality_cutoff: Integer of the phred score required to have a base count towards a multiallelic site.
     :param base_cutoff: Integer of number of bases needed to have a base be part of a multiallelic site.
-    :param base_fraction cutoff: Float of fraction of bases needed to have a base be part of a multiallelic site.
+    :param base_fraction_cutoff: Float of fraction of bases needed to have a base be part of a multiallelic site.
     If specified will be used instead of base_cutoff
     :return:
     """
@@ -796,8 +796,22 @@ def check_for_databases_and_download(database_location, tmpdir):
         logging.info('Databases successfully downloaded...')
 
 
+def check_valid_base_fraction(base_fraction):
+    """
+    Checks that base fraction specified is either None, and therefore won't be used, or is between 0 and 1.
+    :param base_fraction: Base fraction, which should be either None or a float.
+    :return: True if base fraction is valid, False if not.
+    """
+    if base_fraction is None:
+        return True
+    if 0 <= base_fraction <= 1:
+        return True
+    else:
+        return False
+
+
 if __name__ == '__main__':
-    version = 'ConFindr 0.4.2'
+    version = 'ConFindr 0.4.3'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -830,10 +844,11 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--base_cutoff',
                         type=int,
                         default=2,
-                        help='Number of bases necessary to support a multiple allele call (use this argument or -bf). Defaults to 2.')
+                        help='Number of bases necessary to support a multiple allele call. Defaults to 2.')
     parser.add_argument('-bf', '--base_fraction_cutoff',
-                    type=float,
-                    help='Fraction of bases necessary to support a multiple allele call (use this argument or -b). Defaults to 0.05 and will be used in preeference to --base_cutoff.')
+                        type=float,
+                        help='Fraction of bases necessary to support a multiple allele call. Particularly useful when '
+                             'dealing with very high coverage samples.')
     parser.add_argument('-fid', '--forward_id',
                         type=str,
                         default='_R1',
@@ -856,7 +871,6 @@ if __name__ == '__main__':
                         default='info',
                         help='Amount of output you want printed to the screen. Defaults to info, which should be good '
                              'for most users.')
-
     args = parser.parse_args()
 
     # Setup the logger. TODO: Different colors for different levels.
@@ -894,6 +908,11 @@ if __name__ == '__main__':
     check_for_databases_and_download(database_location=args.databases,
                                      tmpdir=args.output_name)
 
+    # Check that the base fraction specified actually makes sense.
+    if check_valid_base_fraction(args.base_fraction_cutoff) is False:
+        logging.error('Base fraction must be between 0 and 1 if specified. Input value was: {}'.format(args.base_fraction_cutoff))
+        quit(code=1)
+
     # Figure out what pairs of reads, as well as unpaired reads, are present.
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
     unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
@@ -910,7 +929,7 @@ if __name__ == '__main__':
                                keep_files=args.keep_files,
                                quality_cutoff=args.quality_cutoff,
                                base_cutoff=args.base_cutoff,
-                               base_fraction_cutoff = args.base_fraction_cutoff)
+                               base_fraction_cutoff=args.base_fraction_cutoff)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -939,7 +958,7 @@ if __name__ == '__main__':
                                keep_files=args.keep_files,
                                quality_cutoff=args.quality_cutoff,
                                base_cutoff=args.base_cutoff,
-                               base_fraction_cutoff = args.base_fraction_cutoff)
+                               base_fraction_cutoff=args.base_fraction_cutoff)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
