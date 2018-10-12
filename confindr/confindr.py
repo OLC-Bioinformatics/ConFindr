@@ -241,7 +241,7 @@ def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2
     # Method differs depending on whether absolute or fraction cutoff is specified
     if base_fraction_cutoff:
         total_hq_base_count = sum(high_quality_base_count.values())
-        bases_above_threshold = {base:float(count)/total_hq_base_count > base_fraction_cutoff for (base,count) in high_quality_base_count.items()}
+        bases_above_threshold = {base:float(count)/total_hq_base_count >= base_fraction_cutoff for (base,count) in high_quality_base_count.items()}
     else:
         bases_above_threshold = {base:count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
 
@@ -277,26 +277,26 @@ def find_if_multibase(column, quality_cutoff, base_cutoff, base_fraction_cutoff)
     # first remove all low quality bases
     # Use dictionary comprehension to make a new dictionary where only scores above threshold are kept.
     # Internally list comprehension is used to filter the list
-    filtered_base_qualities = {base:[score for score in scores if score > quality_cutoff] for (base,scores) in unfiltered_base_qualities.items()}
+    filtered_base_qualities = {base:[score for score in scores if score >= quality_cutoff] for (base,scores) in unfiltered_base_qualities.items()}
 
     # Now remove bases that have no high quality scores
     # Use dictionary comprehension to make a new dictionary where bases that have a non-empty scores list are kept
     filtered_base_qualities = {base:scores for (base,scores) in filtered_base_qualities.items() if scores}
-    if len(unfiltered_base_qualities) > 1:
-        logging.debug('base qualities before filtering: {0}'.format(unfiltered_base_qualities))
-        logging.debug('base qualities after filtering: {0}'.format(filtered_base_qualities))
-
+ 
     # If we less than two bases with high quality scores, ignore things.
     if len(filtered_base_qualities) < 2:
         return dict()
 
+    logging.debug('base qualities before filtering: {0}'.format(unfiltered_base_qualities))
+    logging.debug('base qualities after filtering: {0}'.format(filtered_base_qualities))
     # Now that filtered_base_qualities only contains bases with more than one HQ base, make just a dict with base counts with dict comprehension
     high_quality_base_count = {base:len(scores) for (base,scores) in filtered_base_qualities.items()}
+    
     if number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=base_cutoff, base_fraction_cutoff=base_fraction_cutoff) > 1:
-        logging.debug('SNVs found\n')
+        # logging.debug('SNVs found\n')
         return high_quality_base_count
     else:
-        logging.debug('No SNVs\n')
+        # logging.debug('No SNVs\n')
         return dict()
 
 
@@ -594,7 +594,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                               quality_cutoff=quality_cutoff,
                                               base_cutoff=base_cutoff,
                                               base_fraction_cutoff=base_fraction_cutoff)
-        multi_positions += len(multibase_position_dict)
+        multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
     if multi_positions >= 3:
         percent_contam, contam_stddev = estimate_percent_contamination(contamination_report_file=report_file)
     else:
