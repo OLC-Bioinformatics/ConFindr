@@ -72,17 +72,45 @@ def test_run_cmd_failure_exit_code():
         run_cmd('garbagecommandthatdoesnotwork')
 
 
-def test_two_quality_bases_present():
-    assert has_two_high_quality_bases([20, 20]) is True
+# test base_count_cutoff
+
+def test_two_hq_bases_above_threshold():
+    assert number_of_bases_above_threshold({'G': 80, 'A': 20}) == 2
 
 
-def test_two_quality_bases_not_present():
-    assert has_two_high_quality_bases([10, 22, 3]) is False
+def test_just_one_hq_bases_above_threshold():
+    assert number_of_bases_above_threshold({'G': 99, 'A': 1}) == 1
 
 
-def test_quality_bases_success_custom_params():
-    assert has_two_high_quality_bases([30, 22, 44], quality_cutoff=22, base_count_cutoff=3) is True
+def test_two_hq_bases_above_threshold_custom_params():
+    assert number_of_bases_above_threshold({'G': 99, 'A': 1}, base_count_cutoff=1) == 2
 
 
-def test_quality_bases_fail_custom_params():
-    assert has_two_high_quality_bases([30, 22, 44], quality_cutoff=30, base_count_cutoff=3) is False
+def test_just_one_hq_base_above_threshold_custom_params():
+    assert number_of_bases_above_threshold({'G': 96, 'A': 4}, base_count_cutoff=5) == 1
+
+def test_three_hq_bases_above_threshold():
+    assert number_of_bases_above_threshold({'G': 90, 'A': 10, 'T': 10}) == 3
+
+def test_two_out_of_three_hq_bases_above_threshold():
+    assert number_of_bases_above_threshold({'G': 90, 'A': 9, 'T': 1}) == 2
+
+# test base_fraction_cutoff
+
+def test_two_hq_bases_above_fraction_threshold():
+    assert number_of_bases_above_threshold({'G': 80, 'A': 20}, base_fraction_cutoff=0.05) == 2
+
+def test_two_hq_bases_above_fraction_threshold_low_coverage():
+    assert number_of_bases_above_threshold({'G': 9, 'A': 1}, base_fraction_cutoff=0.05) == 1
+
+def test_two_hq_bases_above_fraction_threshold_low_coverage_one_base_counts():
+    assert number_of_bases_above_threshold({'G': 9, 'A': 1}, base_count_cutoff=1, base_fraction_cutoff=0.05) == 2
+
+def test_just_one_hq_bases_above_fraction_threshold():
+    assert number_of_bases_above_threshold({'G': 99, 'A': 1}, base_fraction_cutoff=0.05) == 1
+
+def test_three_hq_bases_above_fraction_threshold():
+    assert number_of_bases_above_threshold({'G': 90, 'A': 10, 'T': 10}, base_fraction_cutoff=0.05) == 3
+
+def test_two_out_of_three_hq_bases_above_fraction_threshold():
+    assert number_of_bases_above_threshold({'G': 90, 'A': 9, 'T': 1}, base_fraction_cutoff=0.05) == 2
