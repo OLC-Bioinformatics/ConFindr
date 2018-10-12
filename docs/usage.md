@@ -26,7 +26,7 @@ You can use absolute or relative paths, and trailing slashes are also acceptable
 If ConFindr is properly installed, you should see something similar to the following appear on your terminal:
 
 ```bash
-  2018-09-10 13:24:32  Welcome to ConFindr 0.4.0! Beginning analysis of your samples...
+  2018-09-10 13:24:32  Welcome to ConFindr 0.4.3! Beginning analysis of your samples...
   2018-09-10 13:24:32  Databases not present. Downloading to /home/user/.confindr_db. This may take a few minutes...
   2018-09-10 13:35:46  Databases successfully downloaded...
   2018-09-10 13:35:46  Beginning analysis of sample example...
@@ -35,7 +35,7 @@ If ConFindr is properly installed, you should see something similar to the follo
   2018-09-10 13:36:58  Extracting rMLST genes...
   2018-09-10 13:37:02  Quality trimming...
   2018-09-10 13:37:02  Detecting contamination...
-  2018-09-10 13:37:20  Done! Number of contaminating SNVs found: 15
+  2018-09-10 13:37:20  Done! Number of contaminating SNVs found: 24
 
   2018-09-10 13:37:20  Contamination detection complete!
 ```
@@ -87,8 +87,11 @@ that ConFindr creates, which are deleted by default.
 - `-verbosity, --verbosity`: How much you want printed to the screen. Choose `debug` to get some extra, or `warning` to
 get almost nothing. Default is `info`.
 - `-b`, `--base_cutoff`: The number of high-quality bases needed to call a site as multiallelic, and therefore 
-contributing to contamination. Defaults to 2, which is sensitive without producing false positives.
-If you have a very high depth (>100X) sample, you may want to increase this number.
+contributing to contamination. Defaults to 2, which is usually sensitive without producing false positives.
+If dealing with high depth samples, adding the `-bf` parameter set to around `0.05` is likely to be helpful in reducing
+false positives.
+- `-bf`, `--base_fraction_cutoff`: The proportion of high-quality bases needed to call a site as multiallelic, and therefore 
+contributing to contamination. Must be between 0 and 1. Not used by default.
 - `-q`, `--quality_cutoff`: The phred score a base needs to have before it's considered
 trustworthy enough to contribute to a site being multiallelic. Defaults to 20, which should
 be suitable for most purposes. 
