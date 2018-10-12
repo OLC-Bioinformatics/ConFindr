@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="confindr",
-    version="0.4.2",
+    version="0.4.3",
     packages=find_packages(),
     scripts=['confindr/confindr.py'],
     author="Andrew Low",
