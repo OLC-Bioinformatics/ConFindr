@@ -758,7 +758,7 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
                                               bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
                                               reference_fasta=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                               report_file=report_file)
-        multi_positions += len(multibase_position_dict)
+        multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
     logging.info('Done! Number of contaminating SNVs found: {}\n'.format(multi_positions))
     write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
                  sample_name=sample_name,
