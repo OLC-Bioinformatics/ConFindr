@@ -130,7 +130,7 @@ information will be created in this folder</li>
 <p><code>confindr.py -i example-data -o output</code></p>
 <p>You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified.
 If ConFindr is properly installed, you should see something similar to the following appear on your terminal:</p>
-<pre><code class="bash">  2018-09-10 13:24:32  Welcome to ConFindr 0.4.0! Beginning analysis of your samples...
+<pre><code class="bash">  2018-09-10 13:24:32  Welcome to ConFindr 0.4.3! Beginning analysis of your samples...
   2018-09-10 13:24:32  Databases not present. Downloading to /home/user/.confindr_db. This may take a few minutes...
   2018-09-10 13:35:46  Databases successfully downloaded...
   2018-09-10 13:35:46  Beginning analysis of sample example...
@@ -139,7 +139,7 @@ If ConFindr is properly installed, you should see something similar to the follo
   2018-09-10 13:36:58  Extracting rMLST genes...
   2018-09-10 13:37:02  Quality trimming...
   2018-09-10 13:37:02  Detecting contamination...
-  2018-09-10 13:37:20  Done! Number of contaminating SNVs found: 15
+  2018-09-10 13:37:20  Done! Number of contaminating SNVs found: 24
 
   2018-09-10 13:37:20  Contamination detection complete!
 </code></pre>
@@ -183,8 +183,11 @@ that ConFindr creates, which are deleted by default.</li>
 <li><code>-verbosity, --verbosity</code>: How much you want printed to the screen. Choose <code>debug</code> to get some extra, or <code>warning</code> to
 get almost nothing. Default is <code>info</code>.</li>
 <li><code>-b</code>, <code>--base_cutoff</code>: The number of high-quality bases needed to call a site as multiallelic, and therefore 
-contributing to contamination. Defaults to 2, which is sensitive without producing false positives.
-If you have a very high depth (&gt;100X) sample, you may want to increase this number.</li>
+contributing to contamination. Defaults to 2, which is usually sensitive without producing false positives.
+If dealing with high depth samples, adding the <code>-bf</code> parameter set to around <code>0.05</code> is likely to be helpful in reducing
+false positives.</li>
+<li><code>-bf</code>, <code>--base_fraction_cutoff</code>: The proportion of high-quality bases needed to call a site as multiallelic, and therefore 
+contributing to contamination. Must be between 0 and 1. Not used by default.</li>
 <li><code>-q</code>, <code>--quality_cutoff</code>: The phred score a base needs to have before it's considered
 trustworthy enough to contribute to a site being multiallelic. Defaults to 20, which should
 be suitable for most purposes. </li>
