@@ -28,6 +28,31 @@ This will download the databases ConFindr needs and run ConFindr on the example 
 called `example-out` in your current working directory. Take a look at `confindr_report.csv` in that directory to see
 the ConFindr results, which will show the sample is contaminated.
 
+Important note: Under current default settings, ConFindr will call a lot of false positives if you 
+input high depth (>100X) samples. If your samples are high depth, add `-bf 0.05` to your command - this will make it so that
+at least 5 percent of bases in a column have to support a call, as well as having at least 2 high quality bases.
+This will likely be changed to a default setting in a future version of ConFindr.
+
+### Running ConFindr in a Python Script
+
+If you want to run ConFindr from within a script instead of running from the command line, here's how:
+
+```python
+from confindr import confindr
+
+# Find read files.
+paired_reads = confindr.find_paired_reads('path_to_fastq_folder', forward_id='_R1', reverse_id='_R2')
+# Run confindr. This assumes that you have already downloaded the databases. If you haven't,
+# you can run confindr.check_for_databases_and_download(database_location='path/where/you/want/to/download, tmpdir='a/tmp/dir')
+for pair in paired_reads:
+    confindr.find_contamination(pair=pair,
+                                forward_id='_R1', # change if yours is different
+                                threads=4, 
+                                output_folder='path/to/output',
+                                databases_folder='path/to/databases')
+                                
+```
+
 ## Reporting Issues
 
 If you have any problems installing or running ConFindr, or have feature request,

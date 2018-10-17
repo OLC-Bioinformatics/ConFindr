@@ -4,10 +4,12 @@ import gzip
 from Bio import SeqIO
 
 
-def nanopore_or_illumina(fastq_file):
+def nanopore_or_illumina(fastq_file, read_length_cutoff=301):
     """
-    Makes a fairly educated guess about whether something is illumina or nanopore data
+    Makes a somewhat educated guess about whether something is illumina or nanopore data
     :param fastq_file: Path to a fastq file, either gzipped or uncompressed.
+    :param read_length_cutoff: Read length cutoff - if average read length is greater than this, assume reads are
+    nanopore, otherwise assume illumina.
     :return: 'Nanopore' if file is determined to be a nanopore file, 'Illumina' if it's illumina.
     """
     # Parse through the first 10 records of the fastq file to find average length and quality.
@@ -22,7 +24,7 @@ def nanopore_or_illumina(fastq_file):
 
     # Anything with over 300 average read length is probably nanopore (or PacBio I suppose, but that
     # should be able to be treated same as nanopore).
-    if average_read_length > 301:
+    if average_read_length > read_length_cutoff:
         return 'Nanopore'
     else:
         return 'Illumina'
