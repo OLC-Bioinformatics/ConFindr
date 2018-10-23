@@ -18,6 +18,11 @@ from confindr_wrappers import bbtools
 from confindr_wrappers import nanopore_methods
 
 
+# TODO: Make modifications for cgMLST schemes - ConFindr is brutally slow on them. The first mapping step to find
+# most abundant allele for each gene takes almost half an hour on my 12 core machine, and subsequent steps are just
+# as bad.
+
+
 def run_cmd(cmd):
     """
     Runs a command using subprocess, and returns both the stdout and stderr from that command
@@ -418,7 +423,7 @@ def estimate_percent_contamination(contamination_report_file):
 
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
-                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=None):
+                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -437,7 +442,9 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     :param quality_cutoff: Integer of the phred score required to have a base count towards a multiallelic site.
     :param base_cutoff: Integer of number of bases needed to have a base be part of a multiallelic site.
     :param base_fraction_cutoff: Float of fraction of bases needed to have a base be part of a multiallelic site.
-    If specified will be used instead of base_cutoff
+    If specified will be used in parallel with base_cutoff
+    :param cgmlst_db: if None, we're using rMLST, if True, using some sort of custom cgMLST database. This requires some
+    custom parameters.
     """
     log = os.path.join(output_folder, 'confindr_log.txt')
     if len(pair) == 2:
@@ -474,14 +481,17 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # Main method for finding contamination - works on one pair at a time.
     # Need to:
     # Setup genus-specific databases, if necessary.
-    if genus != 'NA':
-        sample_database = os.path.join(databases_folder, '{}_db.fasta'.format(genus))
-        if not os.path.isfile(os.path.join(databases_folder, '{}_db.fasta'.format(genus))):
-            logging.info('Setting up genus-specific database for genus {}...'.format(genus))
-            allele_list = find_genusspecific_allele_list(os.path.join(databases_folder, 'gene_allele.txt'), genus)
-            setup_allelespecific_database(databases_folder, genus, allele_list)
+    if cgmlst_db is not None:
+        sample_database = cgmlst_db
     else:
-        sample_database = os.path.join(databases_folder, 'rMLST_combined.fasta')
+        if genus != 'NA':
+            sample_database = os.path.join(databases_folder, '{}_db.fasta'.format(genus))
+            if not os.path.isfile(os.path.join(databases_folder, '{}_db.fasta'.format(genus))):
+                logging.info('Setting up genus-specific database for genus {}...'.format(genus))
+                allele_list = find_genusspecific_allele_list(os.path.join(databases_folder, 'gene_allele.txt'), genus)
+                setup_allelespecific_database(databases_folder, genus, allele_list)
+        else:
+            sample_database = os.path.join(databases_folder, 'rMLST_combined.fasta')
     # Extract rMLST reads and quality trim.
     logging.info('Extracting rMLST genes...')
     if paired:
@@ -563,12 +573,22 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                               reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
                               outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
                               threads=threads)
+        if cgmlst_db is not None:
+            # Lots of core genes seem to have relatives within a genome that are at ~70 percent identity - this means
+            # that reads that shouldn't really map do, and cause false positives. Adding in this subfilter means that
+            # reads can only have one mismatch, so they actually have to be from the right gene for this to work.
+            cmd += ' subfilter=1'
     else:
         cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
               'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                               forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
                               outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
                               threads=threads)
+        if cgmlst_db is not None:
+            # Lots of core genes seem to have relatives within a genome that are at ~70 percent identity - this means
+            # that reads that shouldn't really map do, and cause false positives. Adding in this subfilter means that
+            # reads can only have one mismatch, so they actually have to be from the right gene for this to work.
+            cmd += ' subfilter=1'
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
@@ -857,6 +877,7 @@ if __name__ == '__main__':
                         help='Number of bases necessary to support a multiple allele call. Defaults to 2.')
     parser.add_argument('-bf', '--base_fraction_cutoff',
                         type=float,
+                        default=0.05,
                         help='Fraction of bases necessary to support a multiple allele call. Particularly useful when '
                              'dealing with very high coverage samples.')
     parser.add_argument('-fid', '--forward_id',
@@ -876,6 +897,13 @@ if __name__ == '__main__':
                         help='Type of input data. Default is to guess which type of data based on read length. '
                              'Currently has no effect, but future versions of ConFindr will support nanopore data '
                              'as well.')
+    parser.add_argument('-cgmlst', '--cgmlst',
+                        type=str,
+                        help='Path to a cgMLST database to use for contamination detection instead of using the default'
+                             ' rMLST database. Sequences in this file should have headers in format '
+                             '>genename_allelenumber. To speed up ConFindr runs, clustering the cgMLST database with '
+                             'CD-HIT before running ConFindr is recommended. This is highly experimental, results should'
+                             ' be interpreted with great care.')
     parser.add_argument('-verbosity', '--verbosity',
                         choices=['debug', 'info', 'warning'],
                         default='info',
@@ -939,7 +967,8 @@ if __name__ == '__main__':
                                keep_files=args.keep_files,
                                quality_cutoff=args.quality_cutoff,
                                base_cutoff=args.base_cutoff,
-                               base_fraction_cutoff=args.base_fraction_cutoff)
+                               base_fraction_cutoff=args.base_fraction_cutoff,
+                               cgmlst_db=args.cgmlst)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -968,7 +997,8 @@ if __name__ == '__main__':
                                keep_files=args.keep_files,
                                quality_cutoff=args.quality_cutoff,
                                base_cutoff=args.base_cutoff,
-                               base_fraction_cutoff=args.base_fraction_cutoff)
+                               base_fraction_cutoff=args.base_fraction_cutoff,
+                               cgmlst_db=args.cgmlst)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
