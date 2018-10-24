@@ -43,14 +43,12 @@ def test_correct_num_multipositions():
         contig_names.append(contig.id)
     multi_positions = 0
     for contig_name in contig_names:
-        multi_position_dict = read_contig(contig_name=contig_name,
-                                          bamfile_name='tests/contamination.bam',
-                                          reference_fasta='tests/rmlst.fasta',
-                                          report_file='tests/dummy_report',
-                                          quality_cutoff=20,
-                                          base_cutoff=2)
+        multi_position_dict, to_write = read_contig(contig_name=contig_name,
+                                                    bamfile_name='tests/contamination.bam',
+                                                    reference_fasta='tests/rmlst.fasta',
+                                                    quality_cutoff=20,
+                                                    base_cutoff=2)
         multi_positions += sum([len(snp_positions) for snp_positions in multi_position_dict.values()])
-    os.remove('tests/dummy_report')
     assert multi_positions == 24
 
 
@@ -134,3 +132,32 @@ def test_valid_base_fraction_between_zero_one():
 
 def test_invalid_base_fraction():
     assert check_valid_base_fraction(1.2) is False
+
+
+def test_total_length_fasta():
+    assert find_total_sequence_length('tests/rmlst.fasta') == 20862
+
+
+def test_write_output_creates_file_if_does_not_exist():
+    write_output(output_report='tests/file_that_does_not_exist.csv',
+                 sample_name='Test',
+                 multi_positions=55,
+                 genus='Fakella',
+                 percent_contam=22.2,
+                 contam_stddev=1.1,
+                 total_gene_length=888)
+    assert os.path.isfile('tests/file_that_does_not_exist.csv') is True
+    os.remove('tests/file_that_does_not_exist.csv')
+
+
+def test_write_output_appends_if_file_does_exist():
+    write_output(output_report='tests/confindr_report.csv',
+                 sample_name='Test',
+                 multi_positions=55,
+                 genus='Fakella',
+                 percent_contam=22.2,
+                 contam_stddev=1.1,
+                 total_gene_length=888)
+    with open('tests/confindr_report.csv') as f:
+        lines = f.readlines()
+    assert len(lines) > 2

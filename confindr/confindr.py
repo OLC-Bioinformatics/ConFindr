@@ -18,9 +18,12 @@ from confindr_wrappers import bbtools
 from confindr_wrappers import nanopore_methods
 
 
-# TODO: Make modifications for cgMLST schemes - ConFindr is brutally slow on them. The first mapping step to find
-# most abundant allele for each gene takes almost half an hour on my 12 core machine, and subsequent steps are just
-# as bad.
+# TODO: Make a better method of determining cutoff used to call sample as contaminated or not.
+# Should be able to guesstimate at the number of false positive SNPs expected based on total length
+# of cgMLST genes, and then set the cutoff dynamically based on expected number of false positives.
+
+# Number of false positives doesn't look like it's going to correlate nicely with total number of bases examined.
+# Will need to look into this further and see what's happening
 
 
 def run_cmd(cmd):
@@ -316,7 +319,7 @@ def get_contig_names(fasta_file):
     return contig_names
 
 
-def read_contig(contig_name, bamfile_name, reference_fasta, report_file, quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=None):
+def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=None):
     """
     Examines a contig to find if there are positions where more than one base is present.
     :param contig_name: Name of contig as a string.
@@ -328,6 +331,7 @@ def read_contig(contig_name, bamfile_name, reference_fasta, report_file, quality
     """
     bamfile = pysam.AlignmentFile(bamfile_name, 'rb')
     multibase_position_dict = dict()
+    to_write = list()
     # These parameters seem to be fairly undocumented with pysam, but I think that they should make the output
     # that I'm getting to match up with what I'm seeing in Tablet.
     for column in bamfile.pileup(contig_name,
@@ -342,13 +346,12 @@ def read_contig(contig_name, bamfile_name, reference_fasta, report_file, quality
                 multibase_position_dict[column.reference_name].append(actual_position)
             else:
                 multibase_position_dict[column.reference_name] = [actual_position]
-            with open(report_file, 'a+') as r:
-                r.write('{reference},{position},{bases},{coverage}\n'.format(reference=column.reference_name,
-                                                                             position=actual_position,
-                                                                             bases=base_dict_to_string(base_dict),
-                                                                             coverage=sum(base_dict.values())))
+            to_write.append('{reference},{position},{bases},{coverage}\n'.format(reference=column.reference_name,
+                                                                            position=actual_position,
+                                                                            bases=base_dict_to_string(base_dict),
+                                                                            coverage=sum(base_dict.values())))
     bamfile.close()
-    return multibase_position_dict
+    return multibase_position_dict, to_write
 
 
 def find_rmlst_type(bamfile, sample_database, rmlst_report):
@@ -399,6 +402,18 @@ def base_dict_to_string(base_dict):
     for base in base_dict:
         outstr += base + ':' + str(base_dict[base]) + ';'
     return outstr[:-1]
+
+
+def find_total_sequence_length(fasta_file):
+    """
+    Totals up number of bases in a fasta file.
+    :param fasta_file: Path to an uncompressed, fasta-formatted file.
+    :return: Number of total bases in file, as an int.
+    """
+    total_length = 0
+    for sequence in SeqIO.parse(fasta_file, 'fasta'):
+        total_length += len(sequence.seq)
+    return total_length
 
 
 def estimate_percent_contamination(contamination_report_file):
@@ -459,10 +474,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     if not os.path.isdir(sample_tmp_dir):
         os.makedirs(sample_tmp_dir)
 
-    # Get the output report file set up
-    if not os.path.isfile(os.path.join(output_folder, 'confindr_report.csv')):
-        with open(os.path.join(output_folder, 'confindr_report.csv'), 'w') as f:
-            f.write('Sample,Genus,NumContamSNVs,ContamStatus,PercentContam,PercentContamStandardDeviation\n')
     logging.info('Checking for cross-species contamination...')
     if paired:
         genus = find_cross_contamination(databases_folder, pair, tmpdir=sample_tmp_dir, log=log, threads=threads)
@@ -474,14 +485,17 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                      multi_positions=0,
                      genus=genus,
                      percent_contam='NA',
-                     contam_stddev='NA')
+                     contam_stddev='NA',
+                     total_gene_length=0)
         logging.info('Found cross-contamination! Skipping rest of analysis...\n')
         shutil.rmtree(sample_tmp_dir)
         return
-    # Main method for finding contamination - works on one pair at a time.
-    # Need to:
     # Setup genus-specific databases, if necessary.
     if cgmlst_db is not None:
+        # Sanity check that the DB specified is actually a file, otherwise, quit with appropriate error message.
+        if not os.path.isfile(cgmlst_db):
+            logging.error('ERROR: Specified cgMLST file ({}) does not exist. Please check the path and try again.'.format(cgmlst_db))
+            quit(code=1)
         sample_database = cgmlst_db
     else:
         if genus != 'NA':
@@ -525,8 +539,9 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
     # with only the most likely allele for each gene.
     cmd = 'samtools faidx {}'.format(sample_database)
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
+    if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
+        out, err = run_cmd(cmd)
+        write_to_logfile(log, out, err, cmd)
     if paired:
         cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} ' \
               'nodisk ambig=all threads={threads}'.format(ref=sample_database,
@@ -561,6 +576,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                 f.write('>{}\n'.format(contig.id))
                 f.write(str(contig.seq) + '\n')
 
+    rmlst_gene_length = find_total_sequence_length(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
+    logging.debug('Total gene length is {}'.format(rmlst_gene_length))
     # Second step of mapping - Do a mapping of our baited reads against a fasta file that has only one allele per
     # rMLST gene.
     cmd = 'samtools faidx {}'.format(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
@@ -599,21 +616,37 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     # Now find number of multi-positions for each rMLST gene/allele combination
+    multi_positions = 0
+
+    # Run the BAM parsing in parallel! Some refactoring of the code would likely be a good idea so this
+    # isn't quite so ugly, but it works.
+    p = multiprocessing.Pool(processes=threads)
+    bamfile_list = [os.path.join(sample_tmp_dir, 'contamination.bam')] * len(gene_alleles)
+    reference_fasta_list = [os.path.join(sample_tmp_dir, 'rmlst.fasta')] * len(gene_alleles)
+    quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
+    base_cutoff_list = [base_cutoff] * len(gene_alleles)
+    base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
+    multibase_dict_list = list()
+    report_write_list = list()
+    for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list, quality_cutoff_list, base_cutoff_list, base_fraction_list)):
+        multibase_dict_list.append(multibase_dict)
+        report_write_list.append(report_write)
+    p.close()
+    p.join()
+
+    # Write out report info.
     report_file = os.path.join(output_folder, sample_name + '_contamination.csv')
     with open(report_file, 'w') as r:
         r.write('{reference},{position},{bases},{coverage}\n'.format(reference='Gene',
                                                                      position='Position',
                                                                      bases='Bases',
                                                                      coverage='Coverage'))
-    multi_positions = 0
-    for contig_name in gene_alleles:
-        multibase_position_dict = read_contig(contig_name=contig_name,
-                                              bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
-                                              reference_fasta=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                                              report_file=report_file,
-                                              quality_cutoff=quality_cutoff,
-                                              base_cutoff=base_cutoff,
-                                              base_fraction_cutoff=base_fraction_cutoff)
+        for item in report_write_list:
+            for contamination_info in item:
+                r.write(contamination_info)
+
+    # Total up the number of multibase positions.
+    for multibase_position_dict in multibase_dict_list:
         multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
     if multi_positions >= 3:
         percent_contam, contam_stddev = estimate_percent_contamination(contamination_report_file=report_file)
@@ -626,12 +659,15 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                  multi_positions=multi_positions,
                  genus=genus,
                  percent_contam=percent_contam,
-                 contam_stddev=contam_stddev)
+                 contam_stddev=contam_stddev,
+                 total_gene_length=rmlst_gene_length,
+                 cgmlst=cgmlst_db)
     if keep_files is False:
         shutil.rmtree(sample_tmp_dir)
 
 
-def write_output(output_report, sample_name, multi_positions, genus, percent_contam, contam_stddev):
+def write_output(output_report, sample_name, multi_positions, genus, percent_contam, contam_stddev, total_gene_length,
+                 cgmlst=None):
     """
     Function that writes the output generated by ConFindr to a report file. Appends to a file that already exists,
     or creates the file if it doesn't already exist.
@@ -642,19 +678,32 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
     :param genus: string - The genus of your sample
     :param percent_contam: float - Estimated percentage contamination
     :param contam_stddev: float - Standard deviation of percentage contamination
+    :param total_gene_length: integer - number of bases examined to make a contamination call.
+    :param cgmlst: If None, means that rMLST database was used, so use rMLST snp cutoff. Otherwise, some sort of cgMLST
+    database was used, so use a different cutoff.
     """
-    if multi_positions > 2 or len(genus.split(':')) > 1:
+    if cgmlst is None:
+        snp_cutoff = 3
+    else:
+        snp_cutoff = 10  # TODO: This has to be investigated a lot more, and should probably be made dynamic.
+    # If the report file hasn't been created, make it, with appropriate header.
+    if not os.path.isfile(output_report):
+        with open(os.path.join(output_report), 'w') as f:
+            f.write('Sample,Genus,NumContamSNVs,ContamStatus,PercentContam,PercentContamStandardDeviation,BasesExamined\n')
+
+    if multi_positions >= snp_cutoff or len(genus.split(':')) > 1:
         contaminated = True
     else:
         contaminated = False
     with open(output_report, 'a+') as f:
         f.write('{samplename},{genus},{numcontamsnvs},'
-                '{contamstatus},{percent_contam},{contam_stddev}\n'.format(samplename=sample_name,
-                                                                           genus=genus,
-                                                                           numcontamsnvs=multi_positions,
-                                                                           contamstatus=contaminated,
-                                                                           percent_contam=percent_contam,
-                                                                           contam_stddev=contam_stddev))
+                '{contamstatus},{percent_contam},{contam_stddev},{gene_length}\n'.format(samplename=sample_name,
+                                                                                         genus=genus,
+                                                                                         numcontamsnvs=multi_positions,
+                                                                                         contamstatus=contaminated,
+                                                                                         percent_contam=percent_contam,
+                                                                                         contam_stddev=contam_stddev,
+                                                                                         gene_length=total_gene_length))
 
 
 # TODO: This can be deleted soon, as it's no longer used. Keep it around until nanopore stuff gets tested more.
@@ -781,8 +830,7 @@ def find_contamination_unpaired(reads, output_folder, databases_folder, threads=
                                                                      coverage='Coverage'))
     multi_positions = 0
     for contig_name in gene_alleles:
-        # TODO: This should be parallelizable (and ConFindr on MinION data is slooow). Get this done at some
-        # point
+        # TODO: This should be parallelizable (and ConFindr on cgMLST is slower than I'd like, on minION can be really slow.). Get this done at some point.
         logging.debug(contig_name)
         multibase_position_dict = read_contig(contig_name=contig_name,
                                               bamfile_name=os.path.join(sample_tmp_dir, 'contamination.bam'),
@@ -841,14 +889,14 @@ def check_valid_base_fraction(base_fraction):
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.4.3'
+    version = 'ConFindr 0.4.4'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
                         type=str,
                         required=True,
-                        help="Folder that contains fastq files you want to check for contamination. "
-                             "Will find any fastq file that contains .fq or .fastq in the filename.")
+                        help='Folder that contains fastq files you want to check for contamination. '
+                             'Will find any file that contains .fq or .fastq in the filename.')
     parser.add_argument('-o', '--output_name',
                         type=str,
                         required=True,
@@ -891,12 +939,12 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version',
                         action='version',
                         version=version)
-    parser.add_argument('-dt', '--data_type',
-                        choices=['Illumina', 'Nanopore', 'auto'],
-                        default='auto',
-                        help='Type of input data. Default is to guess which type of data based on read length. '
-                             'Currently has no effect, but future versions of ConFindr will support nanopore data '
-                             'as well.')
+    # parser.add_argument('-dt', '--data_type',
+    #                     choices=['Illumina', 'Nanopore', 'auto'],
+    #                     default='auto',
+    #                     help='Type of input data. Default is to guess which type of data based on read length. '
+    #                          'Currently has no effect, but future versions of ConFindr will support nanopore data '
+    #                          'as well.')
     parser.add_argument('-cgmlst', '--cgmlst',
                         type=str,
                         help='Path to a cgMLST database to use for contamination detection instead of using the default'
@@ -979,7 +1027,8 @@ if __name__ == '__main__':
                          multi_positions=multi_positions,
                          genus=genus,
                          percent_contam='NA',
-                         contam_stddev='NA')
+                         contam_stddev='NA',
+                         total_gene_length=0)
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
             if args.keep_files is False:
@@ -1009,7 +1058,8 @@ if __name__ == '__main__':
                          multi_positions=multi_positions,
                          genus=genus,
                          percent_contam='NA',
-                         contam_stddev='NA')
+                         contam_stddev='NA',
+                         total_gene_length=0)
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
             if args.keep_files is False:
