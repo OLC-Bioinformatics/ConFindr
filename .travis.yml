@@ -1,23 +1,19 @@
 language: python
 python:
+  - '3.4'
   - '3.5'
+  - '3.6'
+  - '3.7'
 cache: pip
 
 install:
-  - pip install -r requirements.txt
-  - wget https://github.com/gmarcais/Jellyfish/releases/download/v2.2.6/jellyfish-2.2.6.tar.gz
-  - tar xf jellyfish-2.2.6.tar.gz
-  - pushd jellyfish-2.2.6 && ./configure --prefix /usr && make && sudo make install && popd
   - wget https://sourceforge.net/projects/bbmap/files/BBMap_37.68.tar.gz
   - tar xf BBMap_37.68.tar.gz
   - export PATH=$PATH:$PWD/bbmap/
   - wget https://github.com/marbl/Mash/releases/download/v2.0/mash-Linux64-v2.0.tar
   - tar xf mash-Linux64-v2.0.tar
   - export PATH=$PATH:$PWD/mash-Linux64-v2.0
-  - wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.30/ncbi-blast-2.2.30+-x64-linux.tar.gz
-  - tar -zxvf ncbi-blast-2.2.30+-x64-linux.tar.gz | tail
-  - export PATH="${TRAVIS_BUILD_DIR}/ncbi-blast-2.2.30+/bin:$PATH"
-  - wget https://ndownloader.figshare.com/files/11864267 && tar xf 11864267 && rm 11864267
+  - pip install -e .
 branches:
   only:
     - master
