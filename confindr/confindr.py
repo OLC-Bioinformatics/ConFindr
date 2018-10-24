@@ -648,7 +648,11 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # Total up the number of multibase positions.
     for multibase_position_dict in multibase_dict_list:
         multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
-    if multi_positions >= 3:
+    if cgmlst_db is None:
+        snp_cutoff = 3
+    else:
+        snp_cutoff = 10
+    if multi_positions >= snp_cutoff:
         percent_contam, contam_stddev = estimate_percent_contamination(contamination_report_file=report_file)
     else:
         percent_contam = 0
