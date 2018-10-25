@@ -931,7 +931,7 @@ if __name__ == '__main__':
                         type=float,
                         default=0.05,
                         help='Fraction of bases necessary to support a multiple allele call. Particularly useful when '
-                             'dealing with very high coverage samples.')
+                             'dealing with very high coverage samples. Default is 0.05.')
     parser.add_argument('-fid', '--forward_id',
                         type=str,
                         default='_R1',

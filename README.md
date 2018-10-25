@@ -28,10 +28,6 @@ This will download the databases ConFindr needs and run ConFindr on the example 
 called `example-out` in your current working directory. Take a look at `confindr_report.csv` in that directory to see
 the ConFindr results, which will show the sample is contaminated.
 
-Important note: Under current default settings, ConFindr will call a lot of false positives if you 
-input high depth (>100X) samples. If your samples are high depth, add `-bf 0.05` to your command - this will make it so that
-at least 5 percent of bases in a column have to support a call, as well as having at least 2 high quality bases.
-This will likely be changed to a default setting in a future version of ConFindr.
 
 ### Running ConFindr in a Python Script
 
@@ -52,6 +48,30 @@ for pair in paired_reads:
                                 databases_folder='path/to/databases')
                                 
 ```
+
+### Using a cgMLST scheme instead of rMLST
+
+As of ConFindr 0.4.4, the option to use a cgMLST scheme instead of an rMLST scheme for increased
+contamination detection sensitivity. This hasn't been tested extensively, but looks to be working. Runtime is
+increased by a factor of 2 or 3 compared to running against rMLST genes.
+
+To use this option, you'll need a a cgMLST FASTA file - all FASTA headers should be in format >genename_allele
+
+In order to decrease computation time, clustering the cgMLST FASTA before running is recommended. CD-HIT on default
+parameters does this fairly well.
+
+cgMLST files that are already clustered are available for _Salmonella_ and _Escherichia_. To get them:
+
+Escherichia: `wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&st=2018-10-25T13:45:13Z&se=2020-10-31T21:45:13Z&spr=https&sv=2017-11-09&sig=0fgvcf6R%2BSSiz7gPm7KKm5M78wpjAPjGawhzt%2BlY7iE%3D&sr=b' -O Escherichia_cgmlst.fasta`
+
+Salmonella: `wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&st=2018-10-25T13:35:21Z&se=2020-10-31T21:35:21Z&spr=https&sv=2017-11-09&sig=w5Pq9e4hsa6PGr458%2Bx4b5zqf4F2a6OUUL9H3ewQTNc%3D&sr=b' -O Salmonella_cgmlst.fasta`
+
+When using a cgMLST database, ConFindr will use the provided scheme for all samples regardless of genus.
+
+Actually calling ConFindr with cgMLST:
+
+`confindr.py -i folder-with-Escherichia-files -o cgmlst-output -cgmlst /path/to/Escherichia_cgmlst.fasta`
+
 
 ## Reporting Issues
 
