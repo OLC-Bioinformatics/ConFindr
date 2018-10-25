@@ -51,7 +51,7 @@ for pair in paired_reads:
 
 ### Using a cgMLST scheme instead of rMLST
 
-As of ConFindr 0.4.4, the option to use a cgMLST scheme instead of an rMLST scheme for increased
+As of ConFindr 0.4.4, ConFindr has the option to use a cgMLST scheme instead of an rMLST scheme for increased
 contamination detection sensitivity. This hasn't been tested extensively, but looks to be working. Runtime is
 increased by a factor of 2 or 3 compared to running against rMLST genes.
 
