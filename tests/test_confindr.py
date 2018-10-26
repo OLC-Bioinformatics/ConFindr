@@ -161,3 +161,15 @@ def test_write_output_appends_if_file_does_exist():
     with open('tests/confindr_report.csv') as f:
         lines = f.readlines()
     assert len(lines) > 2
+
+
+def test_base_dict_to_string_two_base_descending():
+    assert base_dict_to_string({'A': 18, 'C': 3}) == 'A:18;C:3'
+
+
+def test_base_dict_to_string_two_base_ascending():
+    assert base_dict_to_string({'A': 8, 'C': 33}) == 'C:33;A:8'
+
+
+def test_base_dict_to_string_three_bases():
+    assert base_dict_to_string({'A': 5, 'T': 88, 'C': 33}) == 'T:88;C:33;A:5'

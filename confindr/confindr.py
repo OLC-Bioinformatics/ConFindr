@@ -399,8 +399,10 @@ def base_dict_to_string(base_dict):
     :return: String representing that dictionary.
     """
     outstr = ''
-    for base in base_dict:
-        outstr += base + ':' + str(base_dict[base]) + ';'
+    # First, sort base_dict so that major allele always comes first - makes output report nicer to look at.
+    base_list = sorted(base_dict.items(), key=lambda kv: kv[1], reverse=True)
+    for base in base_list:
+        outstr += '{}:{};'.format(base[0], base[1])
     return outstr[:-1]
 
 
