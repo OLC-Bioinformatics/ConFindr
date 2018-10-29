@@ -12,6 +12,8 @@ def run_subprocess(command):
     out, err = x.communicate()
     out = out.decode('utf-8')
     err = err.decode('utf-8')
+    if x.returncode != 0:
+        raise subprocess.CalledProcessError(x.returncode, cmd=command)
     return out, err
 
 

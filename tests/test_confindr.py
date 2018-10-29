@@ -173,3 +173,31 @@ def test_base_dict_to_string_two_base_ascending():
 
 def test_base_dict_to_string_three_bases():
     assert base_dict_to_string({'A': 5, 'T': 88, 'C': 33}) == 'T:88;C:33;A:5'
+
+
+def test_valid_xmx_string_gigabytes():
+    assert check_acceptable_xmx('20g') is True
+    assert check_acceptable_xmx('20G') is True
+
+
+def test_valid_xmx_string_megabytes():
+    assert check_acceptable_xmx('20m') is True
+    assert check_acceptable_xmx('20M') is True
+
+
+def test_valid_xmx_string_kilobytes():
+    assert check_acceptable_xmx('550k') is True
+    assert check_acceptable_xmx('550K') is True
+
+
+def test_invalid_xmx_bad_suffix():
+    assert check_acceptable_xmx('600u') is False
+
+
+def test_invalid_xmx_float():
+    assert check_acceptable_xmx('2.2G') is False
+
+
+def test_invalid_xmx_not_an_integer():
+    assert check_acceptable_xmx('asdfK') is False
+
