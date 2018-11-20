@@ -823,7 +823,7 @@ def check_acceptable_xmx(xmx_string):
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.4.6'
+    version = 'ConFindr 0.4.7'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
