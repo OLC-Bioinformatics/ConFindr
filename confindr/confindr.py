@@ -441,7 +441,8 @@ def estimate_percent_contamination(contamination_report_file):
 
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
-                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, Xmx=None, tmpdir=None):
+                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, Xmx=None, tmpdir=None,
+                       data_type='Illumina'):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -539,41 +540,46 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                                Xmx=Xmx,
                                                returncmd=True)
     else:
+        if data_type == 'Nanopore':
+            forward_out = os.path.join(sample_tmp_dir, 'trimmed.fastq.gz')
+        else:
+            forward_out = os.path.join(sample_tmp_dir, 'rmlst.fastq.gz')
         if Xmx is None:
             out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=pair[0],
-                                               forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                               forward_out=forward_out,
                                                returncmd=True, threads=threads)
         else:
             out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=pair[0],
-                                               forward_out=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'), Xmx=Xmx,
+                                               forward_out=forward_out, Xmx=Xmx,
                                                returncmd=True, threads=threads)
 
     write_to_logfile(log, out, err, cmd)
     logging.info('Quality trimming...')
-    if paired:
-        if Xmx is None:
-            out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
-                                               reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
-                                               forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                                               reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
-                                               threads=str(threads), returncmd=True)
-        else:
-            out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
-                                               reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
-                                               forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                                               reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'), Xmx=Xmx,
-                                               threads=str(threads), returncmd=True)
+    if data_type == 'Illumina':
+        if paired:
+            if Xmx is None:
+                out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
+                                                   reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
+                                                   forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                                                   reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
+                                                   threads=str(threads), returncmd=True)
+            else:
+                out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst_R1.fastq.gz'),
+                                                   reverse_in=os.path.join(sample_tmp_dir, 'rmlst_R2.fastq.gz'),
+                                                   forward_out=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                                                   reverse_out=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'), Xmx=Xmx,
+                                                   threads=str(threads), returncmd=True)
 
-    else:
-        if Xmx is None:
-            out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                               forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                               returncmd=True, threads=threads)
         else:
-            out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                               forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                               returncmd=True, threads=threads, Xmx=Xmx)
-    write_to_logfile(log, out, err, cmd)
+            if Xmx is None:
+                out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                                   forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                   returncmd=True, threads=threads)
+            else:
+                out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                                   forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                   returncmd=True, threads=threads, Xmx=Xmx)
+        write_to_logfile(log, out, err, cmd)
 
     logging.info('Detecting contamination...')
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
@@ -593,19 +599,29 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         if Xmx:
             cmd += ' -Xmx{}'.format(Xmx)
     else:
-        cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
-              'nodisk ambig=all'.format(ref=sample_database,
-                                        forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                        outbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                        threads=threads)
-        if Xmx:
-            cmd += ' -Xmx{}'.format(Xmx)
+        if data_type == 'Illumina':
+            cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+                  'nodisk ambig=all'.format(ref=sample_database,
+                                            forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                            outbam=os.path.join(sample_tmp_dir, 'out.bam'),
+                                            threads=threads)
+            if Xmx:
+                cmd += ' -Xmx{}'.format(Xmx)
+        else:
+            cmd = 'minimap2 -t {threads} -ax map-ont {ref} {reads} | ' \
+                  'samtools view -bS > {outbam}'.format(ref=sample_database,
+                                                        reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                        outbam=os.path.join(sample_tmp_dir, 'out.bam'),
+                                                        threads=threads)
+    logging.debug(cmd)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
+    logging.debug('Sorting bam')
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out.bam'),
                                                          sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
+    logging.debug('Indexing bam')
     cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
@@ -643,18 +659,25 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         if Xmx:
             cmd += ' -Xmx{}'.format(Xmx)
     else:
-        cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
-              'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                              forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                              outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                              threads=threads)
-        if cgmlst_db is not None:
-            # Lots of core genes seem to have relatives within a genome that are at ~70 percent identity - this means
-            # that reads that shouldn't really map do, and cause false positives. Adding in this subfilter means that
-            # reads can only have one mismatch, so they actually have to be from the right gene for this to work.
-            cmd += ' subfilter=1'
-        if Xmx:
-            cmd += ' -Xmx{}'.format(Xmx)
+        if data_type == 'Illumina':
+            cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+                  'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                                  forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                  outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
+                                  threads=threads)
+            if cgmlst_db is not None:
+                # Lots of core genes seem to have relatives within a genome that are at ~70 percent identity - this means
+                # that reads that shouldn't really map do, and cause false positives. Adding in this subfilter means that
+                # reads can only have one mismatch, so they actually have to be from the right gene for this to work.
+                cmd += ' subfilter=1'
+            if Xmx:
+                cmd += ' -Xmx{}'.format(Xmx)
+        else:
+            cmd = 'minimap2 -t {threads} -ax map-ont {ref} {reads} |' \
+                  ' samtools view -bS > {outbam}'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                                                         reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                         outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
+                                                         threads=threads)
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
@@ -677,7 +700,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
     multibase_dict_list = list()
     report_write_list = list()
-    for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list, quality_cutoff_list, base_cutoff_list, base_fraction_list)):
+    for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list, quality_cutoff_list, base_cutoff_list, base_fraction_list), chunksize=1):
         multibase_dict_list.append(multibase_dict)
         report_write_list.append(report_write)
     p.close()
@@ -878,12 +901,11 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version',
                         action='version',
                         version=version)
-    # parser.add_argument('-dt', '--data_type',
-    #                     choices=['Illumina', 'Nanopore', 'auto'],
-    #                     default='auto',
-    #                     help='Type of input data. Default is to guess which type of data based on read length. '
-    #                          'Currently has no effect, but future versions of ConFindr will support nanopore data '
-    #                          'as well.')
+    parser.add_argument('-dt', '--data_type',
+                        choices=['Illumina', 'Nanopore'],
+                        default='Illumina',
+                        help='Type of input data. Default is Illumina, but can be used for Nanopore too. No PacBio '
+                             'support (yet).')
     parser.add_argument('-Xmx', '--Xmx',
                         type=str,
                         help='Very occasionally, parts of the pipeline that use the BBMap suite will have their memory '
@@ -922,8 +944,7 @@ if __name__ == '__main__':
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     all_dependencies_present = True
     # Re-enable minimap2 as dependency once nanopore stuff actually works.
-    # dependencies = ['bbmap.sh', 'bbduk.sh', 'mash', 'minimap2']
-    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
+    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash', 'minimap2']
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             logging.error('Dependency {} not found. Please make sure it is installed and present'
@@ -943,6 +964,11 @@ if __name__ == '__main__':
         valid_xmx = check_acceptable_xmx(args.Xmx)
         if valid_xmx is False:
             quit(code=1)
+
+    # Don't yet have cgmlst support with Nanopore reads - don't let user do this.
+    if args.cgmlst and args.data_type == 'Nanopore':
+        logging.error('ERROR: cgMLST schemes not yet supported for Nanopore reads. Quitting...')
+        quit(code=1)
 
     # Make the output directory.
     if not os.path.isdir(args.output_name):
@@ -972,7 +998,8 @@ if __name__ == '__main__':
                                base_fraction_cutoff=args.base_fraction_cutoff,
                                cgmlst_db=args.cgmlst,
                                Xmx=args.Xmx,
-                               tmpdir=args.tmp)
+                               tmpdir=args.tmp,
+                               data_type=args.data_type)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -1005,7 +1032,8 @@ if __name__ == '__main__':
                                base_fraction_cutoff=args.base_fraction_cutoff,
                                cgmlst_db=args.cgmlst,
                                Xmx=args.Xmx,
-                               tmpdir=args.tmp)
+                               tmpdir=args.tmp,
+                               data_type=args.data_type)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
