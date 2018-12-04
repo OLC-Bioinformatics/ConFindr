@@ -1,8 +1,3 @@
-# Usage with a Pip/Conda Install
-
-If you used pip or conda to install, all you need to do is activate your ConFindr virtualenv/type `confindr.py` on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.
-
-
 ## Example Dataset
 
 An example dataset has been uploaded to FigShare. You can download it to your current working directory with the following command:
@@ -45,14 +40,13 @@ one to two minutes (slightly longer if an *Escherichia* specific database has no
 Once the run is done, you'll be able to inspect your results. Take a look at `output/confindr_report.csv`:
 The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value of something close to 15.
 
-
 In any future uses of ConFindr, databases will not need to be re-downloaded.
 
 ## Interpreting ConFindr Results
 
 The results file that ConFindr produces is in comma-separated value (CSV) format, which can be opened by any spreadsheet application (Excel, LibreOffice, etc.) or your favorite text editor.
 
-The file has the following headers: Sample, Genus, NumContamSNVs, NumUniqueKmers, CrossContamination, and ContamStatus. Of these, ContamStatus is the most important - it will be `True` if a sample
+The file has the following headers: `Sample`, `Genus`, `NumContamSNVs`, `ContamStatus`, `PercentContam`, `PercentContamStandardDeviation`, and `BasesExamined`. Of these, ContamStatus is the most important - it will be `True` if a sample
 is contaminated, and `False` if a sample is not contaminated. Detailed descriptions of each header follow.
 
 - `Sample`: The name of the sample. ConFindr will take everything before the first underscore (\_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.
@@ -62,15 +56,58 @@ If multiple genera were found, they will all be listed here, separated by a `:`
 - `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met:
 	- 3 or more contaminating SNVs are found. 
 	- There is cross contamination between genera.
-
-As of version 0.4.2, ConFindr will also attempt to guess at the percentage contamination
-in your sample. This can be found in the `PercentContam` column in `confindr_report.csv`, and
-seems to be fairly reliable - on simulated data, the actual percentage contamination always falls within
-the estimated contamination plus or minus the standard deviation.
-
+- `PercentContam`: Based on the depth of the minor variant for sites with multiple bases, ConFindr guesses
+at what percent of your reads come from a contaminant. The more sequencing depth you have, the more accurate this will
+get. In my experience, this will tend to be a slight overestimate, particularly for low depth samples.
+- `PercentContamStandardDeviation`: The standard deviation of the percentage contamination estimate. Very high values may
+indicate something strange is going on.
+- `BasesExamined`: The number of bases ConFindr examined when making the contamination call. Will usally be around 20kb.
 
 ConFindr will also produce two CSV files for each sample - one called `samplename_contamination.csv`, which shows the contaminating
 sites, and one called `samplename_rmlst.csv`, which shows ConFindr's guess at which allele is present for each rMLST gene.
+
+## Using ConFindr in a Python Script
+
+In the event you'd rather integrate ConFindr into a script than run from the command line, here's how:
+
+```python
+from confindr import confindr
+
+# Find read files.
+paired_reads = confindr.find_paired_reads('path_to_fastq_folder', forward_id='_R1', reverse_id='_R2')
+# Run confindr. This assumes that you have already downloaded the databases. If you haven't,
+# you can run confindr.check_for_databases_and_download(database_location='path/where/you/want/to/download, tmpdir='a/tmp/dir')
+for pair in paired_reads:
+    confindr.find_contamination(pair=pair,
+                                forward_id='_R1', # change if yours is different
+                                threads=4, 
+                                output_folder='path/to/output',
+                                databases_folder='path/to/databases')
+                                
+```
+
+## Using Schemes other than rMLST
+
+As of ConFindr 0.4.4, ConFindr has the option to use a cgMLST scheme instead of an rMLST scheme for increased
+contamination detection sensitivity. This hasn't been tested extensively, but looks to be working. Runtime is
+increased by a factor of 2 or 3 compared to running against rMLST genes. 
+
+To use this option, you'll need a a cgMLST FASTA file - all FASTA headers should be in format >genename_allele
+
+In order to decrease computation time, clustering the cgMLST FASTA before running is recommended. CD-HIT on default
+parameters does this fairly well.
+
+cgMLST files that are already clustered are available for _Salmonella_ and _Escherichia_. To get them:
+
+Escherichia: `wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&st=2018-10-25T13:45:13Z&se=2020-10-31T21:45:13Z&spr=https&sv=2017-11-09&sig=0fgvcf6R%2BSSiz7gPm7KKm5M78wpjAPjGawhzt%2BlY7iE%3D&sr=b' -O Escherichia_cgmlst.fasta`
+
+Salmonella: `wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&st=2018-10-25T13:35:21Z&se=2020-10-31T21:35:21Z&spr=https&sv=2017-11-09&sig=w5Pq9e4hsa6PGr458%2Bx4b5zqf4F2a6OUUL9H3ewQTNc%3D&sr=b' -O Salmonella_cgmlst.fasta`
+
+When using a cgMLST database, ConFindr will use the provided scheme for all samples regardless of genus.
+
+Actually calling ConFindr with cgMLST:
+
+`confindr.py -i folder-with-Escherichia-files -o cgmlst-output -cgmlst /path/to/Escherichia_cgmlst.fasta`
 
 
 ## Optional Arguments

@@ -1,6 +1,9 @@
 # System Requirements
 
-ConFindr has been tested with Debian-based Linux systems, but should in principle work on any flavour of Linux, as well as MacOSX. Windows is not supported at this time.
+ConFindr has been tested with Debian-based Linux systems, 
+but should in principle work on any flavour of Linux, as well as MacOSX. 
+Windows isn't supported, but it may very well be installable via bioconda. If you have any success running
+ConFindr on a Windows machine, let me know!
 
 ConFindr should run on any regular desktop/laptop with 8 GB or RAM or more.
 
