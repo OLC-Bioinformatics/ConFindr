@@ -104,9 +104,9 @@
         
             <li><a href="#how-does-confindr-work">How Does ConFindr Work?</a></li>
         
-            <li><a href="#confindr-intra-species-contamination-detection-performance">ConFindr Intra-species Contamination Detection Performance</a></li>
+            <li><a href="#limits-of-detection">Limits of Detection</a></li>
         
-            <li><a href="#confindr-inter-species-contamination-detection">ConFindr Inter-species Contamination Detection</a></li>
+            <li><a href="#feedback">Feedback</a></li>
         
     
     </ul>
@@ -114,10 +114,13 @@
             <div class="col-md-9" role="main">
 
 <h1 id="what-is-confindr">What is ConFindr?</h1>
-<p>ConFindr is a pipeline that can detect contamination in bacterial NGS data, both between and within species. It can do this with exceptional sensitivity - two samples mixed together with as few as
+<p>ConFindr is a pipeline that can detect contamination in bacterial NGS data, both between and within species. It can do this with pretty darn good sensitivity - two samples mixed together with as few as
 500 SNPs between them (&gt; 99.9 percent identity!) can be identified. This allows for stringent quality control of NGS samples.</p>
-<h2 id="how-does-confindr-work">How Does ConFindr Work?</h2>
-<p>ConFindr works by looking at rMLST genes. These 53 genes are known to be single copy and conserved across all bacteria, making them excellent markers. As they are known to be single copy (with some caveats), any sample that has multiple alleles of one or more rMLST gene is likely to be contaminated. To identify the presence of multiple alleles in a sample, the following workflow is followed:</p>
+<h3 id="how-does-confindr-work">How Does ConFindr Work?</h3>
+<p>ConFindr works by looking at rMLST genes (Jolley <em>et al</em>., 2012). 
+These 53 genes are known to be single copy and conserved across all bacteria (with some known exceptions, which ConFindr handles),
+ making them excellent markers. As they are known to be single copy, any sample that has multiple alleles of one or more rMLST gene is likely to be contaminated. 
+To identify the presence of multiple alleles in a sample, the following workflow is followed:</p>
 <ol>
 <li>Use Mash to determine the genus of each sample so that genus-specific rMLST databases can be constructed
 and check for interspecies contamination.</li>
@@ -126,7 +129,26 @@ and check for interspecies contamination.</li>
 <li>Look at the alignment to find <code>Contaminating SNVs</code> - those that have sites where more than one base is present, indicating
 that multiple alleles are present, indicating contamination.</li>
 </ol>
-<h2 id="confindr-intra-species-contamination-detection-performance">ConFindr Intra-species Contamination Detection Performance</h2>
+<h3 id="limits-of-detection">Limits of Detection</h3>
+<h4 id="intraspecies">Intraspecies</h4>
+<p>The limit of detection for ConFindr is going to be a function of several factors, so it's hard to give
+exact information on what can and can't be detected. However, here are a few guidelines:</p>
+<ul>
+<li>Two strains with identical rMLST genes won't ever have contamination detected between them. </li>
+<li>ConFindr has a cutoff of finding 3 <code>Contaminating SNVs</code> found for calling a sample as contaminated, as
+there will occasionally be 1 false positive, and very rarely 2 false positive sites. In practice, this still lets you detect
+contamination essentially whenever two strains have different rMLST types, as &gt;99 percent of types have
+at least 3 SNPs between them in <em>E. coli</em>, <em>S. enterica</em>, and <em>L. monocytogenes</em>. I haven't looked at other
+species in detail, but this very likely holds true for them too.</li>
+<li>The degree of contamination matters: things with very low levels of contamination (around 1 percent) probably
+won't ever be picked up under default parameters. Once you hit 5 percent contamination, whether or not it gets
+detected is a function of sequencing depth and distance between species.</li>
+<li>Sequencing depth matters: <code>Contaminating SNVs</code> are found more reliably the more depth you have. ConFindr seems
+to work pretty well once you hit 40X or 50X, but trying to run it on a sample with only 10X coverage is unlikely to ever
+find anything (unless default parameters get changed)</li>
+<li>Relatedness of the contaminant strain is the the final major factor - with something very closely related to the
+strain you actually want, picking up contamination at 5 percent will be pretty difficult.</li>
+</ul>
 <p>The below graph shows the magnitude of contamination detected for several synthetic datasets in <em>Escherichia coli</em>.
 Strains were mixed together that were either identical (and so should have no contamination), not identical but
 have the same rMLST type (and so are contaminated, but beyond the limit of detection), two strains with the same serotype,
@@ -135,12 +157,15 @@ and therefore very closely related, or two strains of differing serotypes.</p>
 can reliably be called contaminated. As can be seen, two different serotypes from the same species are reliably detected
 at contamination levels of 5 percent or higher, two strains of the same serotype are often detected at 10 percent
 contamination and almost always at 20 percent contamination, and two strains that have the same rMLST or are identical
-never have contamination detected. Results are very similar for other species.</p>
+never have contamination detected. Results should be very similar for other species.</p>
 <p><img alt="alt text" src="./performance.png" title="ConFindr Performance" /></p>
-<h2 id="confindr-inter-species-contamination-detection">ConFindr Inter-species Contamination Detection</h2>
+<h4 id="interspecies">Interspecies</h4>
 <p>ConFindr seems to reliably be able to detect interspecies contamination at levels of 5 percent or above, but its checks
 for interspecies contamination are not particularly rigorous. If you're very worried about interspecies contamination,
-it would be a good idea to put your samples through some sort of metagenomics software (such as Kraken or Kaiju).</p></div>
+it would be a good idea to put your samples through some sort of metagenomics software (such as Kraken or Kaiju).</p>
+<h3 id="feedback">Feedback</h3>
+<p>If you run into any issues installing or running ConFindr, have feature requests, want some help interpreting results, or
+anything else, feel free to open an issue on GitHub or send me an email at <code>andrew.low@canada.ca</code>.</p></div>
         </div>
 
         <footer class="col-md-12">

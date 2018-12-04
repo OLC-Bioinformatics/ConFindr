@@ -100,21 +100,25 @@
             <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
     
-        <li class="main active"><a href="#usage-with-a-pipconda-install">Usage with a Pip/Conda Install</a></li>
+        <li class="main active"><a href="#example-dataset">Example Dataset</a></li>
         
-            <li><a href="#example-dataset">Example Dataset</a></li>
+    
+        <li class="main "><a href="#interpreting-confindr-results">Interpreting ConFindr Results</a></li>
         
-            <li><a href="#interpreting-confindr-results">Interpreting ConFindr Results</a></li>
+    
+        <li class="main "><a href="#using-confindr-in-a-python-script">Using ConFindr in a Python Script</a></li>
         
-            <li><a href="#optional-arguments">Optional Arguments</a></li>
+    
+        <li class="main "><a href="#using-schemes-other-than-rmlst">Using Schemes other than rMLST</a></li>
+        
+    
+        <li class="main "><a href="#optional-arguments">Optional Arguments</a></li>
         
     
     </ul>
 </div></div>
             <div class="col-md-9" role="main">
 
-<h1 id="usage-with-a-pipconda-install">Usage with a Pip/Conda Install</h1>
-<p>If you used pip or conda to install, all you need to do is activate your ConFindr virtualenv/type <code>confindr.py</code> on the command line. Doing so without providing parameters will give a message telling you what parameters you do need to provide.</p>
 <h2 id="example-dataset">Example Dataset</h2>
 <p>An example dataset has been uploaded to FigShare. You can download it to your current working directory with the following command:</p>
 <p><code>wget https://ndownloader.figshare.com/files/9972709 &amp;&amp; tar xf 9972709</code></p>
@@ -151,7 +155,7 @@ The <code>ContamStatus</code> column should read <code>True</code>, and the <cod
 <p>In any future uses of ConFindr, databases will not need to be re-downloaded.</p>
 <h2 id="interpreting-confindr-results">Interpreting ConFindr Results</h2>
 <p>The results file that ConFindr produces is in comma-separated value (CSV) format, which can be opened by any spreadsheet application (Excel, LibreOffice, etc.) or your favorite text editor.</p>
-<p>The file has the following headers: Sample, Genus, NumContamSNVs, NumUniqueKmers, CrossContamination, and ContamStatus. Of these, ContamStatus is the most important - it will be <code>True</code> if a sample
+<p>The file has the following headers: <code>Sample</code>, <code>Genus</code>, <code>NumContamSNVs</code>, <code>ContamStatus</code>, <code>PercentContam</code>, <code>PercentContamStandardDeviation</code>, and <code>BasesExamined</code>. Of these, ContamStatus is the most important - it will be <code>True</code> if a sample
 is contaminated, and <code>False</code> if a sample is not contaminated. Detailed descriptions of each header follow.</p>
 <ul>
 <li><code>Sample</code>: The name of the sample. ConFindr will take everything before the first underscore (_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.</li>
@@ -163,13 +167,45 @@ If multiple genera were found, they will all be listed here, separated by a <cod
 <li>There is cross contamination between genera.</li>
 </ul>
 </li>
+<li><code>PercentContam</code>: Based on the depth of the minor variant for sites with multiple bases, ConFindr guesses
+at what percent of your reads come from a contaminant. The more sequencing depth you have, the more accurate this will
+get. In my experience, this will tend to be a slight overestimate, particularly for low depth samples.</li>
+<li><code>PercentContamStandardDeviation</code>: The standard deviation of the percentage contamination estimate. Very high values may
+indicate something strange is going on.</li>
+<li><code>BasesExamined</code>: The number of bases ConFindr examined when making the contamination call. Will usally be around 20kb.</li>
 </ul>
-<p>As of version 0.4.2, ConFindr will also attempt to guess at the percentage contamination
-in your sample. This can be found in the <code>PercentContam</code> column in <code>confindr_report.csv</code>, and
-seems to be fairly reliable - on simulated data, the actual percentage contamination always falls within
-the estimated contamination plus or minus the standard deviation.</p>
 <p>ConFindr will also produce two CSV files for each sample - one called <code>samplename_contamination.csv</code>, which shows the contaminating
 sites, and one called <code>samplename_rmlst.csv</code>, which shows ConFindr's guess at which allele is present for each rMLST gene.</p>
+<h2 id="using-confindr-in-a-python-script">Using ConFindr in a Python Script</h2>
+<p>In the event you'd rather integrate ConFindr into a script than run from the command line, here's how:</p>
+<pre><code class="python">from confindr import confindr
+
+# Find read files.
+paired_reads = confindr.find_paired_reads('path_to_fastq_folder', forward_id='_R1', reverse_id='_R2')
+# Run confindr. This assumes that you have already downloaded the databases. If you haven't,
+# you can run confindr.check_for_databases_and_download(database_location='path/where/you/want/to/download, tmpdir='a/tmp/dir')
+for pair in paired_reads:
+    confindr.find_contamination(pair=pair,
+                                forward_id='_R1', # change if yours is different
+                                threads=4, 
+                                output_folder='path/to/output',
+                                databases_folder='path/to/databases')
+
+</code></pre>
+
+<h2 id="using-schemes-other-than-rmlst">Using Schemes other than rMLST</h2>
+<p>As of ConFindr 0.4.4, ConFindr has the option to use a cgMLST scheme instead of an rMLST scheme for increased
+contamination detection sensitivity. This hasn't been tested extensively, but looks to be working. Runtime is
+increased by a factor of 2 or 3 compared to running against rMLST genes. </p>
+<p>To use this option, you'll need a a cgMLST FASTA file - all FASTA headers should be in format &gt;genename_allele</p>
+<p>In order to decrease computation time, clustering the cgMLST FASTA before running is recommended. CD-HIT on default
+parameters does this fairly well.</p>
+<p>cgMLST files that are already clustered are available for <em>Salmonella</em> and <em>Escherichia</em>. To get them:</p>
+<p>Escherichia: <code>wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&amp;st=2018-10-25T13:45:13Z&amp;se=2020-10-31T21:45:13Z&amp;spr=https&amp;sv=2017-11-09&amp;sig=0fgvcf6R%2BSSiz7gPm7KKm5M78wpjAPjGawhzt%2BlY7iE%3D&amp;sr=b' -O Escherichia_cgmlst.fasta</code></p>
+<p>Salmonella: <code>wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&amp;st=2018-10-25T13:35:21Z&amp;se=2020-10-31T21:35:21Z&amp;spr=https&amp;sv=2017-11-09&amp;sig=w5Pq9e4hsa6PGr458%2Bx4b5zqf4F2a6OUUL9H3ewQTNc%3D&amp;sr=b' -O Salmonella_cgmlst.fasta</code></p>
+<p>When using a cgMLST database, ConFindr will use the provided scheme for all samples regardless of genus.</p>
+<p>Actually calling ConFindr with cgMLST:</p>
+<p><code>confindr.py -i folder-with-Escherichia-files -o cgmlst-output -cgmlst /path/to/Escherichia_cgmlst.fasta</code></p>
 <h2 id="optional-arguments">Optional Arguments</h2>
 <p>ConFindr has a few optional arguments that allow you to modify its other parameters. Optional arguments are:</p>
 <ul>
