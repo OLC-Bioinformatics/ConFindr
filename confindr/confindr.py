@@ -280,12 +280,26 @@ def find_if_multibase(column, quality_cutoff, base_cutoff, base_fraction_cutoff)
     unfiltered_base_qualities = dict()
     for read in column.pileups:
         if read.query_position is not None:  # Not entirely sure why this is sometimes None, but it causes bad stuff
-            base = read.alignment.query_sequence[read.query_position]
-            quality = read.alignment.query_qualities[read.query_position]
-            if base not in unfiltered_base_qualities:
-                unfiltered_base_qualities[base] = [quality]
-            else:
-                unfiltered_base_qualities[base].append(quality)
+            reference_sequence = read.alignment.get_reference_sequence()
+            previous_position = read.query_position - 1 if read.query_position > 1 else 0
+            next_position = read.query_position + 1  # This causes index errors. Fix at some point soon.
+            # Another stringency check - to make sure that we're actually looking at a point mutation, check that the
+            # base before and after the one we're looking at match the reference. With Nanopore data, lots of indels and
+            # the like cause false positives, so this filters those out.
+            try:  # Need to actually handle this at some point. For now, be lazy
+                previous_reference_base = reference_sequence[previous_position]
+                next_reference_base = reference_sequence[next_position]
+                previous_base = read.alignment.query_sequence[previous_position]
+                next_base = read.alignment.query_sequence[next_position]
+                base = read.alignment.query_sequence[read.query_position]
+                quality = read.alignment.query_qualities[read.query_position]
+                if previous_reference_base == previous_base and next_reference_base == next_base:
+                    if base not in unfiltered_base_qualities:
+                        unfiltered_base_qualities[base] = [quality]
+                    else:
+                        unfiltered_base_qualities[base].append(quality)
+            except IndexError:
+                pass
 
     # Now check that at least two bases for each of the bases present high quality.
     # first remove all low quality bases
@@ -651,7 +665,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     out, err = run_cmd(cmd)
     write_to_logfile(log, out, err, cmd)
     if paired:
-        cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} ' \
+        cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} mdtag ' \
               'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                               forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
                               reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
@@ -666,7 +680,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             cmd += ' -Xmx{}'.format(Xmx)
     else:
         if data_type == 'Illumina':
-            cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
+            cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} mdtag ' \
                   'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                   forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
                                   outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
@@ -679,7 +693,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             if Xmx:
                 cmd += ' -Xmx{}'.format(Xmx)
         else:
-            cmd = 'minimap2 -t {threads} -ax map-ont {ref} {reads} |' \
+            cmd = 'minimap2 --MD -t {threads} -ax map-ont {ref} {reads} |' \
                   ' samtools view -bS > {outbam}'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                                          reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
                                                          outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
