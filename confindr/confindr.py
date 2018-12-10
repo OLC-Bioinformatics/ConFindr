@@ -4,6 +4,7 @@ import multiprocessing
 import urllib.request
 import numpy as np
 import subprocess
+import traceback
 import argparse
 import tarfile
 import logging
@@ -84,16 +85,21 @@ def find_paired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
     return pair_list
 
 
-def find_unpaired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2'):
+def find_unpaired_reads(fastq_directory, forward_id='_R1', reverse_id='_R2', find_fasta=False):
     """
     Looks at a directory to find unpaired fastq files.
     :param fastq_directory: Complete path to directory containing fastq files.
     :param forward_id: Identifier for forward reads. Default _R1.
     :param reverse_id: Identifier for forward reads. Default _R2.
+    :param find_fasta: If False, will look for fastq files. Otherwise, looks for Fasta files.
     :return: List of files that appear to be unpaired reads.
     """
     read_list = list()
-    fastq_files = glob.glob(os.path.join(fastq_directory, '*.f*q*'))
+    if find_fasta is False:
+        fastq_files = glob.glob(os.path.join(fastq_directory, '*.f*q*'))
+    else:
+        # Very misnamed!
+        fastq_files = glob.glob(os.path.join(fastq_directory, '*.f*a*'))
     for name in sorted(fastq_files):
         # Iterate through files, adding them to our list of unpaired reads if:
         # 1) They don't have the forward identifier or the reverse identifier in their name.
@@ -920,6 +926,10 @@ if __name__ == '__main__':
                              '>genename_allelenumber. To speed up ConFindr runs, clustering the cgMLST database with '
                              'CD-HIT before running ConFindr is recommended. This is highly experimental, results should'
                              ' be interpreted with great care.')
+    parser.add_argument('--fasta',
+                        default=False,
+                        action='store_true',
+                        help='If activated, will look for FASTA files instead of FASTQ for unpaired reads.')
     parser.add_argument('-verbosity', '--verbosity',
                         choices=['debug', 'info', 'warning'],
                         default='info',
@@ -981,7 +991,7 @@ if __name__ == '__main__':
 
     # Figure out what pairs of reads, as well as unpaired reads, are present.
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
-    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
+    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id, find_fasta=args.fasta)
     # Process paired reads, one sample at a time.
     for pair in paired_reads:
         sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
@@ -1014,6 +1024,7 @@ if __name__ == '__main__':
                          total_gene_length=0)
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
+            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
     # Process unpaired reads, also one sample at a time.
@@ -1048,6 +1059,7 @@ if __name__ == '__main__':
                          total_gene_length=0)
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
+            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
     if args.keep_files is False and args.tmp is not None:
