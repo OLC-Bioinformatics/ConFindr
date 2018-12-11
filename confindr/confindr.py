@@ -605,10 +605,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
     # with only the most likely allele for each gene.
-    cmd = 'samtools faidx {}'.format(sample_database)
     if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
-        out, err = run_cmd(cmd)
-        write_to_logfile(log, out, err, cmd)
+        pysam.faidx(sample_database)
     if paired:
         cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} ' \
               'nodisk ambig=all threads={threads}'.format(ref=sample_database,
@@ -618,6 +616,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                                           threads=threads)
         if Xmx:
             cmd += ' -Xmx{}'.format(Xmx)
+        out, err = run_cmd(cmd)
+        write_to_logfile(log, out, err, cmd)
     else:
         if data_type == 'Illumina':
             cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
@@ -627,24 +627,28 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                             threads=threads)
             if Xmx:
                 cmd += ' -Xmx{}'.format(Xmx)
+            out, err = run_cmd(cmd)
+            write_to_logfile(log, out, err, cmd)
         else:
-            cmd = 'minimap2 -t {threads} -ax map-ont {ref} {reads} | ' \
-                  'samtools view -bS > {outbam}'.format(ref=sample_database,
-                                                        reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                                        outbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                                        threads=threads)
-    logging.debug(cmd)
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
+            cmd = 'minimap2 -t {threads} -ax map-ont {ref} {reads} ' \
+                  '> {outsam}'.format(ref=sample_database,
+                                      reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                      outsam=os.path.join(sample_tmp_dir, 'out.sam'),
+                                      threads=threads)
+            out, err = run_cmd(cmd)
+            write_to_logfile(log, out, err, cmd)
+            # There's a bug in pysam that makes the pysam.view function output to stdout even if the -o is specified
+            # https://github.com/pysam-developers/pysam/issues/677
+            # Workaround it!
+            outbam = os.path.join(sample_tmp_dir, 'out.bam')
+            # Apparently have to perform equivalent of a touch on this file for this to work.
+            fh = open(outbam, 'w')
+            fh.close()
+            pysam.view('-b', '-o', outbam, os.path.join(sample_tmp_dir, 'out.sam'), save_stdout=outbam)
     logging.debug('Sorting bam')
-    cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                                         sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
+    pysam.sort('-o', os.path.join(sample_tmp_dir, 'rmlst.bam'), os.path.join(sample_tmp_dir, 'out.bam'))
     logging.debug('Indexing bam')
-    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'rmlst.bam'))
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
+    pysam.index(os.path.join(sample_tmp_dir, 'rmlst.bam'))
 
     rmlst_report = os.path.join(output_folder, sample_name + '_rmlst.csv')
     gene_alleles = find_rmlst_type(bamfile=os.path.join(sample_tmp_dir, 'rmlst.bam'),
@@ -661,9 +665,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     logging.debug('Total gene length is {}'.format(rmlst_gene_length))
     # Second step of mapping - Do a mapping of our baited reads against a fasta file that has only one allele per
     # rMLST gene.
-    cmd = 'samtools faidx {}'.format(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
+    pysam.faidx(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
     if paired:
         cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} mdtag ' \
               'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
@@ -678,6 +680,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             cmd += ' subfilter=1'
         if Xmx:
             cmd += ' -Xmx{}'.format(Xmx)
+        out, err = run_cmd(cmd)
+        write_to_logfile(log, out, err, cmd)
     else:
         if data_type == 'Illumina':
             cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} mdtag ' \
@@ -692,21 +696,23 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                 cmd += ' subfilter=1'
             if Xmx:
                 cmd += ' -Xmx{}'.format(Xmx)
+            out, err = run_cmd(cmd)
+            write_to_logfile(log, out, err, cmd)
         else:
-            cmd = 'minimap2 --MD -t {threads} -ax map-ont {ref} {reads} |' \
-                  ' samtools view -bS > {outbam}'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                                                         reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                                         outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                                                         threads=threads)
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
-    cmd = 'samtools sort {inbam} -o {sorted_bam}'.format(inbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                                                         sorted_bam=os.path.join(sample_tmp_dir, 'contamination.bam'))
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
-    cmd = 'samtools index {sorted_bam}'.format(sorted_bam=os.path.join(sample_tmp_dir, 'contamination.bam'))
-    out, err = run_cmd(cmd)
-    write_to_logfile(log, out, err, cmd)
+            cmd = 'minimap2 --MD -t {threads} -ax map-ont {ref} {reads} ' \
+                  '> {outsam}'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                                      reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                      outsam=os.path.join(sample_tmp_dir, 'out_2.sam'),
+                                      threads=threads)
+            out, err = run_cmd(cmd)
+            write_to_logfile(log, out, err, cmd)
+            outbam = os.path.join(sample_tmp_dir, 'out_2.bam')
+            # Apparently have to perform equivalent of a touch on this file for this to work.
+            fh = open(outbam, 'w')
+            fh.close()
+            pysam.view('-b', '-o', outbam, os.path.join(sample_tmp_dir, 'out_2.sam'), save_stdout=outbam)
+    pysam.sort('-o', os.path.join(sample_tmp_dir, 'contamination.bam'), os.path.join(sample_tmp_dir, 'out_2.bam'))
+    pysam.index(os.path.join(sample_tmp_dir, 'contamination.bam'))
     # Now find number of multi-positions for each rMLST gene/allele combination
     multi_positions = 0
 
@@ -866,7 +872,7 @@ def check_acceptable_xmx(xmx_string):
 
 
 if __name__ == '__main__':
-    version = 'ConFindr 0.4.7'
+    version = 'ConFindr 0.4.8'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -968,7 +974,11 @@ if __name__ == '__main__':
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     all_dependencies_present = True
     # Re-enable minimap2 as dependency once nanopore stuff actually works.
-    dependencies = ['bbmap.sh', 'bbduk.sh', 'mash', 'minimap2']
+    if args.data_type == 'Illumina':
+        dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
+    else:
+        dependencies = ['bbduk.sh', 'mash', 'minimap2']
+
     for dependency in dependencies:
         if dependency_check(dependency) is False:
             logging.error('Dependency {} not found. Please make sure it is installed and present'
@@ -993,6 +1003,13 @@ if __name__ == '__main__':
     if args.cgmlst and args.data_type == 'Nanopore':
         logging.error('ERROR: cgMLST schemes not yet supported for Nanopore reads. Quitting...')
         quit(code=1)
+
+    if args.data_type == 'Nanopore':
+        logging.warning('WARNING: Nanopore contamination detection is highly experimental. Any results should be taken '
+                        'with several very large grains of salt. If you are going to try this, try setting -q to '
+                        'somewhere in the range of 12-15, and only count things as contaminated that have at least '
+                        '10 contaminating SNVs. Even then, results may be wonky. In particular, samples with lots of '
+                        'depth will probably always show up as contaminated.')
 
     # Make the output directory.
     if not os.path.isdir(args.output_name):
