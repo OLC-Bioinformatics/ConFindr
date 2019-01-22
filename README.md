@@ -77,3 +77,10 @@ Actually calling ConFindr with cgMLST:
 
 If you have any problems installing or running ConFindr, or have feature request,
 please open an issue here on GitHub.
+
+
+## Citing ConFindr
+
+ConFindr has been submitted to PeerJ and is available as a preprint. If you use ConFindr, please cite it!
+
+Low AJ, Koziol AG, Manninger PA, Blais BW, Carrillo CD. 2019. ConFindr: Rapid detection of intraspecies and cross-species contamination in bacterial whole-genome sequence data. PeerJ Preprints 7:e27499v1 https://doi.org/10.7287/peerj.preprints.27499v1
