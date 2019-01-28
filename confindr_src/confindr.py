@@ -5,6 +5,7 @@ import urllib.request
 import numpy as np
 import subprocess
 import traceback
+import datetime
 import argparse
 import tarfile
 import logging
@@ -14,8 +15,8 @@ import csv
 import os
 import pysam
 from Bio import SeqIO
-from confindr_wrappers import mash
-from confindr_wrappers import bbtools
+from confindr_src.wrappers import mash
+from confindr_src.wrappers import bbtools
 
 
 # TODO: Make a better method of determining cutoff used to call sample as contaminated or not.
@@ -808,32 +809,27 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
                                                                                          gene_length=total_gene_length))
 
 
-def check_for_databases_and_download(database_location, tmpdir):
+def check_for_databases_and_download(database_location):
+    current_time = datetime.datetime.now()
+    try:
+        database_modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(database_location, 'rMLST_combined.fasta')))
+        timediff = current_time - database_modification_time
+        if timediff.days > 30:
+            logging.info('It looks like your databases haven\'t been updated for more than 30 days - it\'s recommended '
+                         'to run confindr_database_setup regularly to keep up to date with any rMLST database updates.')
+    except OSError:  # In case the rMLST_combined.fasta does not exist
+        pass
     # Check for the files necessary - should have rMLST_combined.fasta, gene_allele.txt, profiles.txt, and refseq.msh
     necessary_files = ['rMLST_combined.fasta', 'gene_allele.txt', 'profiles.txt', 'refseq.msh']
     all_files_present = True
     for necessary_file in necessary_files:
         if not os.path.isfile(os.path.join(database_location, necessary_file)):
+            logging.warning('Could not find {}'.format(necessary_file))
             all_files_present = False
 
     if not all_files_present:
-        logging.info('Databases not present. Downloading to {}. This may take a few minutes...'.format(database_location))
-        if not os.path.isdir(tmpdir):
-            os.makedirs(tmpdir)
-        # Download
-        # TODO: Progress bar?
-        urllib.request.urlretrieve('https://ndownloader.figshare.com/files/11864267', os.path.join(tmpdir, 'confindr_db.tar.gz'))
-        # Extract.
-        tar = tarfile.open(os.path.join(tmpdir, 'confindr_db.tar.gz'))
-        tar.extractall(path=database_location)
-        tar.close()
-        # We now have the files extracted to database_location/databases - move them to database_location
-        for item in glob.glob(os.path.join(database_location, 'databases', '*')):
-            shutil.move(item, database_location)
-        # Cleanup!
-        shutil.rmtree(os.path.join(database_location, 'databases'))
-        os.remove(os.path.join(tmpdir, 'confindr_db.tar.gz'))
-        logging.info('Databases successfully downloaded...')
+        logging.error('Databases not present - you\'ll need to get acccess to rMLST databases (instructions at PUT DOC '
+                      'LINK HERE) and run confindr_database_setup')
 
 
 def check_valid_base_fraction(base_fraction):
@@ -871,8 +867,134 @@ def check_acceptable_xmx(xmx_string):
     return acceptable_xmx
 
 
-if __name__ == '__main__':
-    version = 'ConFindr 0.4.8'
+def confindr(args):
+    # Check for dependencies.
+    all_dependencies_present = True
+    # Re-enable minimap2 as dependency once nanopore stuff actually works.
+    if args.data_type == 'Illumina':
+        dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
+    else:
+        dependencies = ['bbduk.sh', 'mash', 'minimap2']
+
+    for dependency in dependencies:
+        if dependency_check(dependency) is False:
+            logging.error('Dependency {} not found. Please make sure it is installed and present'
+                          ' on your $PATH.'.format(dependency))
+            all_dependencies_present = False
+    if not all_dependencies_present:
+        quit(code=1)
+
+    # Check that the base fraction specified actually makes sense.
+    if check_valid_base_fraction(args.base_fraction_cutoff) is False:
+        logging.error('Base fraction must be between 0 and 1 if specified. Input value was: {}'.format(args.base_fraction_cutoff))
+        quit(code=1)
+
+    # If user specified Xmx, make sure that they actually entered a value that will work. If not, the method will tell
+    # them what they did wrong. Then quit.
+    if args.Xmx:
+        valid_xmx = check_acceptable_xmx(args.Xmx)
+        if valid_xmx is False:
+            quit(code=1)
+
+    # Don't yet have cgmlst support with Nanopore reads - don't let user do this.
+    if args.cgmlst and args.data_type == 'Nanopore':
+        logging.error('ERROR: cgMLST schemes not yet supported for Nanopore reads. Quitting...')
+        quit(code=1)
+
+    if args.data_type == 'Nanopore':
+        logging.warning('WARNING: Nanopore contamination detection is highly experimental. Any results should be taken '
+                        'with several very large grains of salt. If you are going to try this, try setting -q to '
+                        'somewhere in the range of 12-15, and only count things as contaminated that have at least '
+                        '10 contaminating SNVs. Even then, results may be wonky. In particular, samples with lots of '
+                        'depth will probably always show up as contaminated.')
+
+    # Make the output directory.
+    if not os.path.isdir(args.output_name):
+        os.makedirs(args.output_name)
+
+    # Check if databases necessary to run are present, and download them if they aren't
+    check_for_databases_and_download(database_location=args.databases)
+
+    # Figure out what pairs of reads, as well as unpaired reads, are present.
+    paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
+    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id, find_fasta=args.fasta)
+    # Process paired reads, one sample at a time.
+    for pair in paired_reads:
+        sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
+        logging.info('Beginning analysis of sample {}...'.format(sample_name))
+        try:
+            find_contamination(pair=pair,
+                               forward_id=args.forward_id,
+                               threads=args.threads,
+                               output_folder=args.output_name,
+                               databases_folder=args.databases,
+                               keep_files=args.keep_files,
+                               quality_cutoff=args.quality_cutoff,
+                               base_cutoff=args.base_cutoff,
+                               base_fraction_cutoff=args.base_fraction_cutoff,
+                               cgmlst_db=args.cgmlst,
+                               Xmx=args.Xmx,
+                               tmpdir=args.tmp,
+                               data_type=args.data_type)
+        except subprocess.CalledProcessError:
+            # If something unforeseen goes wrong, traceback will be printed to screen.
+            # We then add the sample to the report with a note that it failed.
+            multi_positions = 0
+            genus = 'Error processing sample'
+            write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                         sample_name=sample_name,
+                         multi_positions=multi_positions,
+                         genus=genus,
+                         percent_contam='NA',
+                         contam_stddev='NA',
+                         total_gene_length=0)
+            logging.warning('Encountered error when attempting to run ConFindr on sample '
+                            '{sample}. Skipping...'.format(sample=sample_name))
+            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
+            if args.keep_files is False:
+                shutil.rmtree(os.path.join(args.output_name, sample_name))
+    # Process unpaired reads, also one sample at a time.
+    for pair in unpaired_reads:
+        sample_name = os.path.split(pair[0])[-1].split('.')[0]
+        logging.info('Beginning analysis of sample {}...'.format(sample_name))
+        try:
+            find_contamination(pair=pair,
+                               forward_id=args.forward_id,
+                               threads=args.threads,
+                               output_folder=args.output_name,
+                               databases_folder=args.databases,
+                               keep_files=args.keep_files,
+                               quality_cutoff=args.quality_cutoff,
+                               base_cutoff=args.base_cutoff,
+                               base_fraction_cutoff=args.base_fraction_cutoff,
+                               cgmlst_db=args.cgmlst,
+                               Xmx=args.Xmx,
+                               tmpdir=args.tmp,
+                               data_type=args.data_type)
+        except subprocess.CalledProcessError:
+            # If something unforeseen goes wrong, traceback will be printed to screen.
+            # We then add the sample to the report with a note that it failed.
+            multi_positions = 0
+            genus = 'Error processing sample'
+            write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
+                         sample_name=sample_name,
+                         multi_positions=multi_positions,
+                         genus=genus,
+                         percent_contam='NA',
+                         contam_stddev='NA',
+                         total_gene_length=0)
+            logging.warning('Encountered error when attempting to run ConFindr on sample '
+                            '{sample}. Skipping...'.format(sample=sample_name))
+            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
+            if args.keep_files is False:
+                shutil.rmtree(os.path.join(args.output_name, sample_name))
+    if args.keep_files is False and args.tmp is not None:
+        shutil.rmtree(args.tmp)
+    logging.info('Contamination detection complete!')
+
+
+def main():
+    version = 'ConFindr 0.5.0'
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -887,8 +1009,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--databases',
                         type=str,
                         default=os.environ.get('CONFINDR_DB', os.path.expanduser('~/.confindr_db')),
-                        help='Databases folder. If you don\'t already have databases, they will be downloaded '
-                             'automatically. You may also specify the full path to the databases.')
+                        help='Databases folder. To download these, you will need to get access to the rMLST databases. '
+                             'For complete instructions on how to do this, please see MAKE DOCUMENATION LINK HERE')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=cpu_count,
@@ -970,129 +1092,10 @@ if __name__ == '__main__':
         logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
                             level=logging.WARNING,
                             datefmt='%Y-%m-%d %H:%M:%S')
-    # Check for dependencies.
+
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
-    all_dependencies_present = True
-    # Re-enable minimap2 as dependency once nanopore stuff actually works.
-    if args.data_type == 'Illumina':
-        dependencies = ['bbmap.sh', 'bbduk.sh', 'mash']
-    else:
-        dependencies = ['bbduk.sh', 'mash', 'minimap2']
+    confindr(args)
+    
 
-    for dependency in dependencies:
-        if dependency_check(dependency) is False:
-            logging.error('Dependency {} not found. Please make sure it is installed and present'
-                          ' on your $PATH.'.format(dependency))
-            all_dependencies_present = False
-    if not all_dependencies_present:
-        quit(code=1)
-
-    # Check that the base fraction specified actually makes sense.
-    if check_valid_base_fraction(args.base_fraction_cutoff) is False:
-        logging.error('Base fraction must be between 0 and 1 if specified. Input value was: {}'.format(args.base_fraction_cutoff))
-        quit(code=1)
-
-    # If user specified Xmx, make sure that they actually entered a value that will work. If not, the method will tell
-    # them what they did wrong. Then quit.
-    if args.Xmx:
-        valid_xmx = check_acceptable_xmx(args.Xmx)
-        if valid_xmx is False:
-            quit(code=1)
-
-    # Don't yet have cgmlst support with Nanopore reads - don't let user do this.
-    if args.cgmlst and args.data_type == 'Nanopore':
-        logging.error('ERROR: cgMLST schemes not yet supported for Nanopore reads. Quitting...')
-        quit(code=1)
-
-    if args.data_type == 'Nanopore':
-        logging.warning('WARNING: Nanopore contamination detection is highly experimental. Any results should be taken '
-                        'with several very large grains of salt. If you are going to try this, try setting -q to '
-                        'somewhere in the range of 12-15, and only count things as contaminated that have at least '
-                        '10 contaminating SNVs. Even then, results may be wonky. In particular, samples with lots of '
-                        'depth will probably always show up as contaminated.')
-
-    # Make the output directory.
-    if not os.path.isdir(args.output_name):
-        os.makedirs(args.output_name)
-
-    # Check if databases necessary to run are present, and download them if they aren't
-    check_for_databases_and_download(database_location=args.databases,
-                                     tmpdir=args.output_name)
-
-
-    # Figure out what pairs of reads, as well as unpaired reads, are present.
-    paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
-    unpaired_reads = find_unpaired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id, find_fasta=args.fasta)
-    # Process paired reads, one sample at a time.
-    for pair in paired_reads:
-        sample_name = os.path.split(pair[0])[-1].split(args.forward_id)[0]
-        logging.info('Beginning analysis of sample {}...'.format(sample_name))
-        try:
-            find_contamination(pair=pair,
-                               forward_id=args.forward_id,
-                               threads=args.threads,
-                               output_folder=args.output_name,
-                               databases_folder=args.databases,
-                               keep_files=args.keep_files,
-                               quality_cutoff=args.quality_cutoff,
-                               base_cutoff=args.base_cutoff,
-                               base_fraction_cutoff=args.base_fraction_cutoff,
-                               cgmlst_db=args.cgmlst,
-                               Xmx=args.Xmx,
-                               tmpdir=args.tmp,
-                               data_type=args.data_type)
-        except subprocess.CalledProcessError:
-            # If something unforeseen goes wrong, traceback will be printed to screen.
-            # We then add the sample to the report with a note that it failed.
-            multi_positions = 0
-            genus = 'Error processing sample'
-            write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
-                         sample_name=sample_name,
-                         multi_positions=multi_positions,
-                         genus=genus,
-                         percent_contam='NA',
-                         contam_stddev='NA',
-                         total_gene_length=0)
-            logging.warning('Encountered error when attempting to run ConFindr on sample '
-                            '{sample}. Skipping...'.format(sample=sample_name))
-            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
-            if args.keep_files is False:
-                shutil.rmtree(os.path.join(args.output_name, sample_name))
-    # Process unpaired reads, also one sample at a time.
-    for pair in unpaired_reads:
-        sample_name = os.path.split(pair[0])[-1].split('.')[0]
-        logging.info('Beginning analysis of sample {}...'.format(sample_name))
-        try:
-            find_contamination(pair=pair,
-                               forward_id=args.forward_id,
-                               threads=args.threads,
-                               output_folder=args.output_name,
-                               databases_folder=args.databases,
-                               keep_files=args.keep_files,
-                               quality_cutoff=args.quality_cutoff,
-                               base_cutoff=args.base_cutoff,
-                               base_fraction_cutoff=args.base_fraction_cutoff,
-                               cgmlst_db=args.cgmlst,
-                               Xmx=args.Xmx,
-                               tmpdir=args.tmp,
-                               data_type=args.data_type)
-        except subprocess.CalledProcessError:
-            # If something unforeseen goes wrong, traceback will be printed to screen.
-            # We then add the sample to the report with a note that it failed.
-            multi_positions = 0
-            genus = 'Error processing sample'
-            write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
-                         sample_name=sample_name,
-                         multi_positions=multi_positions,
-                         genus=genus,
-                         percent_contam='NA',
-                         contam_stddev='NA',
-                         total_gene_length=0)
-            logging.warning('Encountered error when attempting to run ConFindr on sample '
-                            '{sample}. Skipping...'.format(sample=sample_name))
-            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
-            if args.keep_files is False:
-                shutil.rmtree(os.path.join(args.output_name, sample_name))
-    if args.keep_files is False and args.tmp is not None:
-        shutil.rmtree(args.tmp)
-    logging.info('Contamination detection complete!')
+if __name__ == '__main__':
+    main()
