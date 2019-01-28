@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         
-        <link rel="canonical" href="https://lowandrew.github.io/ConFindr/install/">
+        <link rel="canonical" href="https://olc-bioinformatics.github.io/ConFindr/install/">
         <link rel="shortcut icon" href="../img/favicon.ico">
 
 	<title>Installation - ConFindr</title>
@@ -83,7 +83,7 @@
                 </li>
                 
                 <li>
-                    <a href="https://github.com/lowandrew/Confindr">
+                    <a href="https://github.com/OLC-Bioinformatics/Confindr">
                         
                             <i class="fa fa-github"></i>
                         
@@ -120,15 +120,43 @@ Windows isn't supported, but it may very well be installable via bioconda. If yo
 ConFindr on a Windows machine, let me know!</p>
 <p>ConFindr should run on any regular desktop/laptop with 8 GB or RAM or more.</p>
 <h2 id="downloading-confindr-databases">Downloading ConFindr Databases</h2>
-<h4 id="automatic-download">Automatic Download</h4>
-<p>As of ConFindr 0.3.4, ConFindr databases will automatically downloaded (by default to ~/.confindr_db - this location can be changed
-by setting the environmental variable $CONFINDR_DB). You may still manually download the databases and supply the path
-as done for previous versions.</p>
-<h4 id="manual-download">Manual Download</h4>
-<p>The databases necessary for making ConFindr run are available for download from FigShare.</p>
-<p>Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:</p>
-<p><code>wget https://ndownloader.figshare.com/files/11864267 &amp;&amp; tar xf 11864267 &amp;&amp; rm 11864267</code></p>
-<p>These commands should create a folder called <code>databases</code> in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the <code>-d</code> option.</p>
+<p>ConFindr uses the ribsomal multi-locus sequence typing (rMLST) scheme to detect contamination. These databases are 
+freely available, but you will need to jump through a few hoops before you can get access to them due to an 
+associated <a href="https://pubmlst.org/rmlst/rMLST_licence.pdf">licence agreement</a>.</p>
+<p>Here are the steps to getting databases downloaded:</p>
+<ul>
+<li>
+<p>Register for a PubMLST account if you do not already have one. Link to register is <a href="https://pubmlst.org/bigsdb">here</a>. 
+Click on <code>Register for a site-wide account.</code></p>
+</li>
+<li>
+<p>Login to your account at <a href="https://pubmlst.org/bigsdb">https://pubmlst.org/bigsdb</a> and request access to 
+Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under <code>Registrations</code>. Additionally, email Keith Jolley
+(keith.jolley@zoo.ox.ac.uk) and request a consumer key and consumer secret so that you'll be able
+to access the database programatically.</p>
+</li>
+<li>
+<p>Once you've gotten your consumer key and consumer secret from Keith, put them into a text file
+with the key on the first line and the secret on the second. It should look something like the below
+snippet:</p>
+</li>
+</ul>
+<pre><code>efKXmqp2D0EBlMBkZaGC2lPf
+F$M+fQ2AFFB2YBDfF9fpHF^qSWJdmmN%L4Fxf5Gur3
+</code></pre>
+
+<ul>
+<li>
+<p>Install ConFindr as shown in the next section.</p>
+</li>
+<li>
+<p>With ConFindr installed, use the command <code>confindr_database_setup</code> to have ConFindr download the latest version
+of the rMLST databases. This script takes two arguments - a <code>-s</code> where you give the path to the text file containing your consumer 
+key and secret, and a <code>-o</code> to specify where you want the sequences downloaded. Only the <code>-s</code> is mandatory. If your output
+directory is not specified, ConFindr will first search for an environmental variable called <code>CONFINDR_DB</code>, and if it can't
+find that it will automatically download to a folder called <code>.confindr_db</code> in your home directory.</p>
+</li>
+</ul>
 <h2 id="installing-using-conda-recommended">Installing Using Conda (Recommended)</h2>
 <p>ConFindr is available within bioconda - to get bioconda installed and running see instructions <a href="https://bioconda.github.io/">here</a>.</p>
 <p>With bioconda running, you can install ConFindr with the following command:</p>
