@@ -145,7 +145,8 @@ def test_write_output_creates_file_if_does_not_exist():
                  genus='Fakella',
                  percent_contam=22.2,
                  contam_stddev=1.1,
-                 total_gene_length=888)
+                 total_gene_length=888,
+                 database_download_date='NA')
     assert os.path.isfile('tests/file_that_does_not_exist.csv') is True
     os.remove('tests/file_that_does_not_exist.csv')
 
@@ -157,7 +158,8 @@ def test_write_output_appends_if_file_does_exist():
                  genus='Fakella',
                  percent_contam=22.2,
                  contam_stddev=1.1,
-                 total_gene_length=888)
+                 total_gene_length=888,
+                 database_download_date='NA')
     with open('tests/confindr_report.csv') as f:
         lines = f.readlines()
     assert len(lines) > 2

@@ -10,6 +10,12 @@ This program is designed to find bacterial intra-species contamination in raw Il
 
 For complete instructions on installation and usage, please visit [the ConFindr github pages site](https://olc-bioinformatics.github.io/ConFindr/).
 
+__Important!__
+
+As of ConFindr 0.5.0, you must know have access to the rMLST database at PubMLST in order to download
+the databases that ConFindr needs - this means that the automatic download functionality found in previous versions
+of ConFindr will no longer work, but the new method takes advantage of the growth and curation of the 
+rMLST database. You can find instructions on how to get access to the database [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases). 
 
 ## Quickstart
 
