@@ -10,6 +10,7 @@ This program is designed to find bacterial intra-species contamination in raw Il
 
 For complete instructions on installation and usage, please visit [the ConFindr github pages site](https://olc-bioinformatics.github.io/ConFindr/).
 
+
 ## Quickstart
 
 To install ConFindr, use conda: 
@@ -20,21 +21,22 @@ To get an example dataset, use this command:
 
 `wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
 
-To run confindr on that dataset: 
+ConFindr depends on databases that take a bit of work to get - [complete instructions can be found here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
+
+Once you've gotten the databases downloaded, just run the following (if you specified an output folder 
+when downloading databases, you'll need to specify that same folder here with a `-d`):
 
 `confindr.py -i example-data -o example-out`
 
-This will download the databases ConFindr needs and run ConFindr on the example dataset (a intraspecies _Escherichia coli_ mix), and put the results in a folder
-called `example-out` in your current working directory. Take a look at `confindr_report.csv` in that directory to see
-the ConFindr results, which will show the sample is contaminated.
-
+Once ConFindr finishes running, take a look at the `confindr_report.csv` file found in `example-out` - it shows that multiple
+alleles were found for many sites within the rMLST genes, meaning that this sample is quite contaminated!
 
 ### Running ConFindr in a Python Script
 
 If you want to run ConFindr from within a script instead of running from the command line, here's how:
 
 ```python
-from confindr import confindr
+from confindr_src import confindr
 
 # Find read files.
 paired_reads = confindr.find_paired_reads('path_to_fastq_folder', forward_id='_R1', reverse_id='_R2')

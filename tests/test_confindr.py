@@ -4,7 +4,7 @@ import pytest
 
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
-from confindr.confindr import *
+from confindr_src.confindr import *
 from Bio import SeqIO
 
 # TODO: Make these far more useful than they currently are.

@@ -9,20 +9,36 @@ ConFindr should run on any regular desktop/laptop with 8 GB or RAM or more.
 
 ## Downloading ConFindr Databases
 
-#### Automatic Download
+ConFindr uses the ribsomal multi-locus sequence typing (rMLST) scheme to detect contamination. These databases are 
+freely available, but you will need to jump through a few hoops before you can get access to them due to an 
+associated [licence agreement](https://pubmlst.org/rmlst/rMLST_licence.pdf).
 
-As of ConFindr 0.3.4, ConFindr databases will automatically downloaded (by default to ~/.confindr_db - this location can be changed
-by setting the environmental variable $CONFINDR_DB). You may still manually download the databases and supply the path
-as done for previous versions.
+Here are the steps to getting databases downloaded:
 
-#### Manual Download
-The databases necessary for making ConFindr run are available for download from FigShare.
+- Register for a PubMLST account if you do not already have one. Link to register is [here](https://pubmlst.org/bigsdb). 
+Click on `Register for a site-wide account.`
 
-Navigate to the place you would like to download the database, and use the following commands to download and uncompress the folder:
+- Login to your account at [https://pubmlst.org/bigsdb](https://pubmlst.org/bigsdb) and request access to 
+Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under `Registrations`. Additionally, email Keith Jolley
+(keith.jolley@zoo.ox.ac.uk) and request a consumer key and consumer secret so that you'll be able
+to access the database programatically.
 
-`wget https://ndownloader.figshare.com/files/11864267 && tar xf 11864267 && rm 11864267`
+- Once you've gotten your consumer key and consumer secret from Keith, put them into a text file
+with the key on the first line and the secret on the second. It should look something like the below
+snippet:
 
-These commands should create a folder called `databases` in your current working directory. This folder contains everything you need to run ConFindr - it's what will be specified with the `-d` option.
+```
+efKXmqp2D0EBlMBkZaGC2lPf
+F$M+fQ2AFFB2YBDfF9fpHF^qSWJdmmN%L4Fxf5Gur3
+```
+
+- Install ConFindr as shown in the next section.
+
+- With ConFindr installed, use the command `confindr_database_setup` to have ConFindr download the latest version
+of the rMLST databases. This script takes two arguments - a `-s` where you give the path to the text file containing your consumer 
+key and secret, and a `-o` to specify where you want the sequences downloaded. Only the `-s` is mandatory. If your output
+directory is not specified, ConFindr will first search for an environmental variable called `CONFINDR_DB`, and if it can't
+find that it will automatically download to a folder called `.confindr_db` in your home directory.
 
 ## Installing Using Conda (Recommended)
 
