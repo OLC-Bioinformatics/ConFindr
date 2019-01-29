@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="confindr",
-    version="0.5.0",
+    version="0.5.1",
     packages=find_packages(),
     entry_points={
        'console_scripts': [

@@ -520,7 +520,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                      genus=genus,
                      percent_contam='NA',
                      contam_stddev='NA',
-                     total_gene_length=0)
+                     total_gene_length=0,
+                     database_download_date=database_download_date)
         logging.info('Found cross-contamination! Skipping rest of analysis...\n')
         shutil.rmtree(sample_tmp_dir)
         return
@@ -836,8 +837,9 @@ def check_for_databases_and_download(database_location):
             all_files_present = False
 
     if not all_files_present:
-        logging.error('Databases not present - you\'ll need to get acccess to rMLST databases (instructions at PUT DOC '
-                      'LINK HERE) and run confindr_database_setup')
+        logging.error('Databases not present - you\'ll need to get acccess to rMLST databases (instructions at '
+                      'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases) '
+                      'and run confindr_database_setup')
 
 
 def check_valid_base_fraction(base_fraction):
@@ -1020,7 +1022,8 @@ def main():
                         type=str,
                         default=os.environ.get('CONFINDR_DB', os.path.expanduser('~/.confindr_db')),
                         help='Databases folder. To download these, you will need to get access to the rMLST databases. '
-                             'For complete instructions on how to do this, please see MAKE DOCUMENATION LINK HERE')
+                             'For complete instructions on how to do this, please see '
+                             'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=cpu_count,
