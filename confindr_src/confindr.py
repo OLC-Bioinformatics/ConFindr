@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
 import multiprocessing
-import urllib.request
+import pkg_resources
 import numpy as np
 import subprocess
 import traceback
 import datetime
 import argparse
-import tarfile
 import logging
 import shutil
 import glob
@@ -17,14 +16,6 @@ import pysam
 from Bio import SeqIO
 from confindr_src.wrappers import mash
 from confindr_src.wrappers import bbtools
-
-
-# TODO: Make a better method of determining cutoff used to call sample as contaminated or not.
-# Should be able to guesstimate at the number of false positive SNPs expected based on total length
-# of cgMLST genes, and then set the cutoff dynamically based on expected number of false positives.
-
-# Number of false positives doesn't look like it's going to correlate nicely with total number of bases examined.
-# Will need to look into this further and see what's happening
 
 
 def run_cmd(cmd):
@@ -1005,8 +996,16 @@ def confindr(args):
     logging.info('Contamination detection complete!')
 
 
+def get_version():
+    try:
+        version = 'ConFindr {}'.format(pkg_resources.get_distribution('confindr').version)
+    except pkg_resources.DistributionNotFound:
+        version = 'ConFindr (Unknown version)'
+    return version
+        
+
 def main():
-    version = 'ConFindr 0.5.0'
+    version = get_version()
     cpu_count = multiprocessing.cpu_count()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
