@@ -366,9 +366,8 @@ def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, b
     bamfile.close()
     return multibase_position_dict, to_write
 
-
+"""
 def find_rmlst_type(bamfile, sample_database, rmlst_report):
-    """
     Approximates finding the rMLST type by counting the number of reads aligned to each allele and reporting
     which allele has the most reads aligned.
     :param bamfile: Path to bamfile where reads where aligned to rmlst file. It's assumed these reads were aligned
@@ -376,7 +375,6 @@ def find_rmlst_type(bamfile, sample_database, rmlst_report):
     :param sample_database: Path to fasta-formatted sample database (usually a genus-specific rMLST)
     :param rmlst_report: Path to file where rmlst report (what allele each gene is) is written.
     :return: gene_alleles: Dictionary where keys are genes, and values are alleles
-    """
     # Find which rMLST allele has the most reads mapped back to it for each gene.
     gene_alleles_to_use = dict()
     bamfile = pysam.AlignmentFile(os.path.join(bamfile), 'rb')
@@ -395,6 +393,37 @@ def find_rmlst_type(bamfile, sample_database, rmlst_report):
     for gene in gene_alleles_to_use:
         contig_name = gene + '_' + gene_alleles_to_use[gene][0]
         gene_alleles.append(contig_name)
+    gene_alleles = sorted(gene_alleles)
+    with open(rmlst_report, 'w') as f:
+        f.write('Gene,Allele\n')
+        for gene_allele in gene_alleles:
+            gene = gene_allele.split('_')[0]
+            allele = gene_allele.split('_')[1]
+            f.write('{},{}\n'.format(gene, allele))
+    return gene_alleles
+"""
+
+
+def find_rmlst_type(kma_report, rmlst_report):
+    genes_to_use = dict()
+    score_dict = dict()
+    gene_alleles = list()
+    with open(kma_report) as tsvfile:
+        reader = csv.DictReader(tsvfile, delimiter='\t')
+        for row in reader:
+            gene_allele = row['#Template']
+            score = int(row['Score'])
+            gene = gene_allele.split('_')[0]
+            allele = gene_allele.split('_')[1]
+            if gene not in score_dict:
+                score_dict[gene] = score
+                genes_to_use[gene] = allele
+            else:
+                if score > score_dict[gene]:
+                    score_dict[gene] = score
+                    genes_to_use[gene] = allele
+    for gene in genes_to_use:
+        gene_alleles.append(gene + '_' + genes_to_use[gene])
     gene_alleles = sorted(gene_alleles)
     with open(rmlst_report, 'w') as f:
         f.write('Gene,Allele\n')
@@ -603,54 +632,45 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
     # with only the most likely allele for each gene.
+    logging.info('Finding rMLST type...')
     if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
         pysam.faidx(sample_database)
+    kma_database = sample_database.replace('.fasta', '') + '_kma'
+    kma_report = os.path.join(sample_tmp_dir, 'kma_rmlst')
+    if not os.path.isfile(kma_database + '.name'):  # The .name is one of the files KMA creates when making a database.
+        cmd = 'kma index -i {} -o {}'.format(sample_database, kma_database)  # NOTE: Need KMA >=1.2.0 for this to work.
+        out, err = run_cmd(cmd)
+        write_to_logfile(log, out, err, cmd)
+
+    # Run KMA.
     if paired:
-        cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} ' \
-              'nodisk ambig=all threads={threads}'.format(ref=sample_database,
-                                                          forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                                                          reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
-                                                          outbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                                          threads=threads)
-        if Xmx:
-            cmd += ' -Xmx{}'.format(Xmx)
+        cmd = 'kma -ipe {forward_in} {reverse_in} -t_db {kma_database} -o {kma_report} ' \
+              '-t {threads}'.format(forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                                    reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
+                                    kma_database=kma_database,
+                                    kma_report=kma_report,
+                                    threads=threads)
         out, err = run_cmd(cmd)
         write_to_logfile(log, out, err, cmd)
     else:
         if data_type == 'Illumina':
-            cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} ' \
-                  'nodisk ambig=all'.format(ref=sample_database,
-                                            forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                            outbam=os.path.join(sample_tmp_dir, 'out.bam'),
-                                            threads=threads)
-            if Xmx:
-                cmd += ' -Xmx{}'.format(Xmx)
-            out, err = run_cmd(cmd)
-            write_to_logfile(log, out, err, cmd)
+            cmd = 'kma -i {input_reads} -t_db {kma_database} -o {kma_report} ' \
+                  '-t {threads}'.format(input_reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                        kma_database=kma_database,
+                                        kma_report=kma_report,
+                                        threads=threads)
         else:
-            cmd = 'minimap2 -t {threads} -ax map-ont {ref} {reads} ' \
-                  '> {outsam}'.format(ref=sample_database,
-                                      reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                      outsam=os.path.join(sample_tmp_dir, 'out.sam'),
-                                      threads=threads)
-            out, err = run_cmd(cmd)
-            write_to_logfile(log, out, err, cmd)
-            # There's a bug in pysam that makes the pysam.view function output to stdout even if the -o is specified
-            # https://github.com/pysam-developers/pysam/issues/677
-            # Workaround it!
-            outbam = os.path.join(sample_tmp_dir, 'out.bam')
-            # Apparently have to perform equivalent of a touch on this file for this to work.
-            fh = open(outbam, 'w')
-            fh.close()
-            pysam.view('-b', '-o', outbam, os.path.join(sample_tmp_dir, 'out.sam'), save_stdout=outbam)
-    logging.debug('Sorting bam')
-    pysam.sort('-o', os.path.join(sample_tmp_dir, 'rmlst.bam'), os.path.join(sample_tmp_dir, 'out.bam'))
-    logging.debug('Indexing bam')
-    pysam.index(os.path.join(sample_tmp_dir, 'rmlst.bam'))
+            # Recommended Nanopore settings from KMA repo: https://bitbucket.org/genomicepidemiology/kma
+            cmd = 'kma -i {input_reads} -t_db {kma_database} -i {kma_report} -mem_mode -mp 20 -mrs 0.0 -bcNano ' \
+                  '-t {threads}'.format(input_reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                        kma_database=kma_database,
+                                        kma_report=kma_report,
+                                        threads=threads)
+        out, err = run_cmd(cmd)
+        write_to_logfile(log, out, err, cmd)
 
     rmlst_report = os.path.join(output_folder, sample_name + '_rmlst.csv')
-    gene_alleles = find_rmlst_type(bamfile=os.path.join(sample_tmp_dir, 'rmlst.bam'),
-                                   sample_database=sample_database,
+    gene_alleles = find_rmlst_type(kma_report=kma_report + '.res',
                                    rmlst_report=rmlst_report)
 
     with open(os.path.join(sample_tmp_dir, 'rmlst.fasta'), 'w') as f:
@@ -663,6 +683,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     logging.debug('Total gene length is {}'.format(rmlst_gene_length))
     # Second step of mapping - Do a mapping of our baited reads against a fasta file that has only one allele per
     # rMLST gene.
+    logging.info('Counting cSNVs...')
     pysam.faidx(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
     if paired:
         cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} mdtag ' \
@@ -718,6 +739,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # isn't quite so ugly, but it works.
     p = multiprocessing.Pool(processes=threads)
     bamfile_list = [os.path.join(sample_tmp_dir, 'contamination.bam')] * len(gene_alleles)
+    # bamfile_list = [os.path.join(sample_tmp_dir, 'rmlst.bam')] * len(gene_alleles)
     reference_fasta_list = [os.path.join(sample_tmp_dir, 'rmlst.fasta')] * len(gene_alleles)
     quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
     base_cutoff_list = [base_cutoff] * len(gene_alleles)
@@ -730,6 +752,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     p.close()
     p.join()
 
+    logging.info('Writing report...')
     # Write out report info.
     report_file = os.path.join(output_folder, sample_name + '_contamination.csv')
     with open(report_file, 'w') as r:
@@ -814,8 +837,8 @@ def check_for_databases_and_download(database_location):
     try:
         database_modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(database_location, 'rMLST_combined.fasta')))
         timediff = current_time - database_modification_time
-        if timediff.days > 30:
-            logging.info('It looks like your databases haven\'t been updated for more than 30 days - it\'s recommended '
+        if timediff.days > 90:
+            logging.info('It looks like your databases haven\'t been updated for more than 90 days - it\'s recommended '
                          'to run confindr_database_setup regularly to keep up to date with any rMLST database updates.')
     except OSError:  # In case the rMLST_combined.fasta does not exist
         pass

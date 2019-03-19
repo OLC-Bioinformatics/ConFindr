@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="confindr",
-    version="0.5.1",
+    version="0.6.0",
     packages=find_packages(),
     entry_points={
        'console_scripts': [
@@ -14,7 +14,7 @@ setup(
     },
     author="Andrew Low",
     author_email="andrew.low@canada.ca",
-    url="https://github.com/lowandrew/ConFindr",
+    url="https://github.com/OLC-Bioinformatics/ConFindr",
     install_requires=['biopython',
                       'pysam',
                       'pytest',
