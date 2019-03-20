@@ -69,7 +69,10 @@ Before using ConFindr, you'll need to download and add the following programs to
 
 - [BBTools (>=37.23)](https://jgi.doe.gov/data-and-tools/bbtools/)
 - [Mash (>=2.0)](https://github.com/marbl/Mash/releases)
+- [KMA (>=1.2.0)](https://bitbucket.org/genomicepidemiology/kma)
 - [Python (>=3.5)](https://www.python.org/downloads/)
+
+If you want to run in Nanopore mode, you'll also need to get [minimap2](https://github.com/lh3/minimap2).
 
 Instructions on adding programs to your $PATH can be found [here](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix).
 
