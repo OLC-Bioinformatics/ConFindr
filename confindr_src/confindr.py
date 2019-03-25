@@ -452,7 +452,7 @@ def estimate_percent_contamination(contamination_report_file):
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
                        quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, Xmx=None, tmpdir=None,
-                       data_type='Illumina'):
+                       data_type='Illumina', database_priority='rmlst'):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -512,7 +512,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                      total_gene_length=0,
                      database_download_date=database_download_date)
         logging.info('Found cross-contamination! Skipping rest of analysis...\n')
-        shutil.rmtree(sample_tmp_dir)
+        if keep_files is False:
+            shutil.rmtree(sample_tmp_dir)
         return
     # Setup genus-specific databases, if necessary.
     if cgmlst_db is not None:
@@ -526,15 +527,57 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         if not os.path.isdir(db_folder):
             os.makedirs(db_folder)
         if genus != 'NA':
-            sample_database = os.path.join(db_folder, '{}_db.fasta'.format(genus))
-            if not os.path.isfile(sample_database):
-                logging.info('Setting up genus-specific database for genus {}...'.format(genus))
-                allele_list = find_genusspecific_allele_list(os.path.join(databases_folder, 'gene_allele.txt'), genus)
-                setup_allelespecific_database(fasta_file=sample_database,
-                                              database_folder=databases_folder,
-                                              allele_list=allele_list)
+            # Logic here is as follows: users can either have both rMLST databases, which cover all of bacteria,
+            # cgmlst-derived databases, which cover only Escherichia, Salmonella, and Listeria (may add more at some
+            # point), or they can have both. They can also set priority to either always use rMLST, or to use my
+            # core-genome derived stuff and fall back on rMLST if they're trying to look at a genus I haven't created
+            # a scheme for.
+
+            # In the event rmlst databases have priority, always use them.
+            if database_priority == 'rmlst':
+                sample_database = os.path.join(db_folder, '{}_db.fasta'.format(genus))
+                if not os.path.isfile(sample_database):
+                    logging.info('Setting up genus-specific database for genus {}...'.format(genus))
+                    allele_list = find_genusspecific_allele_list(os.path.join(db_folder, 'gene_allele.txt'), genus)
+                    setup_allelespecific_database(fasta_file=sample_database,
+                                                  database_folder=db_folder,
+                                                  allele_list=allele_list)
+            elif database_priority == 'cgderived':
+                # Check if a cgderived database is available. If not, try to use rMLST database.
+                sample_database = os.path.join(db_folder, '{}_db_cgderived.fasta'.format(genus))
+                if not os.path.isfile(sample_database):
+                    sample_database = os.path.join(db_folder, '{}_db.fasta'.format(genus))
+                    if os.path.isfile(os.path.join(db_folder, 'rMLST_combined.fasta')) and os.path.isfile(os.path.join(db_folder, 'gene_allele.txt')):
+                        logging.info('Setting up genus-specific database for genus {}...'.format(genus))
+                        allele_list = find_genusspecific_allele_list(os.path.join(db_folder, 'gene_allele.txt'), genus)
+                        setup_allelespecific_database(fasta_file=sample_database,
+                                                      database_folder=db_folder,
+                                                      allele_list=allele_list)
+
         else:
             sample_database = os.path.join(db_folder, 'rMLST_combined.fasta')
+
+    # If a user has gotten to this point and they don't have any database available to do analysis because
+    # they don't have rMLST downloaded and we don't have a cg-derived database available, boot them with a helpful
+    # message.
+    if not os.path.isfile(sample_database):
+        write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
+                     sample_name=sample_name,
+                     multi_positions=0,
+                     genus=genus,
+                     percent_contam='NA',
+                     contam_stddev='NA',
+                     total_gene_length=0,
+                     database_download_date=database_download_date)
+        logging.info('Did not find databases for genus {genus}. You can download the rMLST database to get access to all '
+                     'genera (see https://olc-bioinformatics.github.io/ConFindr/install/). Alternatively, if you have a '
+                     'high-quality core-genome derived database for your genome of interest, we would be happy to '
+                     'add it. Please open an issue at https://github.com/OLC-Bioinformatics/ConFindr/issues with the '
+                     'title "Add genus-specific database: {genus}"\n'.format(genus=genus))
+        if keep_files is False:
+            shutil.rmtree(sample_tmp_dir)
+        return
+
     # Extract rMLST reads and quality trim.
     logging.info('Extracting rMLST genes...')
     if paired:
@@ -904,7 +947,8 @@ def confindr(args):
         os.makedirs(args.output_name)
 
     # Check if databases necessary to run are present, and download them if they aren't
-    check_for_databases_and_download(database_location=args.databases)
+    # TODO: Re-work this to accomodate non-rMLST databases.
+    # check_for_databases_and_download(database_location=args.databases)
 
     # Figure out what pairs of reads, as well as unpaired reads, are present.
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
@@ -926,7 +970,8 @@ def confindr(args):
                                cgmlst_db=args.cgmlst,
                                Xmx=args.Xmx,
                                tmpdir=args.tmp,
-                               data_type=args.data_type)
+                               data_type=args.data_type,
+                               database_priority=args.database_priority)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -962,7 +1007,8 @@ def confindr(args):
                                cgmlst_db=args.cgmlst,
                                Xmx=args.Xmx,
                                tmpdir=args.tmp,
-                               data_type=args.data_type)
+                               data_type=args.data_type,
+                               database_priority=args.database_priority)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -1013,6 +1059,13 @@ def main():
                         help='Databases folder. To download these, you will need to get access to the rMLST databases. '
                              'For complete instructions on how to do this, please see '
                              'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases')
+    parser.add_argument('--database_priority',
+                        options=['rmlst', 'cgderived'],
+                        default='rmlst',
+                        help='Use this option to specify which database files to use. Option "rmlst" will always use '
+                             'rMLST-derived databases, and option "cgderived" will use custom core-genome derived '
+                             'databases where available, and fall back on rMLST-derived databases when core-genome '
+                             'databases are not available.')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=cpu_count,

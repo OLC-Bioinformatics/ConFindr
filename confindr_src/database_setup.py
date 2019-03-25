@@ -187,11 +187,7 @@ def create_gene_allele_file(profiles_file, gene_allele_file):
 
 def setup_confindr_database(output_folder, consumer_secret):
     # Remove previous output folder if it existed.
-    if os.path.isdir(output_folder):
-        logging.info('Removing old databases...')
-        shutil.rmtree(output_folder)
-    os.makedirs(output_folder)
-    
+
     # Go through the REST API in order to get profiles downloaded.
     rmlst_rest = RmlstRest(consumer_secret_file=consumer_secret,
                            output_folder=output_folder)
@@ -232,6 +228,11 @@ def download_mash_sketch(output_folder):
                                os.path.join(output_folder, 'refseq.msh'))
 
 
+def download_cgmlst_derived_data(output_folder):
+    logging.info('Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria...')
+    # TODO: Actually do this.
+
+
 def main():
     logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
                         level=logging.INFO,
@@ -244,11 +245,21 @@ def main():
                              'the CONFINDR_DB environmental variable.')
     parser.add_argument('-s', '--secret_file',
                         type=str,
-                        required=True,
                         help='Path to consumer secret file for rMLST database.')
     args = parser.parse_args()
-    setup_confindr_database(args.output_folder,
-                            args.secret_file)
+    if os.path.isdir(args.output_folder):
+        logging.info('Removing old databases...')
+        shutil.rmtree(args.output_folder)
+    os.makedirs(args.output_folder)
+    download_cgmlst_derived_data(args.output_folder)
+    if args.secret_file is not None:
+        logging.warning('WARNING: Without an rMLST secret file, data will only be downloaded for Escherichia, '
+                        'Salmonella, and Listeria. See '
+                        'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases for '
+                        'instructions on how to get access to rMLST databases so ConFindr can be used for other species'
+                        ' as well')
+        setup_confindr_database(args.output_folder,
+                                args.secret_file)
     download_mash_sketch(args.output_folder)
     current_year = datetime.datetime.utcnow().year
     current_month = datetime.datetime.utcnow().month
