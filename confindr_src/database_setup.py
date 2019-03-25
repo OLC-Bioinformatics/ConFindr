@@ -5,7 +5,7 @@ from Bio import SeqIO
 import argparse
 import datetime
 import logging
-import urllib
+import urllib.request
 import shutil
 import glob
 import csv

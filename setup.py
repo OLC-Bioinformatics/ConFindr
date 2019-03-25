@@ -9,7 +9,8 @@ setup(
     entry_points={
        'console_scripts': [
             'confindr.py = confindr_src.confindr:main',
-            'confindr_database_setup = confindr_src.database_setup:main'
+            'confindr_database_setup = confindr_src.database_setup:main',
+            'confindr_create_db = confindr_src.create_genus_specific_db:main'
        ],
     },
     author="Andrew Low",
