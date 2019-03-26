@@ -47,7 +47,8 @@ def main():
     find_hits_per_genome(args.input_folder, args.output_folder)
     # 4) BLAST the potential genes we've found against each other to make sure none of them are similar to each other.
     potential_genes = get_potential_genes(os.path.join(args.output_folder, 'gene_hit_report.csv'), args.desired_number_genes)
-    confirmed_genes = check_for_similar_genes(potential_genes)
+    genomes = sorted(glob.glob(os.path.join(args.output_folder, '*.fasta')))
+    confirmed_genes = check_for_similar_genes(potential_genes, genomes)
     for gene in confirmed_genes:
         cmd = 'cat {} >> {}'.format(gene, args.genus + '_db_cgderived.fasta')
         subprocess.call(cmd, shell=True)
@@ -55,7 +56,7 @@ def main():
     # 6) Profit! (but not actually, free and open source, wooooo!)
 
 
-def check_for_similar_genes(potential_genes):
+def check_for_similar_genes(potential_genes, genomes):
     # For each of our potential genes make a blast DB.
     confirmed_genes = list()
     for potential_gene in potential_genes:
@@ -76,7 +77,7 @@ def check_for_similar_genes(potential_genes):
                     with open(blast_file) as f:
                         for line in f:
                             blast_result = BlastResult(line.rstrip())
-                            if blast_result.percent_identity >= 70 and blast_result.query_coverage >= 70:
+                            if blast_result.percent_identity >= 70 or blast_result.query_coverage >= 50:
                                 similar_genes_found = True
                 if similar_genes_found:
                     logging.warning('WARNING: {} and {} look pretty similar, and should probably get excluded from '
@@ -84,7 +85,29 @@ def check_for_similar_genes(potential_genes):
                 else:
                     if gene1 not in confirmed_genes:
                         confirmed_genes.append(gene1)
-    return confirmed_genes
+    # Also check that our confirmed genes only hit each genome once, with very loose settings.
+    really_confirmed_genes = list()
+    for confirmed_gene in confirmed_genes:
+        only_one_per_genome = True
+        for genome in genomes:
+            hits = 0
+            with tempfile.TemporaryDirectory() as tmpdir:
+                blast_file = os.path.join(tmpdir, 'blast_out.tsv')
+                cmd = 'blastn -query {seqfile} -db {genome} -out {outfile} -outfmt ' \
+                      '"6 qseqid sseqid pident length qlen qstart qend sstart send evalue"'.format(seqfile=confirmed_gene,
+                                                                                                   genome=genome,
+                                                                                                   outfile=blast_file)
+                subprocess.call(cmd, shell=True)
+                with open(blast_file) as f:
+                    for line in f:
+                        blast_result = BlastResult(line.rstrip())
+                        if blast_result.percent_identity >= 70 or blast_result.query_coverage >= 50:
+                            hits += 1
+            if hits > 1:
+                only_one_per_genome = False
+        if only_one_per_genome is True:
+            really_confirmed_genes.append(confirmed_gene)
+    return really_confirmed_genes
 
 
 def get_potential_genes(gene_report, desired_genes):
