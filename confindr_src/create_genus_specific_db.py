@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import multiprocessing
 from Bio import SeqIO
 import urllib.request
 import subprocess
@@ -8,6 +7,7 @@ import argparse
 import tempfile
 import logging
 import glob
+import csv
 import os
 
 
@@ -29,6 +29,10 @@ def main():
                         type=str,
                         required=True,
                         help='Name of genus you\'re creating a database for.')
+    parser.add_argument('--desired_number_genes',
+                        type=int,
+                        default=50,
+                        help='Minimum number of genes you want to find.')
     args = parser.parse_args()
 
     if not os.path.isdir(args.output_folder):
@@ -42,8 +46,69 @@ def main():
     # that both hit all genomes, and also hit only once per genome.
     find_hits_per_genome(args.input_folder, args.output_folder)
     # 4) BLAST the potential genes we've found against each other to make sure none of them are similar to each other.
+    potential_genes = get_potential_genes(os.path.join(args.output_folder, 'gene_hit_report.csv'), args.desired_number_genes)
+    confirmed_genes = check_for_similar_genes(potential_genes)
+    for gene in confirmed_genes:
+        cmd = 'cat {} >> {}'.format(gene, args.genus + '_db_cgderived.fasta')
+        subprocess.call(cmd, shell=True)
     # 5) ???
     # 6) Profit! (but not actually, free and open source, wooooo!)
+
+
+def check_for_similar_genes(potential_genes):
+    # For each of our potential genes make a blast DB.
+    confirmed_genes = list()
+    for potential_gene in potential_genes:
+        cmd = 'makeblastdb -dbtype nucl -in {}'.format(potential_gene)
+        subprocess.call(cmd, shell=True)
+    # Then, blast each gene against all other genes, and raise warnings if you find any significant-looking hits.
+    for gene1 in potential_genes:
+        for gene2 in potential_genes:
+            if gene1 != gene2:
+                similar_genes_found = False
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    blast_file = os.path.join(tmpdir, 'blast_out.tsv')
+                    cmd = 'blastn -query {seqfile} -db {genome} -out {outfile} -outfmt ' \
+                          '"6 qseqid sseqid pident length qlen qstart qend sstart send evalue"'.format(seqfile=gene1,
+                                                                                                       genome=gene2,
+                                                                                                       outfile=blast_file)
+                    subprocess.call(cmd, shell=True)
+                    with open(blast_file) as f:
+                        for line in f:
+                            blast_result = BlastResult(line.rstrip())
+                            if blast_result.percent_identity >= 70 and blast_result.query_coverage >= 70:
+                                similar_genes_found = True
+                if similar_genes_found:
+                    logging.warning('WARNING: {} and {} look pretty similar, and should probably get excluded from '
+                                    'your scheme!'.format(gene1, gene2))
+                else:
+                    if gene1 not in confirmed_genes:
+                        confirmed_genes.append(gene1)
+    return confirmed_genes
+
+
+def get_potential_genes(gene_report, desired_genes):
+    proportion_in_genomes = dict()
+    potential_genes = list()
+    lowest_proportion = 1
+    with open(gene_report) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            gene = row['Gene']
+            proportion = float(row['OneHitPerGenome'])
+            proportion_in_genomes[gene] = proportion
+    sorted_proportions = sorted(proportion_in_genomes.items(), key=lambda kv: kv[1], reverse=True)
+    genes_added = 0
+    for gene, proportion in sorted_proportions:
+        if proportion == 1:
+            potential_genes.append(gene)
+            genes_added += 1
+        elif genes_added < desired_genes:
+            potential_genes.append(gene)
+            genes_added += 1
+            lowest_proportion = proportion
+    logging.info('Found {} genes. Lowest proportion found was {}'.format(genes_added, lowest_proportion))
+    return potential_genes
 
 
 def download_refseq_summary(output_folder):
@@ -70,12 +135,26 @@ def download_refseq_genomes(output_folder, assembly_summary, genus):
                     urllib.request.urlretrieve(download_link, output_file)
                     # System call to gzip since it's faster
                     subprocess.call('gunzip {}'.format(output_file), shell=True)
+                    # Make sure files are big enough to be genomes and aren't phage/plasmid/something else.
+                    if os.path.getsize(output_file.replace('.gz', '')) < 2000000:
+                        os.remove(output_file.replace('.gz', ''))
+                        i -= 1
     logging.info('Done downloading! Got {} genomes.'.format(i))
 
 
 def find_hits_per_genome(genes_folder, genomes_folder):
     # Make blast DBs for all of our genomes.
     genomes = sorted(glob.glob(os.path.join(genomes_folder, '*.fasta')))
+    genome_hit_report_file = os.path.join(genomes_folder, 'genome_hit_report.csv')
+    gene_report_file = os.path.join(genomes_folder, 'gene_hit_report.csv')
+    with open(gene_report_file, 'w') as f:
+        f.write('Gene,OneHitPerGenome\n')
+    with open(genome_hit_report_file, 'w') as f:
+        to_write = 'Gene,'
+        for genome in genomes:
+            to_write += genome + ','
+        to_write = to_write[:-1]
+        f.write(to_write + '\n')
     logging.info('Creating BLAST databases for genomes of interest.')
     for genome in genomes:
         cmd = 'makeblastdb -dbtype nucl -in {}'.format(genome)
@@ -90,7 +169,8 @@ def find_hits_per_genome(genes_folder, genomes_folder):
                 with tempfile.TemporaryDirectory() as tmpdir:
                     seqfile = os.path.join(tmpdir, 'sequence.fasta')
                     SeqIO.write([sequence], seqfile, 'fasta')
-                    one_hit_in_all_genomes = True
+                    genomes_with_one_hit = 0
+                    hits_per_genome = dict()
                     for genome in genomes:
                         blast_file = os.path.join(tmpdir, 'blast_out.tsv')
                         cmd = 'blastn -query {seqfile} -db {genome} -out {outfile} -outfmt ' \
@@ -104,10 +184,17 @@ def find_hits_per_genome(genes_folder, genomes_folder):
                                 blast_result = BlastResult(line.rstrip())
                                 if blast_result.percent_identity >= 90 and blast_result.query_coverage >= 90:
                                     number_hits += 1
-                        if number_hits != 1:
-                            print(genome)
-                            one_hit_in_all_genomes = False
-                    print('{},{}'.format(gene, one_hit_in_all_genomes))
+                        hits_per_genome[genome] = number_hits
+                        if number_hits == 1:
+                            genomes_with_one_hit += 1
+                    with open(genome_hit_report_file, 'a+') as f:
+                        to_write = gene + ','
+                        for genome in genomes:
+                            to_write += str(hits_per_genome[genome]) + ','
+                        to_write = to_write[:-1]
+                        f.write(to_write + '\n')
+                    with open(gene_report_file, 'a+') as f:
+                        f.write('{},{}\n'.format(gene, genomes_with_one_hit/len(genomes)))
             i += 1
 
 
