@@ -14,6 +14,7 @@ import csv
 import os
 import pysam
 from Bio import SeqIO
+from confindr_src.database_setup import download_cgmlst_derived_data, download_mash_sketch
 from confindr_src.wrappers import mash
 from confindr_src.wrappers import bbtools
 
@@ -392,7 +393,7 @@ def find_rmlst_type(kma_report, rmlst_report):
                     score_dict[gene] = score
                     genes_to_use[gene] = allele
     for gene in genes_to_use:
-        gene_alleles.append(gene + '_' + genes_to_use[gene])
+        gene_alleles.append(gene + '_' + genes_to_use[gene].replace(' ', ''))
     gene_alleles = sorted(gene_alleles)
     with open(rmlst_report, 'w') as f:
         f.write('Gene,Allele\n')
@@ -547,7 +548,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                 sample_database = os.path.join(db_folder, '{}_db_cgderived.fasta'.format(genus))
                 if not os.path.isfile(sample_database):
                     sample_database = os.path.join(db_folder, '{}_db.fasta'.format(genus))
-                    if os.path.isfile(os.path.join(db_folder, 'rMLST_combined.fasta')) and os.path.isfile(os.path.join(db_folder, 'gene_allele.txt')):
+                    # Create genus specific database if it doesn't already exist and we have the necessary rMLST files.
+                    if os.path.isfile(os.path.join(db_folder, 'rMLST_combined.fasta')) and os.path.isfile(os.path.join(db_folder, 'gene_allele.txt')) and not os.path.isfile(sample_database):
                         logging.info('Setting up genus-specific database for genus {}...'.format(genus))
                         allele_list = find_genusspecific_allele_list(os.path.join(db_folder, 'gene_allele.txt'), genus)
                         setup_allelespecific_database(fasta_file=sample_database,
@@ -579,7 +581,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         return
 
     # Extract rMLST reads and quality trim.
-    logging.info('Extracting rMLST genes...')
+    logging.info('Extracting conserved core genes...')
     if paired:
         if Xmx is None:
             out, err, cmd = bbtools.bbduk_bait(reference=sample_database,
@@ -842,17 +844,9 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
 
 
 def check_for_databases_and_download(database_location):
-    current_time = datetime.datetime.now()
-    try:
-        database_modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(database_location, 'rMLST_combined.fasta')))
-        timediff = current_time - database_modification_time
-        if timediff.days > 90:
-            logging.info('It looks like your databases haven\'t been updated for more than 90 days - it\'s recommended '
-                         'to run confindr_database_setup regularly to keep up to date with any rMLST database updates.')
-    except OSError:  # In case the rMLST_combined.fasta does not exist
-        pass
     # Check for the files necessary - should have rMLST_combined.fasta, gene_allele.txt, profiles.txt, and refseq.msh
-    necessary_files = ['rMLST_combined.fasta', 'gene_allele.txt', 'profiles.txt', 'refseq.msh']
+    necessary_files = ['Escherichia_db_cgderived.fasta', 'Listeria_db_cgderived.fasta', 'Salmonella_db_cgderived.fasta', 'refseq.msh']
+    optional_files = ['rMLST_combined.fasta', 'gene_allele.txt', 'profiles.txt']
     all_files_present = True
     for necessary_file in necessary_files:
         if not os.path.isfile(os.path.join(database_location, necessary_file)):
@@ -860,9 +854,19 @@ def check_for_databases_and_download(database_location):
             all_files_present = False
 
     if not all_files_present:
-        logging.error('Databases not present - you\'ll need to get acccess to rMLST databases (instructions at '
-                      'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases) '
-                      'and run confindr_database_setup')
+        logging.warning('Databases not present - downloading basic databases now...')
+        download_mash_sketch(database_location)
+        download_cgmlst_derived_data(database_location)
+
+    optional_files_present = True
+    for optional_file in optional_files:
+        if not os.path.isfile(os.path.join(database_location, optional_file)):
+            logging.warning('Could not find {}'.format(optional_file))
+            optional_files_present = False
+    if not optional_files_present:
+        logging.warning('Did not find rMLST databases, if you want to use ConFindr on genera other than Listeria, '
+                        'Salmonella, and Escherichia, you\'ll need to download them. Instructions are available at '
+                        'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases')
 
 
 def check_valid_base_fraction(base_fraction):
@@ -947,8 +951,7 @@ def confindr(args):
         os.makedirs(args.output_name)
 
     # Check if databases necessary to run are present, and download them if they aren't
-    # TODO: Re-work this to accomodate non-rMLST databases.
-    # check_for_databases_and_download(database_location=args.databases)
+    check_for_databases_and_download(database_location=args.databases)
 
     # Figure out what pairs of reads, as well as unpaired reads, are present.
     paired_reads = find_paired_reads(args.input_directory, forward_id=args.forward_id, reverse_id=args.reverse_id)
@@ -1060,7 +1063,7 @@ def main():
                              'For complete instructions on how to do this, please see '
                              'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases')
     parser.add_argument('--database_priority',
-                        options=['rmlst', 'cgderived'],
+                        choices=['rmlst', 'cgderived'],
                         default='rmlst',
                         help='Use this option to specify which database files to use. Option "rmlst" will always use '
                              'rMLST-derived databases, and option "cgderived" will use custom core-genome derived '

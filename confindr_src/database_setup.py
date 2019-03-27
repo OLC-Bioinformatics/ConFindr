@@ -6,6 +6,7 @@ import argparse
 import datetime
 import logging
 import urllib.request
+import tarfile
 import shutil
 import glob
 import csv
@@ -230,7 +231,13 @@ def download_mash_sketch(output_folder):
 
 def download_cgmlst_derived_data(output_folder):
     logging.info('Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria...')
-    # TODO: Actually do this.
+    urllib.request.urlretrieve('https://ndownloader.figshare.com/files/UPLOADED_FILE_ID_HERE',
+                               os.path.join(output_folder, 'confindr_db.tar.gz'))
+    confindr_tar = os.path.join(output_folder, 'confindr_db.tar.gz')
+    tar = tarfile.open(confindr_tar)
+    tar.extractall(path=output_folder)
+    tar.close()
+    os.remove(confindr_tar)
 
 
 def main():
