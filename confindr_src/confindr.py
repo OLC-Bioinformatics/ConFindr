@@ -453,7 +453,7 @@ def estimate_percent_contamination(contamination_report_file):
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
                        quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, Xmx=None, tmpdir=None,
-                       data_type='Illumina', database_priority='rmlst'):
+                       data_type='Illumina', use_rmlst=False):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -535,7 +535,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             # a scheme for.
 
             # In the event rmlst databases have priority, always use them.
-            if database_priority == 'rmlst':
+            if use_rmlst is True:
                 sample_database = os.path.join(db_folder, '{}_db.fasta'.format(genus))
                 if not os.path.isfile(sample_database):
                     logging.info('Setting up genus-specific database for genus {}...'.format(genus))
@@ -543,7 +543,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                     setup_allelespecific_database(fasta_file=sample_database,
                                                   database_folder=db_folder,
                                                   allele_list=allele_list)
-            elif database_priority == 'cgderived':
+            else:
                 # Check if a cgderived database is available. If not, try to use rMLST database.
                 sample_database = os.path.join(db_folder, '{}_db_cgderived.fasta'.format(genus))
                 if not os.path.isfile(sample_database):
@@ -971,7 +971,7 @@ def confindr(args):
                                Xmx=args.Xmx,
                                tmpdir=args.tmp,
                                data_type=args.data_type,
-                               database_priority=args.database_priority)
+                               use_rmlst=args.rmlst)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -1008,7 +1008,7 @@ def confindr(args):
                                Xmx=args.Xmx,
                                tmpdir=args.tmp,
                                data_type=args.data_type,
-                               database_priority=args.database_priority)
+                               use_rmlst=args.rmlst)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -1059,13 +1059,11 @@ def main():
                         help='Databases folder. To download these, you will need to get access to the rMLST databases. '
                              'For complete instructions on how to do this, please see '
                              'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases')
-    parser.add_argument('--database_priority',
-                        choices=['rmlst', 'cgderived'],
-                        default='rmlst',
-                        help='Use this option to specify which database files to use. Option "rmlst" will always use '
-                             'rMLST-derived databases, and option "cgderived" will use custom core-genome derived '
-                             'databases where available, and fall back on rMLST-derived databases when core-genome '
-                             'databases are not available.')
+    parser.add_argument('--rmlst',
+                        default=False,
+                        action='store_true',
+                        help='Activate to prefer using rMLST databases over core-gene derived databases. By default,'
+                             'ConFindr will use core-gene derived databases where available.')
     parser.add_argument('-t', '--threads',
                         type=int,
                         default=cpu_count,
@@ -1133,7 +1131,6 @@ def main():
                         help='Amount of output you want printed to the screen. Defaults to info, which should be good '
                              'for most users.')
     args = parser.parse_args()
-
     # Setup the logger. TODO: Different colors for different levels.
     if args.verbosity == 'info':
         logging.basicConfig(format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
