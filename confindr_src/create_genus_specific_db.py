@@ -79,22 +79,23 @@ def check_for_similar_genes(potential_genes, genomes):
                             blast_result = BlastResult(line.rstrip())
                             if blast_result.percent_identity >= 70 or blast_result.query_coverage >= 50:
                                 similar_genes_found = True
-                if similar_genes_found:
-                    logging.warning('WARNING: {} and {} look pretty similar, and should probably get excluded from '
-                                    'your scheme!'.format(gene1, gene2))
-                else:
-                    if gene1 not in confirmed_genes:
-                        confirmed_genes.append(gene1)
+                if gene1 not in confirmed_genes and similar_genes_found is False:
+                    confirmed_genes.append(gene1)
     # Also check that our confirmed genes only hit each genome once, with very loose settings.
     really_confirmed_genes = list()
     for confirmed_gene in confirmed_genes:
-        only_one_per_genome = True
-        for genome in genomes:
-            hits = 0
-            with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            count = 0
+            for contig in SeqIO.parse(confirmed_gene, 'fasta'):
+                if count == 0:
+                    SeqIO.write([contig], os.path.join(tmpdir, 'sequence.fasta'), 'fasta')
+                    count += 1
+            only_one_per_genome = True
+            for genome in genomes:
+                hits = 0
                 blast_file = os.path.join(tmpdir, 'blast_out.tsv')
                 cmd = 'blastn -query {seqfile} -db {genome} -out {outfile} -outfmt ' \
-                      '"6 qseqid sseqid pident length qlen qstart qend sstart send evalue"'.format(seqfile=confirmed_gene,
+                      '"6 qseqid sseqid pident length qlen qstart qend sstart send evalue"'.format(seqfile=os.path.join(tmpdir, 'sequence.fasta'),
                                                                                                    genome=genome,
                                                                                                    outfile=blast_file)
                 subprocess.call(cmd, shell=True)
@@ -103,10 +104,10 @@ def check_for_similar_genes(potential_genes, genomes):
                         blast_result = BlastResult(line.rstrip())
                         if blast_result.percent_identity >= 70 or blast_result.query_coverage >= 50:
                             hits += 1
-            if hits > 1:
-                only_one_per_genome = False
-        if only_one_per_genome is True:
-            really_confirmed_genes.append(confirmed_gene)
+                if hits > 1:
+                    only_one_per_genome = False
+            if only_one_per_genome is True:
+                really_confirmed_genes.append(confirmed_gene)
     return really_confirmed_genes
 
 
