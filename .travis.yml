@@ -15,6 +15,7 @@ install:
   - export PATH=$PATH:$PWD/mash-Linux64-v2.0
   - git clone https://bitbucket.org/genomicepidemiology/kma.git
   - cd kma && make
+  - cd ..
   - export PATH=$PATH:$PWD/kma
   - pip install -e .
 branches:
