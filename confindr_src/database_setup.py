@@ -231,7 +231,7 @@ def download_mash_sketch(output_folder):
 
 def download_cgmlst_derived_data(output_folder):
     logging.info('Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria...')
-    urllib.request.urlretrieve('https://ndownloader.figshare.com/files/UPLOADED_FILE_ID_HERE',
+    urllib.request.urlretrieve('https://ndownloader.figshare.com/files/14771267',
                                os.path.join(output_folder, 'confindr_db.tar.gz'))
     confindr_tar = os.path.join(output_folder, 'confindr_db.tar.gz')
     tar = tarfile.open(confindr_tar)

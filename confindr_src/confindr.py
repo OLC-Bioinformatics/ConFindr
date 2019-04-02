@@ -852,6 +852,8 @@ def check_for_databases_and_download(database_location):
 
     if not all_files_present:
         logging.warning('Databases not present - downloading basic databases now...')
+        if not os.path.isdir(database_location):
+            os.makedirs(database_location)
         download_mash_sketch(database_location)
         download_cgmlst_derived_data(database_location)
 
