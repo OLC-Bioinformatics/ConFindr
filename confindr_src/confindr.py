@@ -5,7 +5,6 @@ import pkg_resources
 import numpy as np
 import subprocess
 import traceback
-import datetime
 import argparse
 import logging
 import shutil
@@ -860,12 +859,11 @@ def check_for_databases_and_download(database_location):
     optional_files_present = True
     for optional_file in optional_files:
         if not os.path.isfile(os.path.join(database_location, optional_file)):
-            logging.warning('Could not find {}'.format(optional_file))
             optional_files_present = False
     if not optional_files_present:
         logging.warning('Did not find rMLST databases, if you want to use ConFindr on genera other than Listeria, '
                         'Salmonella, and Escherichia, you\'ll need to download them. Instructions are available at '
-                        'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases')
+                        'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases\n')
 
 
 def check_valid_base_fraction(base_fraction):

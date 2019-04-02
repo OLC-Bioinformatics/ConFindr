@@ -6,12 +6,16 @@ python:
 cache: pip
 
 install:
+  - wget -O confindr_integration.tar.gz https://ndownloader.figshare.com/files/14773226 && tar xf confindr_integration.tar.gz
   - wget https://sourceforge.net/projects/bbmap/files/BBMap_37.68.tar.gz
   - tar xf BBMap_37.68.tar.gz
   - export PATH=$PATH:$PWD/bbmap/
   - wget https://github.com/marbl/Mash/releases/download/v2.0/mash-Linux64-v2.0.tar
   - tar xf mash-Linux64-v2.0.tar
   - export PATH=$PATH:$PWD/mash-Linux64-v2.0
+  - wget https://bitbucket.org/genomicepidemiology/kma/get/1.2.0.tar.gz
+  - tar xf 1.2.0.tar.gz && cd genomicepidemiology-kma-fc0252f14abd && make
+  - export PATH=$PATH:$PWD/genomicepidemiology-kma-fc0252f14abd
   - pip install -e .
 branches:
   only:

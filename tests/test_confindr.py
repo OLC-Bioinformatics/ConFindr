@@ -6,8 +6,39 @@ parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0, parentdir)
 from confindr_src.confindr import *
 from Bio import SeqIO
+import subprocess
+import shutil
+import csv
 
-# TODO: Make these far more useful than they currently are.
+
+def test_integration():
+    correct_contamination_calls = {'NC_002695_50_HS25_clean': 'False',
+                                   'NC_002695_NC_000913_0.05_50_MSv1': 'True',
+                                   'NC_002973_50_MSv1_clean': 'False',
+                                   'NC_002973_NC_012488_0.05_50_HS25': 'True',
+                                   'NC_003198_50_MSv1_clean': 'False',
+                                   'NC_003198_NC_003197_0.1_50_HS25': 'True',
+                                   'cross_contaminated': 'True'}
+    correct_genera = {'NC_002695_50_HS25_clean': 'Escherichia',
+                      'NC_002695_NC_000913_0.05_50_MSv1': 'Escherichia',
+                      'NC_002973_50_MSv1_clean': 'Listeria',
+                      'NC_002973_NC_012488_0.05_50_HS25': 'Listeria',
+                      'NC_003198_50_MSv1_clean': 'Salmonella',
+                      'NC_003198_NC_003197_0.1_50_HS25': 'Salmonella'}
+    subprocess.call('confindr.py -i confindr_integration_tests -o confindr_integration_output -d databases', shell=True)
+    with open('confindr_integration_output/confindr_report.csv') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            sample = row['Sample']
+            if sample != 'cross_contaminated':
+                assert row['ContamStatus'] == correct_contamination_calls[sample]
+                assert row['Genus'] == correct_genera[sample]
+            else:
+                assert row['ContamStatus'] == correct_contamination_calls[sample]
+                genera = row['Genus'].split(':')
+                assert 'Salmonella' in genera and 'Escherichia' in genera and 'Listeria' in genera
+    shutil.rmtree('confindr_integration_output')
+    shutil.rmtree('databases')
 
 
 def test_present_dependency():
