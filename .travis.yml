@@ -23,4 +23,4 @@ branches:
     - master
 
 script:
-  - pytest tests/test_confindr.py
+  - travis wait 30 pytest tests/test_confindr.py
