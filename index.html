@@ -117,12 +117,11 @@
 <p>ConFindr is a pipeline that can detect contamination in bacterial NGS data, both between and within species. It can do this with pretty darn good sensitivity - two samples mixed together with as few as
 500 SNPs between them (&gt; 99.9 percent identity!) can be identified. This allows for stringent quality control of NGS samples.</p>
 <h3 id="how-does-confindr-work">How Does ConFindr Work?</h3>
-<p>ConFindr works by looking at rMLST genes (Jolley <em>et al</em>., 2012). 
-These 53 genes are known to be single copy and conserved across all bacteria (with some known exceptions, which ConFindr handles),
- making them excellent markers. As they are known to be single copy, any sample that has multiple alleles of one or more rMLST gene is likely to be contaminated. 
+<p>ConFindr works by looking at conserved core genes - either using rMLST genes (53 genes are known to be single copy and conserved across all bacteria with some known exceptions, which ConFindr handles), or 
+ custom sets of genes derived from core-genome schemes. As the genes ConFindr looks at are single copy, any sample that has multiple alleles of one or more gene is likely to be contaminated. 
 To identify the presence of multiple alleles in a sample, the following workflow is followed:</p>
 <ol>
-<li>Use Mash to determine the genus of each sample so that genus-specific rMLST databases can be constructed
+<li>Use Mash to determine the genus of each sample so that genus-specific databases can be constructed
 and check for interspecies contamination.</li>
 <li>Perform stringent quality trimming and bait out reads that contain rMLST gene sequence, using BBDuk.</li>
 <li>Align reads back to the rMLST genes.</li>
