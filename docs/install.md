@@ -9,7 +9,13 @@ ConFindr should run on any regular desktop/laptop with 8 GB or RAM or more.
 
 ## Downloading ConFindr Databases
 
-ConFindr uses the ribsomal multi-locus sequence typing (rMLST) scheme to detect contamination. These databases are 
+As of ConFindr 0.7.0, databases for detecting contamination in _Escherichia_, _Listeria_, and _Salmonella_ derived from
+core-gene schemes are freely available and will be automatically downloaded by ConFindr when it runs. If you only want 
+to run ConFindr on these three genera, nothing further is necessary. If you want to run ConFindr on any other genera, keep
+reading on how to get access to the necessary databases.
+
+ConFindr uses the ribosomal multi-locus sequence typing (rMLST) scheme to detect contamination in genera other 
+than the ones listed above. These databases are 
 freely available, but you will need to jump through a few hoops before you can get access to them due to an 
 associated [licence agreement](https://pubmlst.org/rmlst/rMLST_licence.pdf).
 

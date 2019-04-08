@@ -537,11 +537,12 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             if use_rmlst is True:
                 sample_database = os.path.join(db_folder, '{}_db.fasta'.format(genus))
                 if not os.path.isfile(sample_database):
-                    logging.info('Setting up genus-specific database for genus {}...'.format(genus))
-                    allele_list = find_genusspecific_allele_list(os.path.join(db_folder, 'gene_allele.txt'), genus)
-                    setup_allelespecific_database(fasta_file=sample_database,
-                                                  database_folder=db_folder,
-                                                  allele_list=allele_list)
+                    if os.path.isfile(os.path.join(db_folder, 'gene_allele.txt')) and os.path.isfile(os.path.join(db_folder, 'rMLST_combined.fasta')):
+                        logging.info('Setting up genus-specific database for genus {}...'.format(genus))
+                        allele_list = find_genusspecific_allele_list(os.path.join(db_folder, 'gene_allele.txt'), genus)
+                        setup_allelespecific_database(fasta_file=sample_database,
+                                                      database_folder=db_folder,
+                                                      allele_list=allele_list)
             else:
                 # Check if a cgderived database is available. If not, try to use rMLST database.
                 sample_database = os.path.join(db_folder, '{}_db_cgderived.fasta'.format(genus))
@@ -573,7 +574,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         logging.info('Did not find databases for genus {genus}. You can download the rMLST database to get access to all '
                      'genera (see https://olc-bioinformatics.github.io/ConFindr/install/). Alternatively, if you have a '
                      'high-quality core-genome derived database for your genome of interest, we would be happy to '
-                     'add it. Please open an issue at https://github.com/OLC-Bioinformatics/ConFindr/issues with the '
+                     'add it - open an issue at https://github.com/OLC-Bioinformatics/ConFindr/issues with the '
                      'title "Add genus-specific database: {genus}"\n'.format(genus=genus))
         if keep_files is False:
             shutil.rmtree(sample_tmp_dir)

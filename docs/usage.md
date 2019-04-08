@@ -21,24 +21,30 @@ You can use absolute or relative paths, and trailing slashes are also acceptable
 If ConFindr is properly installed, you should see something similar to the following appear on your terminal:
 
 ```bash
-  2018-09-10 13:24:32  Welcome to ConFindr 0.4.3! Beginning analysis of your samples...
-  2018-09-10 13:24:32  Databases not present. Downloading to /home/user/.confindr_db. This may take a few minutes...
-  2018-09-10 13:35:46  Databases successfully downloaded...
-  2018-09-10 13:35:46  Beginning analysis of sample example...
-  2018-09-10 13:35:46  Checking for cross-species contamination...
-  2018-09-10 13:35:59  Setting up genus-specific database for genus Escherichia...
-  2018-09-10 13:36:58  Extracting rMLST genes...
-  2018-09-10 13:37:02  Quality trimming...
-  2018-09-10 13:37:02  Detecting contamination...
-  2018-09-10 13:37:20  Done! Number of contaminating SNVs found: 24
-
-  2018-09-10 13:37:20  Contamination detection complete!
+  2019-04-02 15:06:04  Welcome to ConFindr 0.7.0! Beginning analysis of your samples... 
+  2019-04-02 15:06:04  Could not find Escherichia_db_cgderived.fasta 
+  2019-04-02 15:06:04  Could not find Listeria_db_cgderived.fasta 
+  2019-04-02 15:06:04  Could not find Salmonella_db_cgderived.fasta 
+  2019-04-02 15:06:04  Could not find refseq.msh 
+  2019-04-02 15:06:04  Databases not present - downloading basic databases now... 
+  2019-04-02 15:06:04  Downloading mash refseq sketch... 
+  2019-04-02 15:06:07  Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria... 
+  2019-04-02 15:06:12  Did not find rMLST databases, if you want to use ConFindr on genera other than Listeria, Salmonella, and Escherichia, you'll need to download them. Instructions are available at https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases
+ 
+  2019-04-02 15:06:12  Beginning analysis of sample example... 
+  2019-04-02 15:06:12  Checking for cross-species contamination... 
+  2019-04-02 15:06:29  Extracting conserved core genes... 
+  2019-04-02 15:06:37  Quality trimming... 
+  2019-04-02 15:06:38  Detecting contamination... 
+  2019-04-02 15:07:05  Done! Number of contaminating SNVs found: 214
+ 
+  2019-04-02 15:07:05  Contamination detection complete! 
 ```
 
 The run shouldn't take too long - depending on how powerful your machine is, it should be done in
 one to two minutes (slightly longer if an *Escherichia* specific database has not yet been set up).
 Once the run is done, you'll be able to inspect your results. Take a look at `output/confindr_report.csv`:
-The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value of something close to 15.
+The `ContamStatus` column should read `True`, and the `NumContamSNVs` column should have a value of something close to 200.
 
 In any future uses of ConFindr, databases will not need to be re-downloaded.
 
@@ -54,14 +60,18 @@ is contaminated, and `False` if a sample is not contaminated. Detailed descripti
 If multiple genera were found, they will all be listed here, separated by a `:`
 - `NumContamSNVs`: The number of times ConFindr found sites with more than one base present.
 - `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met:
-	- 3 or more contaminating SNVs are found. 
+	- More than 1 contaminating SNV per 10000 base pairs examined was found.
 	- There is cross contamination between genera.
 - `PercentContam`: Based on the depth of the minor variant for sites with multiple bases, ConFindr guesses
 at what percent of your reads come from a contaminant. The more sequencing depth you have, the more accurate this will
-get. In my experience, this will tend to be a slight overestimate, particularly for low depth samples.
+get. For lower levels of contamination (around 5 percent) this tends to get overestimated, but the number gets more accurate as
+contamination level increases, as well as sequencing depth.
 - `PercentContamStandardDeviation`: The standard deviation of the percentage contamination estimate. Very high values may
 indicate something strange is going on.
-- `BasesExamined`: The number of bases ConFindr examined when making the contamination call. Will usally be around 20kb.
+- `BasesExamined`: The number of bases ConFindr examined when making the contamination call. Will usally be around 20kb for rMLST databases,
+ and will vary when other databases are used.
+- `DatabaseDownloadDate`: Date that rMLST databases were downloaded, if you have them. As these are curated and updated regularly,
+it's a good idea to re-run `confindr_database_setup` every now and then.
 
 ConFindr will also produce two CSV files for each sample - one called `samplename_contamination.csv`, which shows the contaminating
 sites, and one called `samplename_rmlst.csv`, which shows ConFindr's guess at which allele is present for each rMLST gene.
@@ -71,7 +81,7 @@ sites, and one called `samplename_rmlst.csv`, which shows ConFindr's guess at wh
 In the event you'd rather integrate ConFindr into a script than run from the command line, here's how:
 
 ```python
-from confindr import confindr
+from confindr_src import confindr
 
 # Find read files.
 paired_reads = confindr.find_paired_reads('path_to_fastq_folder', forward_id='_R1', reverse_id='_R2')
@@ -132,4 +142,5 @@ contributing to contamination. Must be between 0 and 1. Not used by default.
 - `-q`, `--quality_cutoff`: The phred score a base needs to have before it's considered
 trustworthy enough to contribute to a site being multiallelic. Defaults to 20, which should
 be suitable for most purposes. 
-
+- `--rmlst`: By default, ConFindr will use custom core-gene derived datasets for _Escherichia_, _Listeria_, and _Salmonella_
+instead of rMLST. Activate this flag to force use of rMLST genes for all genera.

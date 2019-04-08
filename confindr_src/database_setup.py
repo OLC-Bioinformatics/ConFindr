@@ -259,12 +259,13 @@ def main():
         shutil.rmtree(args.output_folder)
     os.makedirs(args.output_folder)
     download_cgmlst_derived_data(args.output_folder)
-    if args.secret_file is not None:
+    if args.secret_file is None:
         logging.warning('WARNING: Without an rMLST secret file, data will only be downloaded for Escherichia, '
                         'Salmonella, and Listeria. See '
                         'https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases for '
                         'instructions on how to get access to rMLST databases so ConFindr can be used for other species'
                         ' as well')
+    else:
         setup_confindr_database(args.output_folder,
                                 args.secret_file)
     download_mash_sketch(args.output_folder)
