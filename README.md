@@ -15,6 +15,9 @@ To install ConFindr, use conda (see [here](https://bioconda.github.io/) for inst
 
 `conda install -c bioconda confindr`
 
+**NOTE**: As of May 2019, the `conda-forge` version of pluggy has broken ConFindr's recipe. If you get an error with `pkg_resources.ContextualVersionConflict`
+when trying to run ConFindr, it can be fixed by downgrading pluggy from 0.12.0 to 0.11.0 (`conda install pluggy==0.11.0`)
+
 To get an example dataset, use this command, which will create a folder called `example-data` in your current working directory: 
 
 `wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
