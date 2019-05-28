@@ -13,7 +13,7 @@ install:
   - wget https://github.com/marbl/Mash/releases/download/v2.0/mash-Linux64-v2.0.tar
   - tar xf mash-Linux64-v2.0.tar
   - export PATH=$PATH:$PWD/mash-Linux64-v2.0
-  - git clone https://bitbucket.org/genomicepidemiology/kma.git
+  - wget -O kma.tar.gz https://bitbucket.org/genomicepidemiology/kma/get/1.2.0.tar.gz && tar xf kma.tar.gz && mv genomicepidemiology-kma-fc0252f14abd kma
   - cd kma && make
   - cd ..
   - export PATH=$PATH:$PWD/kma
