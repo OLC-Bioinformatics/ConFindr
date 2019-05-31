@@ -15,9 +15,6 @@ To install ConFindr, use conda (see [here](https://bioconda.github.io/) for inst
 
 `conda install -c bioconda confindr`
 
-**NOTE**: As of May 2019, the `conda-forge` version of pluggy has broken ConFindr's recipe. If you get an error with `pkg_resources.ContextualVersionConflict`
-when trying to run ConFindr, it can be fixed by downgrading pluggy from 0.12.0 to 0.11.0 (`conda install pluggy==0.11.0`)
-
 To get an example dataset, use this command, which will create a folder called `example-data` in your current working directory: 
 
 `wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
@@ -62,6 +59,9 @@ please open an issue here on GitHub.
 
 ## Citing ConFindr
 
-ConFindr has been submitted to PeerJ and is available as a preprint. If you use ConFindr, please cite it!
+ConFindr has been published in PeerJ - if you use it in your work, please cite the following:
 
-Low AJ, Koziol AG, Manninger PA, Blais BW, Carrillo CD. 2019. ConFindr: Rapid detection of intraspecies and cross-species contamination in bacterial whole-genome sequence data. PeerJ Preprints 7:e27499v1 https://doi.org/10.7287/peerj.preprints.27499v1
+```
+Low AJ, Koziol AG, Manninger PA, Blais B, Carrillo CD. 2019. ConFindr: rapid detection of intraspecies and cross-species contamination in bacterial whole-genome sequence data. PeerJ 7:e6995 https://doi.org/10.7717/peerj.6995
+```
+
