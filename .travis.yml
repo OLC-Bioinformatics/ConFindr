@@ -16,7 +16,7 @@ install:
   - conda update -q conda
   - conda info -a
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
-  - conda activate test-environment
+  - source activate test-environment
   - conda install -c bioconda -c conda-forge bbmap biopython kma mash minimap2 pluggy pysam pytest rauth samtools
   - pip install -e .
 branches:
@@ -24,5 +24,5 @@ branches:
     - master
 
 script:
-  - conda activate test-environment
+  - source activate test-environment
   - travis_wait 30 pytest tests/test_confindr.py
