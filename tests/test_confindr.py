@@ -1,14 +1,13 @@
-import os
-import subprocess
-import pytest
-
-parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.sys.path.insert(0, parentdir)
 from confindr_src.confindr import *
 from Bio import SeqIO
 import subprocess
+import pytest
 import shutil
 import csv
+import os
+
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.sys.path.insert(0, parentdir)
 
 
 def test_integration():
@@ -25,7 +24,8 @@ def test_integration():
                       'NC_002973_NC_012488_0.05_50_HS25': 'Listeria',
                       'NC_003198_50_MSv1_clean': 'Salmonella',
                       'NC_003198_NC_003197_0.1_50_HS25': 'Salmonella'}
-    subprocess.call('confindr.py -i confindr_integration_tests -o confindr_integration_output -d databases', shell=True)
+    subprocess.call('confindr.py -i confindr_integration_tests -o confindr_integration_output -d databases '
+                    '--cross_details', shell=True)
     with open('confindr_integration_output/confindr_report.csv') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
@@ -33,6 +33,7 @@ def test_integration():
             if sample != 'cross_contaminated':
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
                 assert row['Genus'] == correct_genera[sample]
+
             else:
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
                 genera = row['Genus'].split(':')
@@ -118,28 +119,36 @@ def test_two_hq_bases_above_threshold_custom_params():
 def test_just_one_hq_base_above_threshold_custom_params():
     assert number_of_bases_above_threshold({'G': 96, 'A': 4}, base_count_cutoff=5) == 1
 
+
 def test_three_hq_bases_above_threshold():
     assert number_of_bases_above_threshold({'G': 90, 'A': 10, 'T': 10}) == 3
+
 
 def test_two_out_of_three_hq_bases_above_threshold():
     assert number_of_bases_above_threshold({'G': 90, 'A': 9, 'T': 1}) == 2
 
 # test base_fraction_cutoff
 
+
 def test_two_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 80, 'A': 20}, base_fraction_cutoff=0.05) == 2
+
 
 def test_two_hq_bases_above_fraction_threshold_low_coverage():
     assert number_of_bases_above_threshold({'G': 9, 'A': 1}, base_fraction_cutoff=0.05) == 1
 
+
 def test_two_hq_bases_above_fraction_threshold_low_coverage_one_base_counts():
     assert number_of_bases_above_threshold({'G': 9, 'A': 1}, base_count_cutoff=1, base_fraction_cutoff=0.05) == 2
+
 
 def test_just_one_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 99, 'A': 1}, base_fraction_cutoff=0.05) == 1
 
+
 def test_three_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 90, 'A': 10, 'T': 10}, base_fraction_cutoff=0.05) == 3
+
 
 def test_two_out_of_three_hq_bases_above_fraction_threshold():
     assert number_of_bases_above_threshold({'G': 90, 'A': 9, 'T': 1}, base_fraction_cutoff=0.05) == 2
@@ -233,4 +242,3 @@ def test_invalid_xmx_float():
 
 def test_invalid_xmx_not_an_integer():
     assert check_acceptable_xmx('asdfK') is False
-
