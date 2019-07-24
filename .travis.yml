@@ -15,7 +15,9 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION -c bioconda -c conda-forge bbmap biopython kma mash minimap2 pluggy pysam pytest rauth samtools
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
+  - conda activate test-environment
+  - conda install -c bioconda -c conda-forge bbmap biopython kma mash minimap2 pluggy pysam pytest rauth samtools
   - pip install -e .
 branches:
   only:
