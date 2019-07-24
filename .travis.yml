@@ -3,20 +3,19 @@ python:
   - '3.4'
   - '3.5'
   - '3.6'
+  - '3.7'
 cache: pip
 
 install:
   - wget -O confindr_integration.tar.gz https://ndownloader.figshare.com/files/14773226 && tar xf confindr_integration.tar.gz
-  - wget https://sourceforge.net/projects/bbmap/files/BBMap_37.68.tar.gz
-  - tar xf BBMap_37.68.tar.gz
-  - export PATH=$PATH:$PWD/bbmap/
-  - wget https://github.com/marbl/Mash/releases/download/v2.0/mash-Linux64-v2.0.tar
-  - tar xf mash-Linux64-v2.0.tar
-  - export PATH=$PATH:$PWD/mash-Linux64-v2.0
-  - wget -O kma.tar.gz https://bitbucket.org/genomicepidemiology/kma/get/1.2.0.tar.gz && tar xf kma.tar.gz && mv genomicepidemiology-kma-fc0252f14abd kma
-  - cd kma && make
-  - cd ..
-  - export PATH=$PATH:$PWD/kma
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION 
   - pip install -e .
 branches:
   only:
