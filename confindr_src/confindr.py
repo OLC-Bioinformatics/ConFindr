@@ -112,7 +112,7 @@ def find_genusspecific_allele_list(profiles_file, target_genus):
     each genus instead of just excluding a few genes for each. This way, should have much smaller databases
     while managing to make ConFindr a decent bit faster (maybe)
     :param profiles_file: Path to profiles file.
-    :param target_genus:
+    :param target_genus: Genus you want to make a custom database for (STR)
     :return: List of gene/allele combinations that should be part of species-specific database.
     """
     alleles = list()
@@ -149,53 +149,15 @@ def extract_rmlst_genes(pair, database, forward_out, reverse_out, threads=12, lo
     Given a pair of reads and an rMLST database, will extract reads that contain sequence from the database.
     :param pair: List containing path to forward reads at index 0 and path to reverse reads at index 1.
     :param database: Path to rMLST database, in FASTA format.
-    :param forward_out:
-    :param reverse_out:
-    :param threads:
-    :param logfile:
+    :param forward_out: Filepath to write forward reads to (STR)
+    :param reverse_out: Filepath to write reverse reads to (STR)
+    :param threads: Number of threads to use (INT)
+    :param logfile: Logfile to write command/stdout/stderr to. If None, nothing will be written.
     """
     out, err, cmd = bbtools.bbduk_bait(database, pair[0], forward_out, reverse_in=pair[1],
                                        reverse_out=reverse_out, threads=str(threads), returncmd=True)
     if logfile:
         write_to_logfile(logfile, out, err, cmd)
-
-
-# def find_cross_contamination_paired(databases, pair, tmpdir='tmp', log='log.txt', threads=1):
-#     """
-#     Uses mash to find out whether or not a sample has more than one genus present, indicating cross-contamination.
-#     :param databases: A databases folder, which must contain refseq.msh, a mash sketch that has one representative
-#     per genus from refseq.
-#     :param tmpdir: Temporary directory to store mash result files in.
-#     :param pair: Array with path to forward reads at index 0 and path to reverse reads at index o
-#     :param log: Logfile to write to.
-#     :param threads: Number of threads to run mash wit.
-#     :return: cross_contam: a bool that is True if more than one genus is found, and False otherwise.
-#     :return: genera_present: A string. If only one genus is found, string is just genus. If more than one genus is
-#     found, the string is a colon-separated list of genera present (e.g. Escherichia and Salmonella found, string would
-#     be 'Escherichia:Salmonella'. If no genus found, return 'NA'
-#     """
-#     genera_present = list()
-#     out, err, cmd = mash.screen('{}/refseq.msh'.format(databases), pair[0],
-#                                 pair[1], threads=threads, w='', i='0.95',
-#                                 output_file=os.path.join(tmpdir, 'screen.tab'), returncmd=True)
-#     write_to_logfile(log, out, err, cmd)
-#     screen_output = mash.read_mash_screen(os.path.join(tmpdir, 'screen.tab'))
-#     for item in screen_output:
-#         mash_genus = item.query_id.split('/')[-3]
-#         if mash_genus == 'Shigella':
-#             mash_genus = 'Escherichia'
-#         if mash_genus not in genera_present:
-#             genera_present.append(mash_genus)
-#     if len(genera_present) == 1:
-#         genera_present = genera_present[0]
-#     elif len(genera_present) == 0:
-#         genera_present = 'NA'
-#     else:
-#         tmpstr = ''
-#         for mash_genus in genera_present:
-#             tmpstr += mash_genus + ':'
-#         genera_present = tmpstr[:-1]
-#     return genera_present
 
 
 def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', threads=1):
@@ -362,9 +324,9 @@ def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, b
     :param contig_name: Name of contig as a string.
     :param bamfile_name: Full path to bamfile. Must be sorted/indexed
     :param reference_fasta: Full path to fasta file that was used to generate the bamfile.
-    :param quality_cutoff:
-    :param base_cutoff:
-    :param base_fraction_cutoff:
+    :param quality_cutoff: Bases must have at least this phred score to be considered (INT)
+    :param base_cutoff: At least this many bases must support a minor variant (INT)
+    :param base_fraction_cutoff: At least this percentage of bases must support minor variant (FLOAT)
     :return: Dictionary of positions where more than one base is present. Keys are contig name, values are positions
     """
     bamfile = pysam.AlignmentFile(bamfile_name, 'rb')
@@ -508,10 +470,10 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     :param xmx: if None, BBTools will use auto memory detection. If string, BBTools will use what's specified as their
     memory request.
     :param tmpdir: if None, any genus-specifc databases that need to be created will be written to ConFindr DB location.
-    :param data_type:
-    :param use_rmlst:
-    :param cross_details:
-    Otherwise, genus-specific databases will be written here.
+    :param data_type: Either Illumina or Nanopore, depending on what type your reads are. (STR)
+    :param use_rmlst: If False, use cgderived data instead of rMLST where possible. If True, always use rMLST. (BOOL)
+    :param cross_details: If False, stop workflow when cross contamination is detected. If True, continue so estimates
+    of percent contamination can be found (BOOL)
     """
     if os.path.isfile(os.path.join(databases_folder, 'download_date.txt')):
         with open(os.path.join(databases_folder, 'download_date.txt')) as f:
@@ -860,14 +822,13 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                  contam_stddev=contam_stddev,
                  total_gene_length=rmlst_gene_length,
                  snp_cutoff=snp_cutoff,
-                 cgmlst=cgmlst_db,
                  database_download_date=database_download_date)
     if keep_files is False:
         shutil.rmtree(sample_tmp_dir)
 
 
 def write_output(output_report, sample_name, multi_positions, genus, percent_contam, contam_stddev, total_gene_length,
-                 database_download_date, snp_cutoff=3, cgmlst=None):
+                 database_download_date, snp_cutoff=3):
     """
     Function that writes the output generated by ConFindr to a report file. Appends to a file that already exists,
     or creates the file if it doesn't already exist.
@@ -880,9 +841,7 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
     :param contam_stddev: float - Standard deviation of percentage contamination
     :param total_gene_length: integer - number of bases examined to make a contamination call.
     :param database_download_date:
-    :param snp_cutoff:
-    :param cgmlst: If None, means that rMLST database was used, so use rMLST snp cutoff. Otherwise, some sort of cgMLST
-    database was used, so use a different cutoff.
+    :param snp_cutoff: Number of cSNVs to use to call a sample contaminated. Default 3. (INT)
     """
     # If the report file hasn't been created, make it, with appropriate header.
     if not os.path.isfile(output_report):
@@ -1071,43 +1030,6 @@ def confindr(args):
             logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
-    # # Process unpaired reads, also one sample at a time.
-    # for pair in unpaired_reads:
-    #     sample_name = os.path.split(pair[0])[-1].split('.')[0]
-    #     logging.info('Beginning analysis of sample {}...'.format(sample_name))
-    #     try:
-    #         find_contamination(pair=pair,
-    #                            forward_id=args.forward_id,
-    #                            threads=args.threads,
-    #                            output_folder=args.output_name,
-    #                            databases_folder=args.databases,
-    #                            keep_files=args.keep_files,
-    #                            quality_cutoff=args.quality_cutoff,
-    #                            base_cutoff=args.base_cutoff,
-    #                            base_fraction_cutoff=args.base_fraction_cutoff,
-    #                            cgmlst_db=args.cgmlst,
-    #                            xmx=args.Xmx,
-    #                            tmpdir=args.tmp,
-    #                            data_type=args.data_type,
-    #                            use_rmlst=args.rmlst)
-    #     except subprocess.CalledProcessError:
-    #         # If something unforeseen goes wrong, traceback will be printed to screen.
-    #         # We then add the sample to the report with a note that it failed.
-    #         multi_positions = 0
-    #         genus = 'Error processing sample'
-    #         write_output(output_report=os.path.join(args.output_name, 'confindr_report.csv'),
-    #                      sample_name=sample_name,
-    #                      multi_positions=multi_positions,
-    #                      genus=genus,
-    #                      percent_contam='NA',
-    #                      contam_stddev='NA',
-    #                      total_gene_length=0,
-    #                      database_download_date='NA')
-    #         logging.warning('Encountered error when attempting to run ConFindr on sample '
-    #                         '{sample}. Skipping...'.format(sample=sample_name))
-    #         logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
-    #         if args.keep_files is False:
-    #             shutil.rmtree(os.path.join(args.output_name, sample_name))
     if args.keep_files is False and args.tmp is not None:
         shutil.rmtree(args.tmp)
     logging.info('Contamination detection complete!')

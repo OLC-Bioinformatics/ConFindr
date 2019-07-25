@@ -144,3 +144,5 @@ trustworthy enough to contribute to a site being multiallelic. Defaults to 20, w
 be suitable for most purposes. 
 - `--rmlst`: By default, ConFindr will use custom core-gene derived datasets for _Escherichia_, _Listeria_, and _Salmonella_
 instead of rMLST. Activate this flag to force use of rMLST genes for all genera.
+- `--cross_details`: By default, when ConFindr finds cross-contaminated samples it stops analysis. Activate
+this flag to have analysis of number of cSNVs continue in order to get an estimate of percentage contamination.
