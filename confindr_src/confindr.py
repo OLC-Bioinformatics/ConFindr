@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from pysam.utils import SamtoolsError
 import multiprocessing
 import pkg_resources
 import numpy as np
@@ -160,7 +160,7 @@ def extract_rmlst_genes(pair, database, forward_out, reverse_out, threads=12, lo
         write_to_logfile(logfile, out, err, cmd)
 
 
-def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', threads=1):
+def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', threads=1, min_matching_hashes=40):
     """
     Uses mash to find out whether or not a sample has more than one genus present, indicating cross-contamination.
     :param databases: A databases folder, which must contain refseq.msh, a mash sketch that has one representative
@@ -168,7 +168,9 @@ def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', thre
     :param reads: Relative path(s) to either unpaired (type STR) or paired (type LIST) FASTQ reads
     :param tmpdir: Temporary directory to store mash result files in.
     :param log: Logfile to write to.
-    :param threads: Number of threads to run mash wit.
+    :param threads: Number of threads to run mash with.
+    :param min_matching_hashes: Minimum number of matching hashes in a MASH screen in order for a genus to be
+    considered present in a sample. Default is 40
     :return: cross_contam: a bool that is True if more than one genus is found, and False otherwise.
     :return: genera_present: A string. If only one genus is found, string is NA. If more than one genus is found,
     the string is a list of genera present, separated by colons (i.e. for Escherichia and Salmonella found, string would
@@ -179,7 +181,8 @@ def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', thre
         out, err, cmd = mash.screen('{database}/refseq.msh'.format(database=databases), reads,
                                     threads=threads,
                                     w='',
-                                    i='0.95',
+                                    # i='0.95',
+                                    i='0.85',
                                     output_file=os.path.join(tmpdir, 'screen.tab'),
                                     returncmd=True)
     else:
@@ -187,7 +190,8 @@ def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', thre
                                     reads[1],
                                     threads=threads,
                                     w='',
-                                    i='0.95',
+                                    # i='0.95',
+                                    i='0.85',
                                     output_file=os.path.join(tmpdir, 'screen.tab'),
                                     returncmd=True)
     write_to_logfile(log, out, err, cmd)
@@ -196,12 +200,15 @@ def find_cross_contamination(databases, reads, tmpdir='tmp', log='log.txt', thre
         mash_genus = item.query_id.split('/')[-3]
         if mash_genus == 'Shigella':
             mash_genus = 'Escherichia'
-        if mash_genus not in genera_present:
-            genera_present.append(mash_genus)
+        matching_hashes = int(item.shared_hashes.split('/')[0])
+        # Only add the genus to the genera_present list of the number of matching hashes exceeds the cutoff
+        if matching_hashes >= min_matching_hashes:
+            if mash_genus not in genera_present:
+                genera_present.append(mash_genus)
     if len(genera_present) == 1:
         genera_present = genera_present[0]
     elif len(genera_present) == 0:
-        genera_present = 'NA'
+        genera_present = 'ND'
     else:
         tmpstr = ''
         for mash_genus in genera_present:
@@ -445,7 +452,7 @@ def estimate_percent_contamination(contamination_report_file):
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
                        quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
-                       tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False):
+                       tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False, min_matching_hashes=40):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -474,12 +481,14 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     :param use_rmlst: If False, use cgderived data instead of rMLST where possible. If True, always use rMLST. (BOOL)
     :param cross_details: If False, stop workflow when cross contamination is detected. If True, continue so estimates
     of percent contamination can be found (BOOL)
+    :param min_matching_hashes: Minimum number of matching hashes in a MASH screen in order for a genus to be
+    considered present in a sample. Default is 40
     """
     if os.path.isfile(os.path.join(databases_folder, 'download_date.txt')):
         with open(os.path.join(databases_folder, 'download_date.txt')) as f:
             database_download_date = f.readline().rstrip()
     else:
-        database_download_date = 'NA'
+        database_download_date = 'ND'
     log = os.path.join(output_folder, 'confindr_log.txt')
     if len(pair) == 2:
         sample_name = os.path.split(pair[0])[-1].split(forward_id)[0]
@@ -499,21 +508,23 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                          reads=pair,
                                          tmpdir=sample_tmp_dir,
                                          log=log,
-                                         threads=threads)
+                                         threads=threads,
+                                         min_matching_hashes=min_matching_hashes)
     else:
         genus = find_cross_contamination(databases_folder,
                                          reads=pair[0],
                                          tmpdir=sample_tmp_dir,
                                          log=log,
-                                         threads=threads)
+                                         threads=threads,
+                                         min_matching_hashes=min_matching_hashes)
     if len(genus.split(':')) > 1:
         if not cross_details:
             write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
                          sample_name=sample_name,
                          multi_positions=0,
                          genus=genus,
-                         percent_contam='NA',
-                         contam_stddev='NA',
+                         percent_contam='ND',
+                         contam_stddev='ND',
                          total_gene_length=0,
                          database_download_date=database_download_date)
             logging.info('Found cross-contamination! Skipping rest of analysis...\n')
@@ -532,7 +543,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         db_folder = databases_folder if tmpdir is None else tmpdir
         if not os.path.isdir(db_folder):
             os.makedirs(db_folder)
-        if genus != 'NA':
+        if genus != 'ND':
             # Logic here is as follows: users can either have both rMLST databases, which cover all of bacteria,
             # cgmlst-derived databases, which cover only Escherichia, Salmonella, and Listeria (may add more at some
             # point), or they can have both. They can also set priority to either always use rMLST, or to use my
@@ -586,8 +597,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                      sample_name=sample_name,
                      multi_positions=0,
                      genus=genus,
-                     percent_contam='NA',
-                     contam_stddev='NA',
+                     percent_contam='ND',
+                     contam_stddev='ND',
                      total_gene_length=0,
                      database_download_date=database_download_date)
         logging.info('Did not find databases for genus {genus}. You can download the rMLST database to get access to '
@@ -718,35 +729,21 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
 
     rmlst_gene_length = find_total_sequence_length(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
     logging.debug('Total gene length is {}'.format(rmlst_gene_length))
+    pysam_pass = True
     # Second step of mapping - Do a mapping of our baited reads against a fasta file that has only one allele per
     # rMLST gene.
-    pysam.faidx(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
-    if paired:
-        cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} mdtag ' \
-              'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                              forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
-                              reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
-                              outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
-                              threads=threads)
-        if cgmlst_db is not None:
-            # Lots of core genes seem to have relatives within a genome that are at ~70 percent identity - this means
-            # that reads that shouldn't really map do, and cause false positives. Adding in this subfilter means that
-            # reads can only have one mismatch, so they actually have to be from the right gene for this to work.
-            cmd += ' subfilter=1'
-        if xmx:
-            cmd += ' -Xmx{}'.format(xmx)
-        out, err = run_cmd(cmd)
-        write_to_logfile(log, out, err, cmd)
-    else:
-        if data_type == 'Illumina':
-            cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} mdtag ' \
+    try:
+        pysam.faidx(os.path.join(sample_tmp_dir, 'rmlst.fasta'))
+        if paired:
+            cmd = 'bbmap.sh ref={ref} in={forward_in} in2={reverse_in} out={outbam} threads={threads} mdtag ' \
                   'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                                  forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                  forward_in=os.path.join(sample_tmp_dir, 'trimmed_R1.fastq.gz'),
+                                  reverse_in=os.path.join(sample_tmp_dir, 'trimmed_R2.fastq.gz'),
                                   outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
                                   threads=threads)
             if cgmlst_db is not None:
-                # Many core genes seem to have relatives within a genome that are at ~70 percent identity - this means
-                # that reads that shouldn't map do, and cause false positives. Adding in this subfilter means that
+                # Lots of core genes seem to have relatives within a genome that are at ~70 percent identity. This means
+                # that reads that shouldn't map do, and cause false positives. Adding in this sub-filter means that
                 # reads can only have one mismatch, so they actually have to be from the right gene for this to work.
                 cmd += ' subfilter=1'
             if xmx:
@@ -754,42 +751,62 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             out, err = run_cmd(cmd)
             write_to_logfile(log, out, err, cmd)
         else:
-            cmd = 'minimap2 --MD -t {threads} -ax map-ont {ref} {reads} ' \
-                  '> {outsam}'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
-                                      reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                      outsam=os.path.join(sample_tmp_dir, 'out_2.sam'),
+            if data_type == 'Illumina':
+                cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} mdtag ' \
+                      'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                                      forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                      outbam=os.path.join(sample_tmp_dir, 'out_2.bam'),
                                       threads=threads)
-            out, err = run_cmd(cmd)
-            write_to_logfile(log, out, err, cmd)
-            outbam = os.path.join(sample_tmp_dir, 'out_2.bam')
-            # Apparently have to perform equivalent of a touch on this file for this to work.
-            fh = open(outbam, 'w')
-            fh.close()
-            pysam.view('-b', '-o', outbam, os.path.join(sample_tmp_dir, 'out_2.sam'), save_stdout=outbam)
-    pysam.sort('-o', os.path.join(sample_tmp_dir, 'contamination.bam'), os.path.join(sample_tmp_dir, 'out_2.bam'))
-    pysam.index(os.path.join(sample_tmp_dir, 'contamination.bam'))
-    # Now find number of multi-positions for each rMLST gene/allele combination
-    multi_positions = 0
+                if cgmlst_db is not None:
+                    # Core genes can have relatives within a genome that are at ~70 percent identity. This means
+                    # that reads that shouldn't map do, and cause false positives. Adding in this sub-filter means that
+                    # reads can only have one mismatch, so they have to be from the right gene for this to work.
+                    cmd += ' subfilter=1'
+                if xmx:
+                    cmd += ' -Xmx{}'.format(xmx)
+                out, err = run_cmd(cmd)
+                write_to_logfile(log, out, err, cmd)
+            else:
+                cmd = 'minimap2 --MD -t {threads} -ax map-ont {ref} {reads} ' \
+                      '> {outsam}'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
+                                          reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                          outsam=os.path.join(sample_tmp_dir, 'out_2.sam'),
+                                          threads=threads)
+                out, err = run_cmd(cmd)
+                write_to_logfile(log, out, err, cmd)
+                outbam = os.path.join(sample_tmp_dir, 'out_2.bam')
+                # Apparently have to perform equivalent of a touch on this file for this to work.
+                fh = open(outbam, 'w')
+                fh.close()
+                pysam.view('-b', '-o', outbam, os.path.join(sample_tmp_dir, 'out_2.sam'), save_stdout=outbam)
+        pysam.sort('-o', os.path.join(sample_tmp_dir, 'contamination.bam'), os.path.join(sample_tmp_dir, 'out_2.bam'))
+        pysam.index(os.path.join(sample_tmp_dir, 'contamination.bam'))
+        # Now find number of multi-positions for each rMLST gene/allele combination
+        multi_positions = 0
 
-    # Run the BAM parsing in parallel! Some refactoring of the code would likely be a good idea so this
-    # isn't quite so ugly, but it works.
-    p = multiprocessing.Pool(processes=threads)
-    bamfile_list = [os.path.join(sample_tmp_dir, 'contamination.bam')] * len(gene_alleles)
-    # bamfile_list = [os.path.join(sample_tmp_dir, 'rmlst.bam')] * len(gene_alleles)
-    reference_fasta_list = [os.path.join(sample_tmp_dir, 'rmlst.fasta')] * len(gene_alleles)
-    quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
-    base_cutoff_list = [base_cutoff] * len(gene_alleles)
-    base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
-    multibase_dict_list = list()
-    report_write_list = list()
-    for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list,
-                                                                   quality_cutoff_list, base_cutoff_list,
-                                                                   base_fraction_list), chunksize=1):
-        multibase_dict_list.append(multibase_dict)
-        report_write_list.append(report_write)
-    p.close()
-    p.join()
-
+        # Run the BAM parsing in parallel! Some refactoring of the code would likely be a good idea so this
+        # isn't quite so ugly, but it works.
+        p = multiprocessing.Pool(processes=threads)
+        bamfile_list = [os.path.join(sample_tmp_dir, 'contamination.bam')] * len(gene_alleles)
+        # bamfile_list = [os.path.join(sample_tmp_dir, 'rmlst.bam')] * len(gene_alleles)
+        reference_fasta_list = [os.path.join(sample_tmp_dir, 'rmlst.fasta')] * len(gene_alleles)
+        quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
+        base_cutoff_list = [base_cutoff] * len(gene_alleles)
+        base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
+        multibase_dict_list = list()
+        report_write_list = list()
+        for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list,
+                                                                       quality_cutoff_list, base_cutoff_list,
+                                                                       base_fraction_list), chunksize=1):
+            multibase_dict_list.append(multibase_dict)
+            report_write_list.append(report_write)
+        p.close()
+        p.join()
+    except SamtoolsError:
+        pysam_pass = False
+        multi_positions = 0
+        multibase_dict_list = list()
+        report_write_list = list()
     # Write out report info.
     report_file = os.path.join(output_folder, sample_name + '_contamination.csv')
     with open(report_file, 'w') as r:
@@ -822,13 +839,14 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                  contam_stddev=contam_stddev,
                  total_gene_length=rmlst_gene_length,
                  snp_cutoff=snp_cutoff,
-                 database_download_date=database_download_date)
+                 database_download_date=database_download_date,
+                 pysam_pass=pysam_pass)
     if keep_files is False:
         shutil.rmtree(sample_tmp_dir)
 
 
 def write_output(output_report, sample_name, multi_positions, genus, percent_contam, contam_stddev, total_gene_length,
-                 database_download_date, snp_cutoff=3):
+                 database_download_date, snp_cutoff=3, pysam_pass=True):
     """
     Function that writes the output generated by ConFindr to a report file. Appends to a file that already exists,
     or creates the file if it doesn't already exist.
@@ -842,17 +860,23 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
     :param total_gene_length: integer - number of bases examined to make a contamination call.
     :param database_download_date:
     :param snp_cutoff: Number of cSNVs to use to call a sample contaminated. Default 3. (INT)
+    :param pysam_pass: Boolean of whether pysam encountered an error
     """
     # If the report file hasn't been created, make it, with appropriate header.
     if not os.path.isfile(output_report):
         with open(os.path.join(output_report), 'w') as f:
             f.write('Sample,Genus,NumContamSNVs,ContamStatus,PercentContam,PercentContamStandardDeviation,'
                     'BasesExamined,DatabaseDownloadDate\n')
-
-    if multi_positions >= snp_cutoff or len(genus.split(':')) > 1:
-        contaminated = True
+    if pysam_pass:
+        if multi_positions >= snp_cutoff or len(genus.split(':')) > 1:
+            contaminated = True
+        else:
+            contaminated = False
     else:
-        contaminated = False
+        contaminated = 'Pysam SamtoolsError'
+        multi_positions = 'ND'
+        percent_contam = 'ND'
+        contam_stddev = 'ND'
     with open(output_report, 'a+') as f:
         f.write('{samplename},{genus},{numcontamsnvs},'
                 '{contamstatus},{percent_contam},{contam_stddev},'
@@ -975,7 +999,13 @@ def confindr(args):
     # Make the output directory.
     if not os.path.isdir(args.output_name):
         os.makedirs(args.output_name)
-
+    # Remove any reports created by previous iterations of ConFindr
+    try:
+        os.remove(os.path.join(args.output_name, 'confindr_report.csv'))
+    except FileNotFoundError:
+        pass
+    # Set the minimum number of matching hashes
+    min_matching_hashes = args.min_matching_hashes
     # Check if databases necessary to run are present, and download them if they aren't
     check_for_databases_and_download(database_location=args.databases)
 
@@ -1011,7 +1041,8 @@ def confindr(args):
                                tmpdir=args.tmp,
                                data_type=args.data_type,
                                use_rmlst=args.rmlst,
-                               cross_details=args.cross_details)
+                               cross_details=args.cross_details,
+                               min_matching_hashes=min_matching_hashes)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -1021,10 +1052,10 @@ def confindr(args):
                          sample_name=sample_name,
                          multi_positions=multi_positions,
                          genus=genus,
-                         percent_contam='NA',
-                         contam_stddev='NA',
+                         percent_contam='ND',
+                         contam_stddev='ND',
                          total_gene_length=0,
-                         database_download_date='NA')
+                         database_download_date='ND')
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
             logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
@@ -1137,6 +1168,11 @@ def main():
                         action='store_true',
                         help='Continue ConFindr analyses on samples with two or more genera identified. Default is '
                              'False')
+    parser.add_argument('-m', '--min_matching_hashes',
+                        default=150,
+                        type=int,
+                        help='Minimum number of matching hashes in a MASH screen in order for a genus to be considered '
+                             'present in a sample. Default is 150')
     args = parser.parse_args()
     # Setup the logger. TODO: Different colors for different levels.
     if args.verbosity == 'info':

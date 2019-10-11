@@ -17,27 +17,29 @@ def test_integration():
                                    'NC_002973_NC_012488_0.05_50_HS25': 'True',
                                    'NC_003198_50_MSv1_clean': 'False',
                                    'NC_003198_NC_003197_0.1_50_HS25': 'True',
-                                   'cross_contaminated': 'True'}
+                                   'cross_contaminated': 'True',
+                                   '2019-HCLON-0044_S20_L001': 'False'}
     correct_genera = {'NC_002695_50_HS25_clean': 'Escherichia',
                       'NC_002695_NC_000913_0.05_50_MSv1': 'Escherichia',
                       'NC_002973_50_MSv1_clean': 'Listeria',
                       'NC_002973_NC_012488_0.05_50_HS25': 'Listeria',
                       'NC_003198_50_MSv1_clean': 'Salmonella',
-                      'NC_003198_NC_003197_0.1_50_HS25': 'Salmonella'}
+                      'NC_003198_NC_003197_0.1_50_HS25': 'Salmonella',
+                      '2019-HCLON-0044_S20_L001': 'ND'}
     subprocess.call('confindr.py -i confindr_integration_tests -o confindr_integration_output -d databases '
                     '--cross_details', shell=True)
     with open('confindr_integration_output/confindr_report.csv') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             sample = row['Sample']
-            if sample != 'cross_contaminated':
+            if 'cross_contaminated' not in sample:
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
                 assert row['Genus'] == correct_genera[sample]
-
             else:
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
                 genera = row['Genus'].split(':')
                 assert 'Salmonella' in genera and 'Escherichia' in genera and 'Listeria' in genera
+
     shutil.rmtree('confindr_integration_output')
     shutil.rmtree('databases')
 
@@ -186,7 +188,7 @@ def test_write_output_creates_file_if_does_not_exist():
                  percent_contam=22.2,
                  contam_stddev=1.1,
                  total_gene_length=888,
-                 database_download_date='NA')
+                 database_download_date='ND')
     assert os.path.isfile('tests/file_that_does_not_exist.csv') is True
     os.remove('tests/file_that_does_not_exist.csv')
 
@@ -199,7 +201,7 @@ def test_write_output_appends_if_file_does_exist():
                  percent_contam=22.2,
                  contam_stddev=1.1,
                  total_gene_length=888,
-                 database_download_date='NA')
+                 database_download_date='ND')
     with open('tests/confindr_report.csv') as f:
         lines = f.readlines()
     assert len(lines) > 2
