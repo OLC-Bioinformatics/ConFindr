@@ -8,116 +8,107 @@
         
         <link rel="canonical" href="https://olc-bioinformatics.github.io/ConFindr/usage/">
         <link rel="shortcut icon" href="../img/favicon.ico">
-
-	<title>Usage - ConFindr</title>
-
-        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
-        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
-        <link rel="stylesheet" href="../css/highlight.css">
+        <title>Usage - ConFindr</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/docco.min.css">
 
-        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-        <!--[if lt IE 9]>
-            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-
-        
+        <script src="../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
     </head>
 
     <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">ConFindr</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
-    <div class="container">
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../install/" class="nav-link">Installation</a>
+                            </li>
+                            <li class="navitem active">
+                                <a href="./" class="nav-link">Usage</a>
+                            </li>
+                        </ul>
 
-        <!-- Collapsed navigation -->
-        <div class="navbar-header">
-            <!-- Expander button -->
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-
-            <!-- Main title -->
-            <a class="navbar-brand" href="..">ConFindr</a>
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../install/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/OLC-Bioinformatics/Confindr/edit/master/docs/usage.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
         </div>
-
-        <!-- Expanded navigation -->
-        <div class="navbar-collapse collapse">
-            <!-- Main navigation -->
-            <ul class="nav navbar-nav">
-            
-            
-                <li >
-                    <a href="..">Home</a>
-                </li>
-            
-            
-            
-                <li >
-                    <a href="../install/">Installation</a>
-                </li>
-            
-            
-            
-                <li class="active">
-                    <a href="./">Usage</a>
-                </li>
-            
-            
-            </ul>
-
-            <!-- Search, Navigation and Repo links -->
-            <ul class="nav navbar-nav navbar-right">
-                <li >
-                    <a rel="next" href="../install/">
-                        <i class="fa fa-arrow-left"></i> Previous
-                    </a>
-                </li>
-                <li class="disabled">
-                    <a rel="prev" >
-                        Next <i class="fa fa-arrow-right"></i>
-                    </a>
-                </li>
-                
-                <li>
-                    <a href="https://github.com/OLC-Bioinformatics/Confindr">
-                        
-                            <i class="fa fa-github"></i>
-                        
-                        GitHub
-                    </a>
-                </li>
-                
-            </ul>
-        </div>
-    </div>
-</div>
 
         <div class="container">
-            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
-    <ul class="nav bs-sidenav">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
     
-        <li class="main active"><a href="#example-dataset">Example Dataset</a></li>
-        
-    
-        <li class="main "><a href="#interpreting-confindr-results">Interpreting ConFindr Results</a></li>
-        
-    
-        <li class="main "><a href="#using-confindr-in-a-python-script">Using ConFindr in a Python Script</a></li>
-        
-    
-        <li class="main "><a href="#using-schemes-other-than-rmlst">Using Schemes other than rMLST</a></li>
-        
-    
-        <li class="main "><a href="#optional-arguments">Optional Arguments</a></li>
-        
-    
-    </ul>
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#example-dataset" class="nav-link">Example Dataset</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#interpreting-confindr-results" class="nav-link">Interpreting ConFindr Results</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#using-confindr-in-a-python-script" class="nav-link">Using ConFindr in a Python Script</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#using-schemes-other-than-rmlst" class="nav-link">Using Schemes other than rMLST</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#optional-arguments" class="nav-link">Optional Arguments</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
 </div></div>
-            <div class="col-md-9" role="main">
+                    <div class="col-md-9" role="main">
 
 <h2 id="example-dataset">Example Dataset</h2>
 <p>An example dataset has been uploaded to FigShare. You can download it to your current working directory with the following command:</p>
@@ -211,8 +202,8 @@ increased by a factor of 2 or 3 compared to running against rMLST genes. </p>
 <p>In order to decrease computation time, clustering the cgMLST FASTA before running is recommended. CD-HIT on default
 parameters does this fairly well.</p>
 <p>cgMLST files that are already clustered are available for <em>Salmonella</em> and <em>Escherichia</em>. To get them:</p>
-<p>Escherichia: <code>wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&amp;st=2018-10-25T13:45:13Z&amp;se=2020-10-31T21:45:13Z&amp;spr=https&amp;sv=2017-11-09&amp;sig=0fgvcf6R%2BSSiz7gPm7KKm5M78wpjAPjGawhzt%2BlY7iE%3D&amp;sr=b' -O Escherichia_cgmlst.fasta</code></p>
-<p>Salmonella: <code>wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&amp;st=2018-10-25T13:35:21Z&amp;se=2020-10-31T21:35:21Z&amp;spr=https&amp;sv=2017-11-09&amp;sig=w5Pq9e4hsa6PGr458%2Bx4b5zqf4F2a6OUUL9H3ewQTNc%3D&amp;sr=b' -O Salmonella_cgmlst.fasta</code></p>
+<p>Escherichia: <code>wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&amp;st=2020-07-15T13:17:25Z&amp;se=2029-07-15T21:17:25Z&amp;spr=https&amp;sv=2019-10-10&amp;sr=b&amp;sig=zF01kDCgmsmBWJ0cSpyfYi6CLldIjalwU2RgsswKmmI%3D' -O Escherichia_cgmlst.fasta</code></p>
+<p>Salmonella: <code>wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&amp;st=2020-07-15T13:13:16Z&amp;se=2029-07-15T21:13:16Z&amp;spr=https&amp;sv=2019-10-10&amp;sr=b&amp;sig=ncG%2F5MzKt57p1BUdyFtnhJUk9Yfi6x3rFhSQWPlT2Ek%3D' -O Salmonella_cgmlst.fasta</code></p>
 <p>When using a cgMLST database, ConFindr will use the provided scheme for all samples regardless of genus.</p>
 <p>Actually calling ConFindr with cgMLST:</p>
 <p><code>confindr.py -i folder-with-Escherichia-files -o cgmlst-output -cgmlst /path/to/Escherichia_cgmlst.fasta</code></p>
@@ -242,17 +233,83 @@ instead of rMLST. Activate this flag to force use of rMLST genes for all genera.
 <li><code>--cross_details</code>: By default, when ConFindr finds cross-contaminated samples it stops analysis. Activate
 this flag to have analysis of number of cSNVs continue in order to get an estimate of percentage contamination.</li>
 </ul></div>
+            </div>
         </div>
 
         <footer class="col-md-12">
             <hr>
-            
-            <center>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</center>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "previous": 80, "next": 78, "search": 83};
+        </script>
+        <script src="../js/base.js" defer></script>
+        <script src="../search/main.js" defer></script>
 
-        <script src="../js/jquery-1.10.2.min.js"></script>
-        <script src="../js/bootstrap-3.0.3.min.js"></script>
-        <script src="../js/highlight.pack.js"></script>
-        <script src="../js/base.js"></script>
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
     </body>
 </html>

@@ -1,28 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-    
-    <url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url>
      <loc>https://olc-bioinformatics.github.io/ConFindr/</loc>
-     <lastmod>2019-07-25</lastmod>
+     <lastmod>2020-07-15</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
+    </url><url>
      <loc>https://olc-bioinformatics.github.io/ConFindr/install/</loc>
-     <lastmod>2019-07-25</lastmod>
+     <lastmod>2020-07-15</lastmod>
      <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
+    </url><url>
      <loc>https://olc-bioinformatics.github.io/ConFindr/usage/</loc>
-     <lastmod>2019-07-25</lastmod>
+     <lastmod>2020-07-15</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
 </urlset>
