@@ -61,4 +61,4 @@ it would be a good idea to put your samples through some sort of metagenomics so
 ### Feedback
 
 If you run into any issues installing or running ConFindr, have feature requests, want some help interpreting results, or
-anything else, feel free to open an issue on GitHub or send me an email at `andrew.low@canada.ca`.
+anything else, feel free to open an issue on GitHub or send me an email at `adam.koziol@canada.ca`.

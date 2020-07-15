@@ -109,9 +109,9 @@ parameters does this fairly well.
 
 cgMLST files that are already clustered are available for _Salmonella_ and _Escherichia_. To get them:
 
-Escherichia: `wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&st=2018-10-25T13:45:13Z&se=2020-10-31T21:45:13Z&spr=https&sv=2017-11-09&sig=0fgvcf6R%2BSSiz7gPm7KKm5M78wpjAPjGawhzt%2BlY7iE%3D&sr=b' -O Escherichia_cgmlst.fasta`
+Escherichia: `wget 'https://scist01.blob.core.windows.net/olc/Escherichia_cgmlst.fasta?sp=r&st=2020-07-15T13:17:25Z&se=2029-07-15T21:17:25Z&spr=https&sv=2019-10-10&sr=b&sig=zF01kDCgmsmBWJ0cSpyfYi6CLldIjalwU2RgsswKmmI%3D' -O Escherichia_cgmlst.fasta`
 
-Salmonella: `wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&st=2018-10-25T13:35:21Z&se=2020-10-31T21:35:21Z&spr=https&sv=2017-11-09&sig=w5Pq9e4hsa6PGr458%2Bx4b5zqf4F2a6OUUL9H3ewQTNc%3D&sr=b' -O Salmonella_cgmlst.fasta`
+Salmonella: `wget 'https://scist01.blob.core.windows.net/olc/Salmonella_cgmlst.fasta?sp=r&st=2020-07-15T13:13:16Z&se=2029-07-15T21:13:16Z&spr=https&sv=2019-10-10&sr=b&sig=ncG%2F5MzKt57p1BUdyFtnhJUk9Yfi6x3rFhSQWPlT2Ek%3D' -O Salmonella_cgmlst.fasta`
 
 When using a cgMLST database, ConFindr will use the provided scheme for all samples regardless of genus.
 
