@@ -24,4 +24,4 @@ branches:
 
 script:
   - source activate test-environment
-  - travis_wait 30 pytest tests/test_confindr.py
+  - travis_wait 30 pytest tests/test_confindr.py -vv
