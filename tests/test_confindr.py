@@ -33,7 +33,11 @@ def test_integration():
         for row in reader:
             sample = row['Sample']
             if 'cross_contaminated' not in sample:
-                assert row['ContamStatus'] == correct_contamination_calls[sample]
+                try:
+                    assert row['ContamStatus'] == correct_contamination_calls[sample]
+                except AssertionError:
+                    print('ContamStatusError', row)
+                    raise
                 assert row['Genus'] == correct_genera[sample]
             else:
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
