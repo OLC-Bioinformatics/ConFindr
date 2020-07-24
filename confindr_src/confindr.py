@@ -280,7 +280,6 @@ def find_if_multibase(column, quality_cutoff, base_cutoff, base_fraction_cutoff)
                         unfiltered_base_qualities[base].append(quality)
             except IndexError:
                 pass
-
     # Now check that at least two bases for each of the bases present high quality.
     # first remove all low quality bases
     # Use dictionary comprehension to make a new dictionary where only scores above threshold are kept.
@@ -325,7 +324,7 @@ def get_contig_names(fasta_file):
 
 
 def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, base_cutoff=2,
-                base_fraction_cutoff=None):
+                base_fraction_cutoff=None, fasta=False):
     """
     Examines a contig to find if there are positions where more than one base is present.
     :param contig_name: Name of contig as a string.
@@ -346,6 +345,8 @@ def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, b
                                  ignore_orphans=False,
                                  fastafile=pysam.FastaFile(reference_fasta),
                                  min_base_quality=0):
+        if fasta:
+            base_cutoff = 1
         base_dict = find_if_multibase(column,
                                       quality_cutoff=quality_cutoff,
                                       base_cutoff=base_cutoff,
@@ -452,7 +453,8 @@ def estimate_percent_contamination(contamination_report_file):
 
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1, keep_files=False,
                        quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
-                       tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False, min_matching_hashes=40):
+                       tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False, min_matching_hashes=40,
+                       fasta=False):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -483,6 +485,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     of percent contamination can be found (BOOL)
     :param min_matching_hashes: Minimum number of matching hashes in a MASH screen in order for a genus to be
     considered present in a sample. Default is 40
+    :
     """
     if os.path.isfile(os.path.join(databases_folder, 'download_date.txt')):
         with open(os.path.join(databases_folder, 'download_date.txt')) as f:
@@ -631,7 +634,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                                Xmx=xmx,
                                                returncmd=True)
     else:
-        if data_type == 'Nanopore':
+        if data_type == 'Nanopore' or fasta:
             forward_out = os.path.join(sample_tmp_dir, 'trimmed.fastq.gz')
         else:
             forward_out = os.path.join(sample_tmp_dir, 'rmlst.fastq.gz')
@@ -643,7 +646,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             out, err, cmd = bbtools.bbduk_bait(reference=sample_database, forward_in=pair[0],
                                                forward_out=forward_out, Xmx=xmx,
                                                returncmd=True, threads=threads)
-
     write_to_logfile(log, out, err, cmd)
     logging.info('Quality trimming...')
     if data_type == 'Illumina':
@@ -670,11 +672,12 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                                    returncmd=True,
                                                    threads=threads)
             else:
-                out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                                   forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                                   returncmd=True,
-                                                   threads=threads,
-                                                   Xmx=xmx)
+                if not fasta:
+                    out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                                       forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                       returncmd=True,
+                                                       threads=threads,
+                                                       Xmx=xmx)
         write_to_logfile(log, out, err, cmd)
 
     logging.info('Detecting contamination...')
@@ -686,6 +689,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     kma_database = sample_database.replace('.fasta', '') + '_kma'
     kma_report = os.path.join(sample_tmp_dir, 'kma_rmlst')
     if not os.path.isfile(kma_database + '.name'):  # The .name is one of the files KMA creates when making a database.
+        logging.info('Since this is the first time you are using this database, it needs to be indexed by KMA. '
+                     'This might take a while')
         cmd = 'kma index -i {} -o {}'.format(sample_database, kma_database)  # NOTE: Need KMA >=1.2.0 for this to work.
         out, err = run_cmd(cmd)
         write_to_logfile(log, out, err, cmd)
@@ -702,11 +707,19 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         write_to_logfile(log, out, err, cmd)
     else:
         if data_type == 'Illumina':
-            cmd = 'kma -i {input_reads} -t_db {kma_database} -o {kma_report} ' \
-                  '-t {threads}'.format(input_reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                        kma_database=kma_database,
-                                        kma_report=kma_report,
-                                        threads=threads)
+            #
+            if fasta:
+                cmd = 'kma -i {input_reads} -t_db {kma_database} -mem_mode -ID 100 -ConClave 2 -ex_mode -o {kma_report} ' \
+                      '-t {threads}'.format(input_reads=pair[0],
+                                            kma_database=kma_database,
+                                            kma_report=kma_report,
+                                            threads=threads)
+            else:
+                cmd = 'kma -i {input_reads} -t_db {kma_database} -o {kma_report} ' \
+                      '-t {threads}'.format(input_reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                            kma_database=kma_database,
+                                            kma_report=kma_report,
+                                            threads=threads)
         else:
             # Recommended Nanopore settings from KMA repo: https://bitbucket.org/genomicepidemiology/kma
             cmd = 'kma -i {input_reads} -t_db {kma_database} -o {kma_report} -mem_mode -mp 20 -mrs 0.0 -bcNano ' \
@@ -751,7 +764,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
             out, err = run_cmd(cmd)
             write_to_logfile(log, out, err, cmd)
         else:
-            if data_type == 'Illumina':
+            #
+            if data_type == 'Illumina' and not fasta:
                 cmd = 'bbmap.sh ref={ref} in={forward_in} out={outbam} threads={threads} mdtag ' \
                       'nodisk'.format(ref=os.path.join(sample_tmp_dir, 'rmlst.fasta'),
                                       forward_in=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
@@ -790,6 +804,10 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         bamfile_list = [os.path.join(sample_tmp_dir, 'contamination.bam')] * len(gene_alleles)
         # bamfile_list = [os.path.join(sample_tmp_dir, 'rmlst.bam')] * len(gene_alleles)
         reference_fasta_list = [os.path.join(sample_tmp_dir, 'rmlst.fasta')] * len(gene_alleles)
+        if fasta:
+            fasta_list = [fasta] * len(gene_alleles)
+        else:
+            fasta_list = list()
         quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
         base_cutoff_list = [base_cutoff] * len(gene_alleles)
         base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
@@ -797,7 +815,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         report_write_list = list()
         for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list,
                                                                        quality_cutoff_list, base_cutoff_list,
-                                                                       base_fraction_list), chunksize=1):
+                                                                       base_fraction_list, fasta_list), chunksize=1):
             multibase_dict_list.append(multibase_dict)
             report_write_list.append(report_write)
         p.close()
@@ -823,6 +841,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
     if cgmlst_db is None:
         snp_cutoff = int(rmlst_gene_length/10000) + 1
+    elif fasta:
+        snp_cutoff = 1
     else:
         snp_cutoff = 10
     if multi_positions >= snp_cutoff:
@@ -1042,7 +1062,8 @@ def confindr(args):
                                data_type=args.data_type,
                                use_rmlst=args.rmlst,
                                cross_details=args.cross_details,
-                               min_matching_hashes=min_matching_hashes)
+                               min_matching_hashes=min_matching_hashes,
+                               fasta=args.fasta)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
