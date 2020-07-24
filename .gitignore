@@ -99,5 +99,11 @@ ENV/
 # Spyder project settings
 .spyderproject
 
+# pypi distributions
+dist/
+
+# integration test files
+confindr_integration*
+
 # Rope project settings
 .ropeproject
