@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="confindr",
-    version="0.7.2",
+    version="0.7.3",
     packages=find_packages(),
     entry_points={
        'console_scripts': [
@@ -14,8 +14,8 @@ setup(
             'confindr_create_db = confindr_src.create_genus_specific_db:main'
        ],
     },
-    author="Andrew Low",
-    author_email="andrew.low@canada.ca",
+    author="Adam Koziol",
+    author_email="adam.koziol@canada.ca",
     url="https://github.com/OLC-Bioinformatics/ConFindr",
     install_requires=['biopython',
                       'pysam',
