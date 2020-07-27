@@ -333,11 +333,15 @@ def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, b
     :param quality_cutoff: Bases must have at least this phred score to be considered (INT)
     :param base_cutoff: At least this many bases must support a minor variant (INT)
     :param base_fraction_cutoff: At least this percentage of bases must support minor variant (FLOAT)
+    :param fasta: Boolean on whether the samples are in FASTA format. Default is False
     :return: Dictionary of positions where more than one base is present. Keys are contig name, values are positions
     """
     bamfile = pysam.AlignmentFile(bamfile_name, 'rb')
     multibase_position_dict = dict()
     to_write = list()
+    # If analysing FASTA files, a single base difference is all that is expected
+    if fasta:
+        base_cutoff = 1
     # These parameters seem to be fairly undocumented with pysam, but I think that they should make the output
     # that I'm getting to match up with what I'm seeing in Tablet.
     for column in bamfile.pileup(contig_name,
@@ -345,8 +349,7 @@ def read_contig(contig_name, bamfile_name, reference_fasta, quality_cutoff=20, b
                                  ignore_orphans=False,
                                  fastafile=pysam.FastaFile(reference_fasta),
                                  min_base_quality=0):
-        if fasta:
-            base_cutoff = 1
+
         base_dict = find_if_multibase(column,
                                       quality_cutoff=quality_cutoff,
                                       base_cutoff=base_cutoff,
@@ -485,7 +488,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     of percent contamination can be found (BOOL)
     :param min_matching_hashes: Minimum number of matching hashes in a MASH screen in order for a genus to be
     considered present in a sample. Default is 40
-    :
+    :param fasta: Boolean on whether the samples are in FASTA format. Default is False
     """
     if os.path.isfile(os.path.join(databases_folder, 'download_date.txt')):
         with open(os.path.join(databases_folder, 'download_date.txt')) as f:
@@ -707,13 +710,14 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         write_to_logfile(log, out, err, cmd)
     else:
         if data_type == 'Illumina':
-            #
+            # Use the FASTA file (rather than the readsd) as the input
             if fasta:
-                cmd = 'kma -i {input_reads} -t_db {kma_database} -mem_mode -ID 100 -ConClave 2 -ex_mode -o {kma_report} ' \
-                      '-t {threads}'.format(input_reads=pair[0],
-                                            kma_database=kma_database,
-                                            kma_report=kma_report,
-                                            threads=threads)
+                cmd = 'kma -i {input_reads} -t_db {kma_database} -mem_mode -ID 100 -ConClave 2 -ex_mode ' \
+                      '-o {kma_report} -t {threads}'\
+                    .format(input_reads=pair[0],
+                            kma_database=kma_database,
+                            kma_report=kma_report,
+                            threads=threads)
             else:
                 cmd = 'kma -i {input_reads} -t_db {kma_database} -o {kma_report} ' \
                       '-t {threads}'.format(input_reads=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
@@ -804,10 +808,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         bamfile_list = [os.path.join(sample_tmp_dir, 'contamination.bam')] * len(gene_alleles)
         # bamfile_list = [os.path.join(sample_tmp_dir, 'rmlst.bam')] * len(gene_alleles)
         reference_fasta_list = [os.path.join(sample_tmp_dir, 'rmlst.fasta')] * len(gene_alleles)
-        if fasta:
-            fasta_list = [fasta] * len(gene_alleles)
-        else:
-            fasta_list = list()
+        fasta_list = [fasta] * len(gene_alleles)
         quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
         base_cutoff_list = [base_cutoff] * len(gene_alleles)
         base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)

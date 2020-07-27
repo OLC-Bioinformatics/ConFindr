@@ -31,21 +31,14 @@ def test_integration():
     with open('confindr_integration_output/confindr_report.csv') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            print(row)
-        for row in reader:
             sample = row['Sample']
             if 'cross_contaminated' not in sample:
-                try:
-                    assert row['ContamStatus'] == correct_contamination_calls[sample]
-                except AssertionError:
-                    print('ContamStatusError', row)
-                    pass
+                assert row['ContamStatus'] == correct_contamination_calls[sample]
                 assert row['Genus'] == correct_genera[sample]
             else:
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
                 genera = row['Genus'].split(':')
                 assert 'Salmonella' in genera and 'Escherichia' in genera and 'Listeria' in genera
-
     shutil.rmtree('confindr_integration_output')
     shutil.rmtree('databases')
 
