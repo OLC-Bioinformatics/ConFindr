@@ -669,13 +669,13 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                                    returncmd=True)
 
         else:
-            if xmx is None:
-                out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
-                                                   forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
-                                                   returncmd=True,
-                                                   threads=threads)
-            else:
-                if not fasta:
+            if not fasta:
+                if xmx is None:
+                    out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
+                                                       forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
+                                                       returncmd=True,
+                                                       threads=threads)
+                else:
                     out, err, cmd = bbtools.bbduk_trim(forward_in=os.path.join(sample_tmp_dir, 'rmlst.fastq.gz'),
                                                        forward_out=os.path.join(sample_tmp_dir, 'trimmed.fastq.gz'),
                                                        returncmd=True,
