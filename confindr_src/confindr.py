@@ -281,8 +281,8 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
         'reverse_ref_forward_UM_QF': dict(),
         'reverse_quality_filtered': dict()
     }
-    print('!')
-    quit()
+    # print('!')
+    # quit()
     unfiltered_read_details = dict()
     read_list = list()
     snv_dict = dict()
@@ -300,8 +300,8 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
             next_positions = column.pos + 5 if column.pos < len(reference_sequence) - 5 else column.pos + len(reference_sequence) - column.pos
             prev_base_range = range(previous_positions, column.pos)
             next_base_range = range(next_position, next_positions)
-            print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
-            quit()
+            # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
+            # quit()
             from itertools import chain
             # Another stringency check - to make sure that we're actually looking at a point mutation, check that the
             # base before and after the one we're looking at match the reference. With Nanopore data, lots of indels and
@@ -335,8 +335,8 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                 read_name = read.alignment.qname
             quality = fastq_records[read_name].letter_annotations["phred_quality"][read.query_position]
                     # raise
-            print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
-            quit()
+            # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
+            # quit()
             # range_dict = dict()
             # for i, contig_pos in enumerate(chain(prev_base_range, next_base_range)):
             #     try:
@@ -385,8 +385,8 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                 # print(column.pos, previous_position, previous_positions, next_position, next_positions)
                 # print(prev_base_range)
                 # print(next_base_range)
-            print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
-            quit()
+            # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
+            # quit()
             if add_base:
                 unfiltered_read_details[read.alignment.qname][read.alignment.is_read1] = {
                     'mate unmapped': read.alignment.mate_is_unmapped,
@@ -400,8 +400,8 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                     'pos': column.pos,
                     'gene': column.reference_name
                 }
-            else:
-                print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
+            # else:
+                # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
             # # # else:
             # # #     ref_seq = reference_sequence[column.pos]
             # #
@@ -620,86 +620,6 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                         else:
                             filtered_read_dict['reverse_quality_filtered'][dir_dict[direction]['qbase']] += 1
     return filtered_read_dict
-    '''
-    for category, base_dict in filtered_read_dict.items():
-        print(category)
-        for base, count in base_dict.items():
-            print(base, count)
-    # print(column.reference_name, column.pos)
-
-    # if mismatches > 1:
-    #     print(column.reference_name, column.pos, mismatches)
-    # break
-    # Now check that at least two bases for each of the bases present high quality.
-    # first remove all low quality bases
-    # Use dictionary comprehension to make a new dictionary where only scores above threshold are kept.
-    # Internally list comprehension is used to filter the list
-    # filtered_base_qualities = {base: [score for score in scores if score >= quality_cutoff] for (base, scores) in
-    #                            unfiltered_base_qualities.items()}
-
-    for read_type, base_dict in read_dict.items():
-        for base, qual_list in base_dict.items():
-            for qual in qual_list:
-                if qual >= quality_cutoff:
-                    if base not in filtered_read_dict[read_type]:
-                        filtered_read_dict[read_type][base] = [qual]
-                    else:
-                        filtered_read_dict[read_type][base].append(qual)
-                # else:
-                #     print(read_type, base, qual)
-        # break
-    # Now remove bases that have no high quality scores
-    # Use dictionary comprehension to make a new dictionary where bases that have a non-empty scores list are kept
-    # filtered_base_qualities = {base: scores for (base, scores) in filtered_base_qualities.items() if scores}
-    # filtered_base_qualities = {base: [score for score in scores if score >= quality_cutoff] for (base, scores) in
-    #                            unfiltered_base_qualities.items()}
-    # If we find fewer than two bases with high quality scores, ignore things.
-    # if len(filtered_base_qualities) < 2:
-    #     print(column.pos, column.reference_name)
-    #     return dict()
-    total_bases = 0
-    high_quality_base_dict = {
-        'forward': dict(),
-        'reverse': dict(),
-        'unmapped': dict()
-    }
-    for read_type, base_dict in filtered_read_dict.items():
-        for base, qual_list in base_dict.items():
-            len_qual_list = len(qual_list)
-            total_bases += len_qual_list
-            high_quality_base_dict[read_type][base] = len_qual_list
-    if total_bases < 2:
-        return dict()
-
-    # Now that filtered_base_qualities only contains bases with more than one HQ base, make just a dict with base
-    # counts with dict comprehension
-    # high_quality_base_count = {base: len(scores) for (base, scores) in filtered_base_qualities.items()}
-    # high_quality_base_count = {base: len(scores) for (base, scores) in unfiltered_base_qualities.items()}
-    total_bases_above_threshold = 0
-    for read_type, base_dict in high_quality_base_dict.items():
-        bases_above_threshold = number_of_bases_above_threshold(high_quality_base_count=base_dict,
-                                                                base_count_cutoff=base_cutoff,
-                                                                base_fraction_cutoff=base_fraction_cutoff)
-        if bases_above_threshold > 1:
-            total_bases_above_threshold += 1
-    if total_bases_above_threshold > 1:
-        logging.debug('base qualities for contig {contig} at position {pos} before filtering: {bqd}'
-                      .format(contig=column.reference_name,
-                              pos=column.pos,
-                              bqd=read_dict))
-        logging.debug('base qualities for contig {contig} at position {pos} after filtering: {bqd}'
-                      .format(contig=column.reference_name,
-                              pos=column.pos,
-                              bqd=filtered_read_dict))
-        logging.info('SNVs found on contig {contig} at position {pos}: {hqbd}\n'
-                     .format(contig=column.reference_name,
-                             pos=column.pos,
-                             hqbd=high_quality_base_dict))
-        return high_quality_base_dict
-    else:
-        # logging.debug('No SNVs\n')
-        return dict()
-    '''
 
 # def get_contig_names(fasta_file):
 #     """
@@ -711,6 +631,7 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
 #     for contig in SeqIO.parse(fasta_file, 'fasta'):
 #         contig_names.append(contig.id)
 #     return contig_names
+
 
 def find_multibase_positions(column, ref_base, filtered_read_dict, base_cutoff, base_fraction_cutoff):
     snv_dict = {
@@ -968,15 +889,15 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fast
 
 
 
-    for read in bamfile.pileup(contig_name,
-                               stepper='samtools',
-                               fastafile=pysam_fasta, ignore_orphans=False, min_base_quality=0):
-        print(dir(read))
-        quit()
-    # quit()
+    # for read in bamfile.pileup(contig_name,
+    #                            stepper='samtools',
+    #                            fastafile=pysam_fasta, ignore_orphans=False, min_base_quality=0):
+    #     print(dir(read))
+    #     quit()
+    # # quit()
     for column in pileup:
-        print(column.reference_name, column.pos)
-        quit()
+        # print(column.reference_name, column.pos)
+        # quit()
 
         filtered_read_dict = characterise_read(column=column,
                                       reference_sequence=reference_sequence,
@@ -1383,24 +1304,32 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
 
         else:
             unpaired_trimmed = os.path.join(sample_tmp_dir, '{sn}_baited_trimmed.fastq.gz'.format(sn=sample_name))
-            if not os.path.isfile(unpaired_trimmed):
-                if xmx is None:
-                    out, err, cmd = bbtools.bbduk_trim(forward_in=unpaired_bait,
-                                                       forward_out=unpaired_trimmed,
-                                                       returncmd=True,
-                                                       threads=threads)
-                else:
-                    if not fasta:
+
+            if not fasta:
+                if not os.path.isfile(unpaired_trimmed):
+                    if xmx is None:
+                        out, err, cmd = bbtools.bbduk_trim(forward_in=unpaired_bait,
+                                                           forward_out=unpaired_trimmed,
+                                                           returncmd=True,
+                                                           threads=threads)
+                    else:
                         out, err, cmd = bbtools.bbduk_trim(forward_in=unpaired_bait,
                                                            forward_out=unpaired_trimmed,
                                                            returncmd=True,
                                                            threads=threads,
                                                            Xmx=xmx)
-            with gzip.open(unpaired_trimmed, 'rt') as gz:
-                # fastq_records = SeqIO.to_dict(SeqIO.parse(gz, 'fastq'))
-                fastq_records = load_fastq_records(gz=gz,
-                                                   paired=False,
-                                                   forward=True)
+                with gzip.open(unpaired_trimmed, 'rt') as gz:
+                    # fastq_records = SeqIO.to_dict(SeqIO.parse(gz, 'fastq'))
+                    fastq_records = load_fastq_records(gz=gz,
+                                                       paired=False,
+                                                       forward=True)
+            else:
+                # '''unpaired_bait'''
+                with gzip.open(unpaired_bait, 'rt') as gz:
+                    # fastq_records = SeqIO.to_dict(SeqIO.parse(gz, 'fastq'))
+                    fastq_records = load_fastq_records(gz=gz,
+                                                       paired=False,
+                                                       forward=True)
         write_to_logfile(log, out, err, cmd)
     else:
         if paired:
