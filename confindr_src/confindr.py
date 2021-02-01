@@ -237,8 +237,8 @@ def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2
     # Method differs depending on whether absolute or fraction cutoff is specified
     if base_fraction_cutoff:
         total_hq_base_count = sum(high_quality_base_count.values())
-        bases_above_threshold = {base: float(count)/total_hq_base_count >= base_fraction_cutoff and
-                                 count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
+        bases_above_threshold = {base: float(count) / total_hq_base_count >= base_fraction_cutoff and
+                                       count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
     else:
         bases_above_threshold = {base: count >= base_count_cutoff for (base, count) in high_quality_base_count.items()}
 
@@ -297,7 +297,8 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
             next_position = column.pos + 1 if column.pos < len(reference_sequence) - 1 else len(reference_sequence) - 1
             previous_positions = column.pos - 5 if column.pos >= 5 else 0
             # This causes index errors. Fix at some point soon. -- FIXED?
-            next_positions = column.pos + 5 if column.pos < len(reference_sequence) - 5 else column.pos + len(reference_sequence) - column.pos
+            next_positions = column.pos + 5 if column.pos < len(reference_sequence) - 5 else column.pos + len(
+                reference_sequence) - column.pos
             prev_base_range = range(previous_positions, column.pos)
             next_base_range = range(next_position, next_positions)
             # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
@@ -334,7 +335,7 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
             else:
                 read_name = read.alignment.qname
             quality = fastq_records[read_name].letter_annotations["phred_quality"][read.query_position]
-                    # raise
+            # raise
             # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
             # quit()
             # range_dict = dict()
@@ -345,12 +346,14 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
             #         read_pos = int()
             #     if read_pos:
             #         range_dict[contig_pos] = read_pos
-                    # print(i, contig_pos, j)
+            # print(i, contig_pos, j)
             range_dict = dict()
-            for iterator, contig_pos in enumerate(chain(range(column.pos - 5, column.pos), range(column.pos + 1, column.pos + 6))):
+            for iterator, contig_pos in enumerate(
+                    chain(range(column.pos - 5, column.pos), range(column.pos + 1, column.pos + 6))):
 
                 if 0 <= contig_pos < len(reference_sequence) - 1:
-                    read_pos = list(chain(range(read.query_position - 5, read.query_position), range(read.query_position + 1, read.query_position + 6)))[iterator]
+                    read_pos = list(chain(range(read.query_position - 5, read.query_position),
+                                          range(read.query_position + 1, read.query_position + 6)))[iterator]
                     if 0 <= read_pos < read.alignment.query_alignment_end - 1:
                         range_dict[contig_pos] = read_pos
 
@@ -381,10 +384,10 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                 except KeyError:
                     pass
             # if not add_base:
-                # print(column.reference_name)
-                # print(column.pos, previous_position, previous_positions, next_position, next_positions)
-                # print(prev_base_range)
-                # print(next_base_range)
+            # print(column.reference_name)
+            # print(column.pos, previous_position, previous_positions, next_position, next_positions)
+            # print(prev_base_range)
+            # print(next_base_range)
             # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
             # quit()
             if add_base:
@@ -401,7 +404,7 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                     'gene': column.reference_name
                 }
             # else:
-                # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
+            # print(column.reference_name, read.alignment.qname, column.pos, previous_position, next_position)
             # # # else:
             # # #     ref_seq = reference_sequence[column.pos]
             # #
@@ -464,7 +467,7 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
     # if read_list:
     #     for reado in read_list:
     #         print(reado)
-        # print(len(read_list))
+    # print(len(read_list))
 
     for read_base, dir_dict in unfiltered_read_details.items():
         # Check to see if paired reads are present at this position
@@ -621,6 +624,7 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
                             filtered_read_dict['reverse_quality_filtered'][dir_dict[direction]['qbase']] += 1
     return filtered_read_dict
 
+
 # def get_contig_names(fasta_file):
 #     """
 #     Gets contig names from a fasta file using SeqIO.
@@ -745,14 +749,15 @@ def find_multibase_positions(column, ref_base, filtered_read_dict, base_cutoff, 
         }
     '''
     # if multibase_list:
-        # print(column.reference_name, column.pos, multibase_list)
+    # print(column.reference_name, column.pos, multibase_list)
     return_dict = False
     for category, base_dict in filtered_read_dict.items():
         for base, count in base_dict.items():
             if 'congruent' in category and base != ref_base:
                 # passing_snv_dict['congruent'][base] = count
                 if base_fraction_cutoff:
-                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] >= base_cutoff:
+                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[
+                        base] >= base_cutoff:
                         if base not in passing_snv_dict['forward']:
                             passing_snv_dict['congruent'][base] = count
                         else:
@@ -769,7 +774,8 @@ def find_multibase_positions(column, ref_base, filtered_read_dict, base_cutoff, 
                 # if column.reference_name == 'b0014_11' and column.pos == 425:
                 #     print(category, base, count)
                 if base_fraction_cutoff:
-                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] >= base_cutoff:
+                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[
+                        base] >= base_cutoff:
                         if base not in passing_snv_dict['forward']:
                             passing_snv_dict['forward'][base] = count
                         else:
@@ -784,7 +790,8 @@ def find_multibase_positions(column, ref_base, filtered_read_dict, base_cutoff, 
                         return_dict = True
             if category.startswith('reverse_SNV') and base != ref_base:
                 if base_fraction_cutoff:
-                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] >= base_cutoff:
+                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[
+                        base] >= base_cutoff:
                         if base not in passing_snv_dict['reverse']:
                             passing_snv_dict['reverse'][base] = count
                         else:
@@ -800,7 +807,8 @@ def find_multibase_positions(column, ref_base, filtered_read_dict, base_cutoff, 
             # and category.startswith('forward_SNV') or category.startswith('reverse_SNV')
             if base != ref_base and 'filtered' not in category:
                 if base_fraction_cutoff:
-                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] >= base_cutoff:
+                    if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[
+                        base] >= base_cutoff:
                         if base not in passing_snv_dict['paired']:
                             passing_snv_dict['paired'][base] = count
                         else:
@@ -830,6 +838,7 @@ def find_multibase_positions(column, ref_base, filtered_read_dict, base_cutoff, 
     #         elif category.startswith('forward_SNV_'):
     # return snv_dict, passing_snv_dict
 
+
 def position_details(actual_position, cutoff_dict, contig_name, ref_base, total_coverage):
     read_types = ['congruent', 'paired', 'forward', 'reverse']
     to_write = '{contig_name},{pos},{ref_base},'.format(contig_name=contig_name,
@@ -852,6 +861,7 @@ def position_details(actual_position, cutoff_dict, contig_name, ref_base, total_
     to_write += '{snv_cov},{total_cov}\n'.format(snv_cov=snv_coverage,
                                                  total_cov=total_coverage)
     return to_write
+
 
 def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fastq_records, quality_cutoff=20,
                 base_cutoff=2, base_fraction_cutoff=None, fasta=False):
@@ -887,8 +897,6 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fast
     #                              fastafile=pysam_fasta,
     #                              min_base_quality=0)
 
-
-
     # for read in bamfile.pileup(contig_name,
     #                            stepper='samtools',
     #                            fastafile=pysam_fasta, ignore_orphans=False, min_base_quality=0):
@@ -900,16 +908,16 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fast
         # quit()
 
         filtered_read_dict = characterise_read(column=column,
-                                      reference_sequence=reference_sequence,
-                                      fastq_records=fastq_records,
-                                      quality_cutoff=quality_cutoff,
+                                               reference_sequence=reference_sequence,
+                                               fastq_records=fastq_records,
+                                               quality_cutoff=quality_cutoff,
                                                fasta=fasta)
         ref_base = reference_sequence[column.pos]
         snv_dict, cutoff_dict, total_coverage = find_multibase_positions(column=column,
-                                               ref_base=ref_base,
-                                               filtered_read_dict=filtered_read_dict,
-                                               base_cutoff=base_cutoff,
-                                               base_fraction_cutoff=base_fraction_cutoff)
+                                                                         ref_base=ref_base,
+                                                                         filtered_read_dict=filtered_read_dict,
+                                                                         base_cutoff=base_cutoff,
+                                                                         base_fraction_cutoff=base_fraction_cutoff)
         if cutoff_dict:
             # Pysam starts counting at 0, whereas we actually want to start counting at 1.
             actual_position = column.pos + 1
@@ -1012,7 +1020,7 @@ def estimate_percent_contamination(contamination_report_file):
             #     if num_bases < lowest_count:
             #         lowest_count = num_bases
             # total_coverage = int(row['Coverage'])
-            contam_levels.append(base_counts*100/total_coverage)
+            contam_levels.append(base_counts * 100 / total_coverage)
     return '%.2f' % (np.mean(contam_levels)), '%.2f' % np.std(contam_levels)
 
 
@@ -1049,7 +1057,8 @@ def load_fastq_records(gz, paired, forward):
     return records
 
 
-def find_contamination(pair, output_folder, databases_folder, sample_name, forward_id='_R1', threads=1, keep_files=False,
+def find_contamination(pair, output_folder, databases_folder, sample_name, forward_id='_R1', threads=1,
+                       keep_files=False,
                        quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
                        tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False, min_matching_hashes=40,
                        fasta=False):
@@ -1299,8 +1308,8 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
             # for record in fastq_records:
             #     print(record)
             #     break
-                # for record in SeqIO.parse(gz, 'fasta'):
-                #     fastq
+            # for record in SeqIO.parse(gz, 'fasta'):
+            #     fastq
 
         else:
             unpaired_trimmed = os.path.join(sample_tmp_dir, '{sn}_baited_trimmed.fastq.gz'.format(sn=sample_name))
@@ -1381,7 +1390,7 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
                 # Use the FASTA file (rather than the readsd) as the input
                 if fasta:
                     cmd = 'kma -i {input_reads} -t_db {kma_database} -mem_mode -ID 100 -ConClave 2 -ex_mode ' \
-                          '-o {kma_report} -t {threads}'\
+                          '-o {kma_report} -t {threads}' \
                         .format(input_reads=pair[0],
                                 kma_database=kma_database,
                                 kma_report=kma_report,
@@ -1471,11 +1480,11 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
                         ax = 'map-ont'
                     # '> {outsam}'
                     cmd = 'minimap2 --MD -t {threads} -ax {ax} {ref} {reads}' \
-                          .format(ax=ax,
-                                              ref=rmlst_fasta,
-                                              reads=unpaired_trimmed,
-                                              outsam=outsam,
-                                              threads=threads)
+                        .format(ax=ax,
+                                ref=rmlst_fasta,
+                                reads=unpaired_trimmed,
+                                outsam=outsam,
+                                threads=threads)
                     # ' | samtools rmdup - -S -' \
                     cmd += ' | samtools view -@ {threads} -h -bT {abs_ref_link} -' \
                            ' | samtools sort - -@ {threads} -o {sorted_bam}' \
@@ -1512,6 +1521,7 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
         multibase_dict_list = list()
         report_write_list = list()
         # gene_alleles = ['b0169_2']
+        '''
         for i, gene in enumerate(gene_alleles):
             multibase_dict, report_write = read_contig(
                 contig_name=gene,
@@ -1526,14 +1536,22 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
             multibase_dict_list.append(multibase_dict)
             report_write_list.append(report_write)
         '''
-        for multibase_dict, report_write in p.starmap(read_contig, zip(gene_alleles, bamfile_list, reference_fasta_list,
-                                                                       quality_cutoff_list, base_cutoff_list,
-                                                                       base_fraction_list, fasta_list), chunksize=1):
+        for multibase_dict, report_write in p.starmap(read_contig,
+                                                      zip(gene_alleles,
+                                                          bamfile_list,
+                                                          reference_fasta_list,
+                                                          records_list,
+                                                          fastq_records_list,
+                                                          quality_cutoff_list,
+                                                          base_cutoff_list,
+                                                          base_fraction_list,
+                                                          fasta_list),
+                                                      chunksize=1):
             multibase_dict_list.append(multibase_dict)
             report_write_list.append(report_write)
         p.close()
         p.join()
-        '''
+        # '''
     except SamtoolsError:
         pysam_pass = False
         multi_positions = 0
@@ -1555,7 +1573,7 @@ def find_contamination(pair, output_folder, databases_folder, sample_name, forwa
     for multibase_position_dict in multibase_dict_list:
         multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
     if cgmlst_db is None:
-        snp_cutoff = int(rmlst_gene_length/10000) + 1
+        snp_cutoff = int(rmlst_gene_length / 10000) + 1
     elif fasta:
         snp_cutoff = 1
     else:
@@ -1809,7 +1827,7 @@ def get_version():
     except pkg_resources.DistributionNotFound:
         version = 'ConFindr (Unknown version)'
     return version
-        
+
 
 def main():
     version = get_version()
@@ -1927,7 +1945,7 @@ def main():
 
     logging.info('Welcome to {version}! Beginning analysis of your samples...'.format(version=version))
     confindr(args)
-    
+
 
 if __name__ == '__main__':
     main()
