@@ -1,5 +1,4 @@
-from confindr_src.confindr import *
-from Bio import SeqIO
+from confindr_src.methods import *
 import subprocess
 import pytest
 import shutil
@@ -26,7 +25,7 @@ def test_integration():
                       'NC_003198_50_MSv1_clean': 'Salmonella',
                       'NC_003198_NC_003197_0.1_50_HS25': 'Salmonella',
                       '2019-HCLON-0044_S20_L001': 'ND'}
-    subprocess.call('confindr.py -i confindr_integration_tests -o confindr_integration_output -d databases '
+    subprocess.call('confindr.py -i confindr_integration_tests -o confindr_integration_output -d databases -b 3 -k '
                     '--cross_details', shell=True)
     with open('confindr_integration_output/confindr_report.csv') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -70,19 +69,35 @@ def test_unpaired_fastq():
     assert ['tests/fake_fastqs/test_alone.fastq.gz'] == find_unpaired_reads('tests/fake_fastqs')[2]
 
 
-def test_correct_num_multipositions():
-    contig_names = list()
-    for contig in SeqIO.parse('tests/rmlst.fasta', 'fasta'):
-        contig_names.append(contig.id)
-    multi_positions = 0
-    for contig_name in contig_names:
-        multi_position_dict, to_write = read_contig(contig_name=contig_name,
-                                                    bamfile_name='tests/contamination.bam',
-                                                    reference_fasta='tests/rmlst.fasta',
-                                                    quality_cutoff=20,
-                                                    base_cutoff=2)
-        multi_positions += sum([len(snp_positions) for snp_positions in multi_position_dict.values()])
-    assert multi_positions == 24
+# def test_correct_num_multipositions():
+#     contig_names = list()
+#     forward_trimmed = os.path.join(sample_tmp_dir, '{sn}_baited_trimmed_R1.fastq.gz'.format(sn=sample_name))
+#     reverse_trimmed = forward_trimmed.replace('_R1', '_R2')
+#     with gzip.open(forward_trimmed, 'rt') as gz:
+#         fastq_records = load_fastq_records(gz=gz,
+#                                            paired=True,
+#                                            forward=True)
+#     with gzip.open(reverse_trimmed, 'rt') as gz:
+#         # fastq_records.update(SeqIO.to_dict(SeqIO.parse(gz, 'fastq')))
+#         fastq_records.update(load_fastq_records(gz=gz,
+#                                                 paired=True,
+#                                                 forward=False))
+#     rmlst_fasta = os.path.join(sample_tmp_dir, '{sn}_alleles.fasta'.format(sn=sample_name))
+#     allele_records = SeqIO.to_dict(SeqIO.parse(rmlst_fasta, 'fasta'))
+#     for contig in SeqIO.parse('tests/rmlst.fasta', 'fasta'):
+#         contig_names.append(contig.id)
+#     multi_positions = 0
+#     for contig_name in contig_names:
+#
+#         multi_position_dict, to_write = read_contig(contig_name=contig_name,
+#                                                     bamfile_name='tests/contamination.bam',
+#                                                     reference_fasta='tests/rmlst.fasta',
+#                                                     allele_records=allele_records,
+#                                                     fastq_records=fastq_records,
+#                                                     quality_cutoff=20,
+#                                                     base_cutoff=2)
+#         multi_positions += sum([len(snp_positions) for snp_positions in multi_position_dict.values()])
+#     assert multi_positions == 24
 
 
 def test_correct_percent_contam():
