@@ -168,8 +168,9 @@ def main():
                         help='Base quality needed to support a multiple allele call. Defaults to 20.')
     parser.add_argument('-b', '--base_cutoff',
                         type=int,
-                        default=2,
-                        help='Number of bases necessary to support a multiple allele call. Defaults to 2.')
+                        default=None,
+                        help='Number of bases necessary to support a multiple allele call. Is automatically calculated '
+                             'based on gene-specific quality score, length and depth of coverage.')
     parser.add_argument('-bf', '--base_fraction_cutoff',
                         type=float,
                         default=0.05,
