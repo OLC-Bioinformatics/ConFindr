@@ -231,6 +231,27 @@ def number_of_bases_above_threshold(high_quality_base_count, base_count_cutoff=2
     return sum(bases_above_threshold.values())
 
 
+def parse_bam(bamfile_name, contig_name, pysam_fasta):
+    """
+    Use pysam to load the sorted BAM-formatted file, and subsequently the gene-specific read pileup
+    :param bamfile_name: Name and path of the sorted BAM file
+    :param contig_name: Name of the current gene
+    :param pysam_fasta: pysam.FastaFile object created from the reference gene sequence
+    :return: bamfile: pysam.AlignmentFile object of the BAM-formatted file
+    :return pileup: A pysam pileup object created from the BAM file
+    """
+    # Load the sorted BAM-formatted file using pysam
+    bamfile = pysam.AlignmentFile(bamfile_name, 'rb')
+    # These parameters seem to be fairly undocumented with pysam, but I think that they should make the output
+    # that I'm getting to match up with what I'm seeing in Tablet.
+    pileup = bamfile.pileup(contig_name,
+                            stepper='samtools',
+                            ignore_orphans=False,
+                            fastafile=pysam_fasta,
+                            min_base_quality=0)
+    return bamfile, pileup
+
+
 def characterise_read(column, reference_sequence, fastq_records, quality_cutoff, fasta=False):
     """
     Parses a column to characterize all the bases present. Determines the number of bases that fit certain criteria
@@ -488,44 +509,49 @@ def characterise_read(column, reference_sequence, fastq_records, quality_cutoff,
     return filtered_read_dict, qualities
 
 
-def determine_cutoff(qualities, reference_sequence):
+def determine_cutoff(qualities, reference_sequence, error_cutoff=1.0):
     """
     Determine the base cutoff value to use for SNV determination
-    :param qualities: List of
-    :param reference_sequence:
-    :return:
+    :param qualities: List of phred scores for every base in the pileup
+    :param reference_sequence: String of the FASTA reference gene sequence
+    :param error_cutoff: Float of the error cutoff value to use. Default is 1.0%
+    :return: base_cutoff: Int of calculated gene-specific cutoff value to use
+    :return: The percentage error value corresponding to the base_cutoff value
     """
     # Initialise the base cutoff to be at least two - FASTA sequences are not processed by this method
     base_cutoff = 2
     depth_prob = 0
+    # Only find the cutoff if there are qualities (the gene is present in the sample)
     if qualities:
-        # depth = '{:0.2f}'.format(len(qualities) / len(reference_sequence))
-        # mean_qual = '{:0.2f}'.format(mean(qualities))
+        # Convert the gene-specific phred score to its probability e.g phred score of 20 is 1x10^(-20/10) = 1x10^(-2)
+        # = 0.01
         phred_prob = 1 * 10 ** (-(mean(qualities) / 10))
-        # cutoff_dict['depth'] = depth
-        # cutoff_dict['mean_qual'] = mean_qual
-        # cutoff_dict['phred_prob'] = phred_prob
+        # Determine the probability that any base in the pileup will be incorrect. Multiply the phred probability by
+        # the average depth of the sample (number of bases / length of the gene)
         depth_prob = phred_prob * len(qualities) / len(reference_sequence)
-        while depth_prob ** base_cutoff * 100 * len(reference_sequence) > 1.0:
+        # Find the lowest value of the base cutoff that gives a false positive error value under the error cutoff value
+        # for the entire length of the gene. Take the depth_prob to the power of the current base_cutoff value.
+        # Multiply this by the length of the gene to find find that value for the entire gene, and by 100 to convert
+        # this to a percent value. e.g. 0.01^2 * 1674 * 100 = 16.74%
+        while depth_prob ** base_cutoff * len(reference_sequence) > error_cutoff * 100:
             base_cutoff += 1
-        # print(depth, len(reference_sequence), len(qualities), mean_qual, phred_prob,
-        #       phred_prob * len(qualities), depth_prob, depth_prob ** base_cutoff * 100 * len(reference_sequence),
-        #       base_cutoff)
-    # else:
-    #     print(contig_name)
-
     return base_cutoff, depth_prob ** base_cutoff * 100 * len(reference_sequence)
 
 
 def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fraction_cutoff):
     """
 
-    :param ref_base:
-    :param filtered_read_dict:
-    :param base_cutoff:
-    :param base_fraction_cutoff:
-    :return:
+    :param ref_base: String of the sequence of the reference gene at the current position
+    :param filtered_read_dict: ictionary with of base types: read direction: count
+    :param base_cutoff: Integer of the number of identical mismatches in a column required for a SNV call
+    :param base_fraction_cutoff: Float fraction of bases necessary to support a SNV call
+    :return: snv_dict: Dictionary of characterised bases of the current column e.g. total, number matching reference
+    sequence, number of SNVs in both forward and reverse reads, etc.
+    :return: passing_snv_dict: Dictionary summarising counts of categories of bases e.g. congruent, forward, reverse,
+    paired
+    :return: total_coverage: Integer of the total number of bases passing filter in the pileup
     """
+    # Intialise a dictionary to store the counts of the characterised bases
     snv_dict = {
         'total': 0,
         'total_congruent': 0,
@@ -536,61 +562,83 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
         'total_reverse_SNV': 0,
         'total_SNV': 0
     }
+    # Initialise the total depth of the column to zero
     total_coverage = 0
+    # Initialise a dictionary to store the count for each individual nucleotide at this position e.g. A:24, G:2
     base_count = dict()
+    # Iterate through the categories e.g. congruent_ref in the dictionary
     for category, base_dict in filtered_read_dict.items():
+        # Interate through the sequence of each query base, and the corresponding count
         for base, count in base_dict.items():
+            # Do not process the base if it has been flagged as 'filtered'
             if 'filtered' not in category:
+                # Populate the base counting dictionary with the base sequence and increment the count
                 if base not in base_count:
                     base_count[base] = count
                 else:
                     base_count[base] += count
+                # Update the total coverage
                 total_coverage += count
                 snv_dict['total'] += count
             # Forward and reverse reads agree on base
             if 'congruent' in category:
+                # Congruent reference sequence
                 snv_dict['total_congruent'] += count
                 snv_dict['total_forward'] += int(count / 2)
                 snv_dict['total_reverse'] += int(count / 2)
+                # Congruent SNVs
                 if 'SNV' in category and base != ref_base:
                     snv_dict['total_congruent_SNV'] += count
                     snv_dict['total_forward_SNV'] += int(count / 2)
                     snv_dict['total_reverse_SNV'] += int(count / 2)
                     snv_dict['total_SNV'] += count
+            # SNV in forward read
             elif category.startswith('forward_SNV'):
                 snv_dict['total_forward'] += count
                 if base != ref_base:
                     snv_dict['total_forward_SNV'] += count
                     snv_dict['total_SNV'] += count
+            # Forward read matches reference
             elif category.startswith('forward_ref'):
                 snv_dict['total_forward'] += count
+            # SNV in reverse read
             elif category.startswith('reverse_SNV'):
                 snv_dict['total_reverse'] += count
                 if base != ref_base:
                     snv_dict['total_reverse_SNV'] += count
                     snv_dict['total_SNV'] += count
+            # Reverse read match reference
             elif category.startswith('reverse_ref'):
                 snv_dict['total_reverse'] += count
+    # Initialise a dictionary to store the summary of characterised base types
     passing_snv_dict = {
         'congruent': dict(),
         'forward': dict(),
         'reverse': dict(),
         'paired': dict()
     }
-    # print(column.reference_name, column.pos, multibase_list)
+    # Boolean of whether there are bases passing filter, and the passing_snv_dict should be used
     return_dict = False
+    # Iterate through the categories in the dictionary
     for category, base_dict in filtered_read_dict.items():
+        # Iterate through each query base and its corresponding cound
         for base, count in base_dict.items():
+            # Congruent SNVs
             if 'congruent' in category and base != ref_base:
-                # passing_snv_dict['congruent'][base] = count
+                # If the base_cutoff_fraction has been provided, use it in making SNV calls
                 if base_fraction_cutoff:
+                    # Ensure that the number of SNVs in the pileup is greater than the base_cutoff and the
+                    # fraction of SNVs in the pileup is greater than the base_cutoff_fraction
                     if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] \
                             >= base_cutoff:
+                        # Update the summary dictionary with the base sequence and count
                         if base not in passing_snv_dict['forward']:
                             passing_snv_dict['congruent'][base] = count
                         else:
                             passing_snv_dict['congruent'][base] += count
                         return_dict = True
+                # If base_cutoff_fraction is not supplied, only the number of SNVs in the pileup must be greater than
+                # the base_cutoff value in order for a SNV call
                 else:
                     if base_count[base] >= base_cutoff:
                         if base not in passing_snv_dict['congruent']:
@@ -598,9 +646,8 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
                         else:
                             passing_snv_dict['congruent'][base] += count
                     return_dict = True
+            # SNVs in the forward read
             if category.startswith('forward_SNV') and base != ref_base:
-                # if column.reference_name == 'b0014_11' and column.pos == 425:
-                #     print(category, base, count)
                 if base_fraction_cutoff:
                     if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] \
                             >= base_cutoff:
@@ -616,6 +663,7 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
                         else:
                             passing_snv_dict['forward'][base] += count
                         return_dict = True
+            # SNVs in the reverse read
             if category.startswith('reverse_SNV') and base != ref_base:
                 if base_fraction_cutoff:
                     if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] \
@@ -632,7 +680,7 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
                         else:
                             passing_snv_dict['reverse'][base] += count
                         return_dict = True
-            # and category.startswith('forward_SNV') or category.startswith('reverse_SNV')
+            # All unfiltered bases
             if base != ref_base and 'filtered' not in category:
                 if base_fraction_cutoff:
                     if float(base_count[base] / snv_dict['total']) >= base_fraction_cutoff and base_count[base] \
@@ -655,25 +703,43 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
         return snv_dict, dict(), total_coverage
 
 
-def position_details(actual_position, cutoff_dict, contig_name, ref_base, total_coverage, base_cutoff, error_perc):
+def position_details(actual_position, passing_snv_dict, contig_name, ref_base, total_coverage, base_cutoff, error_perc):
+    """
+    Create a string summarising the ConFindr results for current gene
+    :param actual_position: Integer of the adjusted position of the current base
+    :param passing_snv_dict: Dictionary summarising counts of categories of bases
+    :param contig_name: Name of current gene
+    :param ref_base: Sequence of the current reference base
+    :param total_coverage: Integer of the total depth at this position
+    :param base_cutoff: Integer of the SNV depth cutoff value
+    :param error_perc: Float of the calculated error value
+    :return: to_write: String containing formatted outputs to be entered into the final report
+    """
+    # List of the base categories present in passing_snv_dict
     read_types = ['congruent', 'paired', 'forward', 'reverse']
+    # Update the to_write string with basic information
     to_write = '{contig_name},{pos},{ref_base},'.format(contig_name=contig_name,
                                                         pos=actual_position,
                                                         ref_base=ref_base)
+    # Initialise the coverage value to zero
     snv_coverage = 0
+    # Iterate through all the read types
     for read_type in read_types:
-        # print(read_type, actual_position, cutoff_dict[read_type])
+        # Boolean of whether a semi-colon needs to be added to the string to separate all the base sequences
         semi_colon = False
-        for base, coverage in cutoff_dict[read_type].items():
+        for base, coverage in passing_snv_dict[read_type].items():
+            # Ensure that the base isn't empty
             if base:
                 if semi_colon:
                     to_write += ';'
                 to_write += '{base}:{depth}'.format(base=base,
                                                     depth=coverage)
                 semi_colon = True
+                # Increment the coverage only if the read type isn't 'paired'
                 if read_type != 'paired':
                     snv_coverage += coverage
         to_write += ','
+    # Format the error_perc to be more readable
     error_perc = '{:0.2f}'.format(error_perc) if error_perc else 'ND'
     to_write += '{snv_cov},{total_cov},{base_cutoff},{error_perc}\n'\
         .format(snv_cov=snv_coverage,
@@ -684,7 +750,7 @@ def position_details(actual_position, cutoff_dict, contig_name, ref_base, total_
 
 
 def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fastq_records, quality_cutoff=20,
-                base_cutoff=None, base_fraction_cutoff=None, fasta=False):
+                base_cutoff=None, base_fraction_cutoff=None, fasta=False, error_cutoff=1.0):
     """
     Examines a contig to find if there are positions where more than one base is present.
     :param contig_name: Name of contig as a string.
@@ -696,27 +762,23 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fast
     :param base_cutoff: At least this many bases must support a minor variant (INT)
     :param base_fraction_cutoff: At least this percentage of bases must support minor variant (FLOAT)
     :param fasta: Boolean on whether the samples are in FASTA format. Default is False
+    :param error_cutoff: Float of the error cutoff value to use. Default is 1.0%
     :return: Dictionary of positions where more than one base is present. Keys are contig name, values are positions
     """
-    bamfile = pysam.AlignmentFile(bamfile_name, 'rb')
+    pysam_fasta = pysam.FastaFile(reference_fasta)
     multibase_position_dict = dict()
     to_write = str()
     # If analysing FASTA files, a single base difference is all that is expected
     if fasta:
         base_cutoff = 1
     reference_sequence = str(allele_records[contig_name].seq)
-    pysam_fasta = pysam.FastaFile(reference_fasta)
-    # These parameters seem to be fairly undocumented with pysam, but I think that they should make the output
-    # that I'm getting to match up with what I'm seeing in Tablet.
-    pileup = bamfile.pileup(contig_name,
-                            stepper='samtools',
-                            ignore_orphans=False,
-                            fastafile=pysam_fasta,
-                            min_base_quality=0)
+    # Parse the BAM file with pysam to create AlignmentFile, and AlignmentFile.pileup objects
+    bamfile, pileup = parse_bam(bamfile_name=bamfile_name,
+                                contig_name=contig_name,
+                                pysam_fasta=pysam_fasta)
     filtered_read_dict = dict()
     quality_list = list()
     for i, column in enumerate(pileup):
-
         filtered_reads, qualities = characterise_read(column=column,
                                                       reference_sequence=reference_sequence,
                                                       fastq_records=fastq_records,
@@ -724,34 +786,37 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records, fast
                                                       fasta=fasta)
         filtered_read_dict[i] = filtered_reads
         quality_list += qualities
-
+    # Initialise the calculated error percentage to zero
     error_perc = None
     if not base_cutoff:
         base_cutoff, error_perc = determine_cutoff(qualities=quality_list,
-                                                   reference_sequence=reference_sequence)
+                                                   reference_sequence=reference_sequence,
+                                                   error_cutoff=error_cutoff)
     bamfile.close()
-    bamfile = pysam.AlignmentFile(bamfile_name, 'rb')
-    pileup = bamfile.pileup(contig_name,
-                            stepper='samtools',
-                            ignore_orphans=False,
-                            fastafile=pysam_fasta,
-                            min_base_quality=0)
+    # It seems that the pileup (generator?) is used up above, so it must be recreated
+    bamfile, pileup = parse_bam(bamfile_name=bamfile_name,
+                                contig_name=contig_name,
+                                pysam_fasta=pysam_fasta)
     for i, column in enumerate(pileup):
+        # Extract the sequence of the reference gene at the current position
         ref_base = reference_sequence[column.pos]
-
-        snv_dict, cutoff_dict, total_coverage = find_multibase_positions(ref_base=ref_base,
-                                                                         filtered_read_dict=filtered_read_dict[i],
-                                                                         base_cutoff=base_cutoff,
-                                                                         base_fraction_cutoff=base_fraction_cutoff)
-        if cutoff_dict:
+        # Summarise the pileup
+        snv_dict, passing_snv_dict, total_coverage = \
+            find_multibase_positions(ref_base=ref_base,
+                                     filtered_read_dict=filtered_read_dict[i],
+                                     base_cutoff=base_cutoff,
+                                     base_fraction_cutoff=base_fraction_cutoff)
+        # If there are any SNVs called for the gene, update the multibase_position_dict, and to_write string
+        if passing_snv_dict:
             # Pysam starts counting at 0, whereas we actually want to start counting at 1.
             actual_position = column.pos + 1
+            # Initialise the gene name in the dictionary as required
             if column.reference_name not in multibase_position_dict:
                 multibase_position_dict[column.reference_name] = dict()
-
-            multibase_position_dict[column.reference_name].update({actual_position: cutoff_dict})
+            # Update the dictionary with the actual position:
+            multibase_position_dict[column.reference_name].update({actual_position: passing_snv_dict})
             to_write += position_details(actual_position=actual_position,
-                                         cutoff_dict=cutoff_dict,
+                                         passing_snv_dict=passing_snv_dict,
                                          contig_name=contig_name,
                                          ref_base=ref_base,
                                          total_coverage=total_coverage,
@@ -766,7 +831,7 @@ def find_rmlst_type(kma_report, rmlst_report):
     Uses a report generated by KMA to determine what allele is present for each rMLST gene.
     :param kma_report: The .res report generated by KMA.
     :param rmlst_report: rMLST report file to write information to.
-    :return: a sorted list of loci present, in format gene_allele
+    :return: a sorted list of loci present, in format 'gene_allele'
     """
     genes_to_use = dict()
     score_dict = dict()
@@ -829,6 +894,7 @@ def estimate_percent_contamination(contamination_report_file):
     :param contamination_report_file: File created by read_contig,
     :return: Estimated percent contamination and standard deviation.
     """
+    # Initialise a list to store the percentage of SNVs out of the total bases
     contam_levels = list()
     with open(contamination_report_file) as csvfile:
         reader = csv.DictReader(csvfile)
@@ -841,22 +907,29 @@ def estimate_percent_contamination(contamination_report_file):
 
 def load_fastq_records(gz, paired, forward):
     """
-
-    :param gz:
-    :param paired:
-    :param forward:
-    :return:
+    Use SeqIO to load FASTQ records from file
+    :param gz: Name and path of FASTQ file
+    :param paired: Boolean of whether the reads are paired
+    :param forward: Boolean of whether the current reads are in the forward direction
+    :return: records: Dictionary of SeqIO parsed FASTQ records with consistent ID naming
     """
+    # Initialise a dictionary to store the FASTQ records
     records = dict()
+    # Iterate through the reads
     for record in SeqIO.parse(gz, 'fastq'):
+        # Only update the naming scheme for paired reads
         if paired:
             if forward:
+                # Change a :1: to /1 in the record.id
                 if ':1:' in record.id:
                     record.id = record.id + '/1'
+                # Don't worry if the record.id already has a /1
                 elif '/1' in record.id:
                     pass
+                # If the record.id doesn't have a read direction, add /1
                 else:
                     record.id = record.id + '/1'
+            # Process reverse reads in a similar fashion to forward reads
             else:
                 if ':2:' in record.id:
                     record.id = record.id + '/2'
@@ -873,9 +946,9 @@ def load_fastq_records(gz, paired, forward):
 # noinspection PyUnresolvedReferences
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1,
                        keep_files=False,
-                       quality_cutoff=20, base_cutoff=2, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
+                       quality_cutoff=20, base_cutoff=None, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
                        tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False, min_matching_hashes=40,
-                       fasta=False):
+                       fasta=False, error_cutoff=1.0, debug=False):
     """
     This needs some documentation fairly badly, so here we go.
     :param pair: This has become a misnomer. If the input reads are actually paired, needs to be a list
@@ -907,6 +980,8 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     :param min_matching_hashes: Minimum number of matching hashes in a MASH screen in order for a genus to be
     considered present in a sample. Default is 40
     :param fasta: Boolean on whether the samples are in FASTA format. Default is False
+    :param error_cutoff: Float of the error cutoff value to use. Default is 1.0%
+    :param debug: Run the find_contamination with multi-processing to allow easier debugging
     """
     if os.path.isfile(os.path.join(databases_folder, 'download_date.txt')):
         with open(os.path.join(databases_folder, 'download_date.txt')) as f:
@@ -1237,10 +1312,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     try:
         if not os.path.isfile(rmlst_fasta + '.fai'):
             pysam.faidx(rmlst_fasta)
-            # cmd = 'samtools faidx {ref}'.format(ref=rmlst_fasta)
-            # if not os.path.isfile(rmlst_fasta + '.fai'):
-            #     out, err = run_cmd(cmd)
-            #     write_to_logfile(log, out, err, cmd)
         outbam = os.path.join(sample_tmp_dir, '{sn}_contamination.bam'.format(sn=sample_name))
         sorted_bam = os.path.join(sample_tmp_dir, '{sn}_contamination_sorted.bam'.format(sn=sample_name))
         outsam = outbam.replace('.bam', '.sam')
@@ -1313,7 +1384,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         p = multiprocessing.Pool(processes=threads)
         allele_records = SeqIO.to_dict(SeqIO.parse(rmlst_fasta, 'fasta'))
         bamfile_list = [sorted_bam] * len(gene_alleles)
-        # bamfile_list = [os.path.join(sample_tmp_dir, 'rmlst.bam')] * len(gene_alleles)
         reference_fasta_list = [rmlst_fasta] * len(gene_alleles)
         fasta_list = [fasta] * len(gene_alleles)
         quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
@@ -1321,58 +1391,54 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
         records_list = [allele_records] * len(gene_alleles)
         fastq_records_list = [fastq_records] * len(gene_alleles)
+        error_cutoff_list = [error_cutoff] * len(gene_alleles)
         multibase_dict_list = list()
         report_write_list = list()
-        '''
-        for i, gene in enumerate(gene_alleles):
-            multibase_dict, report_write = read_contig(
-                contig_name=gene,
-                bamfile_name=bamfile_list[i],
-                reference_fasta=reference_fasta_list[i],
-                allele_records=records_list[i],
-                fastq_records=fastq_records_list[i],
-                quality_cutoff=quality_cutoff_list[i],
-                base_cutoff=base_cutoff_list[i],
-                base_fraction_cutoff=base_fraction_list[i],
-                fasta=fasta_list[i])
-            multibase_dict_list.append(multibase_dict)
-            report_write_list.append(report_write)
-        # '''
-        for multibase_dict, report_write in p.starmap(read_contig,
-                                                      zip(gene_alleles,
-                                                          bamfile_list,
-                                                          reference_fasta_list,
-                                                          records_list,
-                                                          fastq_records_list,
-                                                          quality_cutoff_list,
-                                                          base_cutoff_list,
-                                                          base_fraction_list,
-                                                          fasta_list),
-                                                      chunksize=1):
-            multibase_dict_list.append(multibase_dict)
-            report_write_list.append(report_write)
-        p.close()
-        p.join()
-        # '''
+        if debug == 'debug':
+            for i, gene in enumerate(gene_alleles):
+                multibase_dict, report_write = read_contig(
+                    contig_name=gene,
+                    bamfile_name=bamfile_list[i],
+                    reference_fasta=reference_fasta_list[i],
+                    allele_records=records_list[i],
+                    fastq_records=fastq_records_list[i],
+                    quality_cutoff=quality_cutoff_list[i],
+                    base_cutoff=base_cutoff_list[i],
+                    base_fraction_cutoff=base_fraction_list[i],
+                    fasta=fasta_list[i],
+                    error_cutoff=error_cutoff_list[i])
+                multibase_dict_list.append(multibase_dict)
+                report_write_list.append(report_write)
+        else:
+            for multibase_dict, report_write in p.starmap(read_contig,
+                                                          zip(gene_alleles,
+                                                              bamfile_list,
+                                                              reference_fasta_list,
+                                                              records_list,
+                                                              fastq_records_list,
+                                                              quality_cutoff_list,
+                                                              base_cutoff_list,
+                                                              base_fraction_list,
+                                                              fasta_list,
+                                                              error_cutoff_list),
+                                                          chunksize=1):
+                multibase_dict_list.append(multibase_dict)
+                report_write_list.append(report_write)
+            p.close()
+            p.join()
     except SamtoolsError:
         pysam_pass = False
         multi_positions = 0
         multibase_dict_list = list()
         report_write_list = list()
-    # quit()
     # Write out report info.
     report_file = os.path.join(output_folder, sample_name + '_contamination.csv')
     with open(report_file, 'w') as r:
         r.write('Gene,Position,RefBase,CongruentSNVs,TotalSNVs,ForwardSNVs,ReverseSNVs,SNVCoverage,TotalCoverage,'
                 'BaseCutoff,ErrorPercent\n')
-        # r.write('{reference},{position},{congruent},{},{coverage}\n'.format(reference='Gene',
-        #                                                              position='Position',
-        #                                                              bases='CongruentReads',
-        #                                                              coverage='Coverage'))
         for item in report_write_list:
             for contamination_info in item:
                 r.write(contamination_info)
-
     # Total up the number of multibase positions.
     for multibase_position_dict in multibase_dict_list:
         multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])

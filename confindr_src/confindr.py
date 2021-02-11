@@ -100,7 +100,8 @@ def confindr(args):
                                use_rmlst=args.rmlst,
                                cross_details=args.cross_details,
                                min_matching_hashes=min_matching_hashes,
-                               fasta=args.fasta)
+                               fasta=args.fasta,
+                               debug=args.verbosity)
         except subprocess.CalledProcessError:
             # If something unforeseen goes wrong, traceback will be printed to screen.
             # We then add the sample to the report with a note that it failed.
@@ -176,6 +177,11 @@ def main():
                         default=0.05,
                         help='Fraction of bases necessary to support a multiple allele call. Particularly useful when '
                              'dealing with very high coverage samples. Default is 0.05.')
+    parser.add_argument('-e', '--error_cutoff',
+                        type=float,
+                        default=1.0,
+                        help='Value to use for the calculated error cutoff when setting the base cutoff value. '
+                             'Default is 1.0%')
     parser.add_argument('-fid', '--forward_id',
                         type=str,
                         default='_R1',
