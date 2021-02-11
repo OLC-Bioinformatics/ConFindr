@@ -14,6 +14,7 @@ import shutil
 import pysam
 import glob
 import gzip
+import math
 import csv
 import os
 
@@ -1443,7 +1444,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     for multibase_position_dict in multibase_dict_list:
         multi_positions += sum([len(snp_positions) for snp_positions in multibase_position_dict.values()])
     if cgmlst_db is None:
-        snp_cutoff = int(rmlst_gene_length / 10000) + 1
+        snp_cutoff = math.ceil(rmlst_gene_length / 10000) + 1
     elif fasta:
         snp_cutoff = 1
     else:
