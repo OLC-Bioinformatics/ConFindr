@@ -9,6 +9,10 @@ This program is designed to find bacterial intra-species contamination in raw Il
 
 For complete instructions on installation and usage, please visit [the ConFindr github pages site](https://olc-bioinformatics.github.io/ConFindr/).
 
+## Important Note
+
+ConFindr has only been validated using rMLST databases. Please use them if possible. Installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases)
+
 ## Quickstart
 
 To install ConFindr, use conda (see [here](https://bioconda.github.io/) for instructions on getting bioconda set up): 
@@ -23,6 +27,10 @@ As of version `0.7.0` ConFindr can run automatically on _Escherichia_, _Salmonel
 work on your part - just run:
 
 `confindr.py -i example-data -o example-out`
+
+To use the recommended rMLST database (after installation)
+
+`confindr.py -i example-data -o example-out --rmlst`
 
 Once ConFindr finishes running, take a look at the `confindr_report.csv` file found in `example-out` - it shows that multiple
 alleles were found for many sites within the genes that ConFindr examines, meaning that this sample is quite contaminated!

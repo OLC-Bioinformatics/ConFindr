@@ -117,7 +117,7 @@ def confindr(args):
                          database_download_date='ND')
             logging.warning('Encountered error when attempting to run ConFindr on sample '
                             '{sample}. Skipping...'.format(sample=sample_name))
-            logging.warning('Error encounted was:\n{}'.format(traceback.format_exc()))
+            logging.warning('Error encountered was:\n{}'.format(traceback.format_exc()))
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
     if args.keep_files is False and args.tmp is not None:

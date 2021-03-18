@@ -533,7 +533,9 @@ def determine_cutoff(qualities, reference_sequence, error_cutoff=1.0):
         # Find the lowest value of the base cutoff that gives a false positive error value under the error cutoff value
         # for the entire length of the gene. Take the depth_prob to the power of the current base_cutoff value.
         # Multiply this by the length of the gene to find find that value for the entire gene, and by 100 to convert
-        # this to a percent value. e.g. 0.01^2 * 1674 * 100 = 16.74%
+        # this to a percent value. e.g. 0.01^2 * 1674 * 100 = 16.74%. Note that this is above the default 1% threshold.
+        # The base_cutoff will be incremented by one, and the calculation will be run again: 0.01^3 * 1674 * 100 =
+        # 0.1674%, which is below the threshold, and would pass
         while depth_prob ** base_cutoff * len(reference_sequence) > error_cutoff * 100:
             base_cutoff += 1
     return base_cutoff, depth_prob ** base_cutoff * 100 * len(reference_sequence)
@@ -543,7 +545,7 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
     """
 
     :param ref_base: String of the sequence of the reference gene at the current position
-    :param filtered_read_dict: ictionary with of base types: read direction: count
+    :param filtered_read_dict: Dictionary with of base types: read direction: count
     :param base_cutoff: Integer of the number of identical mismatches in a column required for a SNV call
     :param base_fraction_cutoff: Float fraction of bases necessary to support a SNV call
     :return: snv_dict: Dictionary of characterised bases of the current column e.g. total, number matching reference
@@ -552,7 +554,7 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
     paired
     :return: total_coverage: Integer of the total number of bases passing filter in the pileup
     """
-    # Intialise a dictionary to store the counts of the characterised bases
+    # Initialise a dictionary to store the counts of the characterised bases
     snv_dict = {
         'total': 0,
         'total_congruent': 0,
@@ -569,7 +571,7 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
     base_count = dict()
     # Iterate through the categories e.g. congruent_ref in the dictionary
     for category, base_dict in filtered_read_dict.items():
-        # Interate through the sequence of each query base, and the corresponding count
+        # Iterate through the sequence of each query base, and the corresponding count
         for base, count in base_dict.items():
             # Do not process the base if it has been flagged as 'filtered'
             if 'filtered' not in category:
@@ -622,7 +624,7 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
     return_dict = False
     # Iterate through the categories in the dictionary
     for category, base_dict in filtered_read_dict.items():
-        # Iterate through each query base and its corresponding cound
+        # Iterate through each query base and its corresponding count
         for base, count in base_dict.items():
             # Congruent SNVs
             if 'congruent' in category and base != ref_base:
@@ -1269,7 +1271,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     else:
         if not os.path.isfile(kma_report + '.res'):
             if data_type == 'Illumina':
-                # Use the FASTA file (rather than the readsd) as the input
+                # Use the FASTA file (rather than the reads) as the input
                 if fasta:
                     cmd = 'kma -i {input_reads} -t_db {kma_database} -mem_mode -ID 100 -ConClave 2 -ex_mode ' \
                           '-o {kma_report} -t {threads}' \
