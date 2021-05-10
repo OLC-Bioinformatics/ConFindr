@@ -19,6 +19,8 @@ To install ConFindr, use conda (see [here](https://bioconda.github.io/) for inst
 
 `conda install -c bioconda confindr`
 
+Note that we are aware of some issues with installing ConFindr via conda with Python 3.8. Until this is resolved, if you run into any issues, please try using Python 3.7.
+
 To get an example dataset, use this command, which will create a folder called `example-data` in your current working directory: 
 
 `wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
