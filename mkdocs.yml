@@ -4,7 +4,7 @@ site_description: ConFindr Pipeline for detecting intra-species contamination in
 repo_url: https://github.com/OLC-Bioinformatics/Confindr
 theme: flatly
 
-pages:
+nav:
 - Home: 'index.md'
 - Installation: 'install.md'
 - Usage: 'usage.md'
