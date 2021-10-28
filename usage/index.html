@@ -12,11 +12,11 @@
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/docco.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/docco.min.css">
 
         <script src="../js/jquery-1.10.2.min.js" defer></script>
         <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
         <script>hljs.initHighlightingOnLoad();</script> 
     </head>
 
@@ -125,7 +125,7 @@ information will be created in this folder</li>
 <p><code>confindr.py -i example-data -o output</code></p>
 <p>You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified.
 If ConFindr is properly installed, you should see something similar to the following appear on your terminal:</p>
-<pre><code class="bash">  2019-04-02 15:06:04  Welcome to ConFindr 0.7.0! Beginning analysis of your samples... 
+<pre><code class="language-bash">  2019-04-02 15:06:04  Welcome to ConFindr 0.7.0! Beginning analysis of your samples... 
   2019-04-02 15:06:04  Could not find Escherichia_db_cgderived.fasta 
   2019-04-02 15:06:04  Could not find Listeria_db_cgderived.fasta 
   2019-04-02 15:06:04  Could not find Salmonella_db_cgderived.fasta 
@@ -144,7 +144,6 @@ If ConFindr is properly installed, you should see something similar to the follo
 
   2019-04-02 15:07:05  Contamination detection complete! 
 </code></pre>
-
 <p>The run shouldn't take too long - depending on how powerful your machine is, it should be done in
 one to two minutes (slightly longer if an <em>Escherichia</em> specific database has not yet been set up).
 Once the run is done, you'll be able to inspect your results. Take a look at <code>output/confindr_report.csv</code>:
@@ -179,7 +178,7 @@ it's a good idea to re-run <code>confindr_database_setup</code> every now and th
 sites, and one called <code>samplename_rmlst.csv</code>, which shows ConFindr's guess at which allele is present for each rMLST gene.</p>
 <h2 id="using-confindr-in-a-python-script">Using ConFindr in a Python Script</h2>
 <p>In the event you'd rather integrate ConFindr into a script than run from the command line, here's how:</p>
-<pre><code class="python">from confindr_src import confindr
+<pre><code class="language-python">from confindr_src import confindr
 
 # Find read files.
 paired_reads = confindr.find_paired_reads('path_to_fastq_folder', forward_id='_R1', reverse_id='_R2')
@@ -193,7 +192,6 @@ for pair in paired_reads:
                                 databases_folder='path/to/databases')
 
 </code></pre>
-
 <h2 id="using-schemes-other-than-rmlst">Using Schemes other than rMLST</h2>
 <p>As of ConFindr 0.4.4, ConFindr has the option to use a cgMLST scheme instead of an rMLST scheme for increased
 contamination detection sensitivity. This hasn't been tested extensively, but looks to be working. Runtime is
@@ -242,7 +240,7 @@ this flag to have analysis of number of cSNVs continue in order to get an estima
         </footer>
         <script>
             var base_url = "..",
-                shortcuts = {"help": 191, "previous": 80, "next": 78, "search": 83};
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
         <script src="../js/base.js" defer></script>
         <script src="../search/main.js" defer></script>
@@ -255,16 +253,13 @@ this flag to have analysis of number of cSNVs continue in order to get an estima
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
             </div>
             <div class="modal-body">
-                <p>
-                    From here you can search these documents. Enter
-                    your search terms below.
-                </p>
+                <p>From here you can search these documents. Enter your search terms below.</p>
                 <form>
                     <div class="form-group">
                         <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
                     </div>
                 </form>
-                <div id="mkdocs-search-results"></div>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
             </div>
             <div class="modal-footer">
             </div>
