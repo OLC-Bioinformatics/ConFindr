@@ -15,9 +15,9 @@ to run ConFindr on these three genera, nothing further is necessary. If you want
 reading on how to get access to the necessary databases.
 
 ConFindr uses the ribosomal multi-locus sequence typing (rMLST) scheme to detect contamination in genera other 
-than the ones listed above. These databases are 
-freely available, but you will need to jump through a few hoops before you can get access to them due to an 
-associated [licence agreement](https://pubmlst.org/rmlst/rMLST_licence.pdf).
+than the ones listed above. These databases are available free for academic use, but you will need to jump through a few 
+hoops before you can get access to them due to an associated [licence agreement](https://pubmlst.org/rmlst/rMLST_licence.pdf).
+Non-academic use will require a commercial licence.
 
 Here are the steps to getting databases downloaded:
 
