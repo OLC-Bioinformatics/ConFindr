@@ -1,22 +1,73 @@
 #!/usr/bin/env python
-from confindr_src.database_setup import download_cgmlst_derived_data, download_mash_sketch
 from confindr_src.wrappers import bbtools, mash
 from Bio import SeqIO
 from pysam.utils import SamtoolsError
 from itertools import chain
 from statistics import mean
 import multiprocessing
+import urllib.request
 import pkg_resources
 import numpy as np
 import subprocess
 import logging
 import shutil
+import tarfile
 import pysam
 import glob
 import gzip
 import math
 import csv
 import os
+
+
+def download_mash_sketch(output_folder):
+    logging.info('Downloading mash refseq sketch...')
+    urllib.request.urlretrieve('https://github.com/OLC-Bioinformatics/ConFindr/raw/master/refseq_sketch/refseq.msh',
+                               os.path.join(output_folder, 'refseq.msh'))
+
+
+def download_cgmlst_derived_data(output_folder):
+    logging.info('Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria...')
+    urllib.request.urlretrieve('https://ndownloader.figshare.com/files/14771267',
+                               os.path.join(output_folder, 'confindr_db.tar.gz'))
+    confindr_tar = os.path.join(output_folder, 'confindr_db.tar.gz')
+    tar = tarfile.open(confindr_tar)
+    tar.extractall(path=output_folder)
+    tar.close()
+    os.remove(confindr_tar)
+    index(output_folder=output_folder,
+          genera=['Escherichia', 'Listeria', 'Salmonella'],
+          cgderived=True)
+
+
+def index(output_folder, genera, cgderived=False):
+    """
+
+    :param output_folder:
+    :param genera:
+    :param cgderived:
+    :return:
+    """
+    for predominant_genus in genera:
+        if cgderived:
+            sample_database = os.path.join(output_folder, '{pg}_db_cgderived.fasta'.format(pg=predominant_genus))
+        else:
+            sample_database = os.path.join(output_folder, '{pg}_db.fasta'.format(pg=predominant_genus))
+
+        if not os.path.isfile(sample_database):
+
+            if os.path.isfile(os.path.join(output_folder, 'gene_allele.txt')) and \
+                    os.path.isfile(os.path.join(output_folder, 'rMLST_combined.fasta')):
+                logging.info('Setting up rMLST genus-specific database for genus {pg}...'
+                             .format(pg=predominant_genus))
+                allele_list = find_genusspecific_allele_list(os.path.join(output_folder, 'gene_allele.txt'),
+                                                             predominant_genus)
+                # Create the allele-specific database
+                setup_allelespecific_database(fasta_file=sample_database,
+                                              database_folder=output_folder,
+                                              allele_list=allele_list)
+        # Perform the necessary samtools and KMA indexing
+        index_databases(sample_database=sample_database)
 
 
 def run_cmd(cmd):
@@ -142,8 +193,10 @@ def setup_allelespecific_database(fasta_file, database_folder, allele_list):
             seqs.append(index[s])
         except KeyError:
             logging.warning('Tried to add {} to allele-specific database, but could not find it.'.format(s))
-    SeqIO.write(seqs, fasta_file, 'fasta')
-
+    try:
+        SeqIO.write(seqs, fasta_file, 'fasta')
+    except FileNotFoundError:
+        pass
 
 def find_cross_contamination(databases, reads, sample_name, tmpdir='tmp', log='log.txt', threads=1,
                              min_matching_hashes=40):
@@ -186,7 +239,7 @@ def find_cross_contamination(databases, reads, sample_name, tmpdir='tmp', log='l
     screen_output = mash.read_mash_screen(os.path.join(tmpdir, '{sn}_screen.tab'.format(sn=sample_name)))
     for item in screen_output:
         mash_genus = item.query_id.split('/')[-3]
-        if mash_genus == 'Shigella':
+        if 'Shigella' in mash_genus:
             mash_genus = 'Escherichia'
         matching_hashes = int(item.shared_hashes.split('/')[0])
         # Only add the genus to the genera_present list of the number of matching hashes exceeds the cutoff
@@ -946,6 +999,31 @@ def load_fastq_records(gz, paired, forward):
     return records
 
 
+def index_databases(sample_database):
+    """
+
+    :param sample_database:
+    """
+    if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
+        try:
+            pysam.faidx(sample_database)
+        except pysam.utils.SamtoolsError:
+            pass
+    kma_database = sample_database.replace('.fasta', '') + '_kma'
+
+    if not os.path.isfile(kma_database + '.name'):  # The .name is one of the files KMA creates when making a database.
+        logging.info('Since this is the first time you are using this database, it needs to be indexed by KMA. '
+                     'This might take a while')
+        cmd = 'kma index -i {} -o {}'.format(sample_database, kma_database)  # NOTE: Need KMA >=1.2.0 for this to work.
+        out = str()
+        try:
+            out, err = run_cmd(cmd)
+        except subprocess.CalledProcessError as e:
+            err = e
+        log = sample_database + '_log.txt'
+        write_to_logfile(log, out, err, cmd)
+
+
 # noinspection PyUnresolvedReferences
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1,
                        keep_files=False,
@@ -1246,17 +1324,18 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     # Now do mapping in two steps - first, map reads back to database with ambiguous reads matching all - this
     # will be used to get a count of number of reads aligned to each gene/allele so we can create a custom rmlst file
     # with only the most likely allele for each gene.
-    if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
-        pysam.faidx(sample_database)
-    kma_database = sample_database.replace('.fasta', '') + '_kma'
     kma_report = os.path.join(sample_tmp_dir, '{sn}_kma'.format(sn=sample_name))
-    if not os.path.isfile(kma_database + '.name'):  # The .name is one of the files KMA creates when making a database.
-        logging.info('Since this is the first time you are using this database, it needs to be indexed by KMA. '
-                     'This might take a while')
-        cmd = 'kma index -i {} -o {}'.format(sample_database, kma_database)  # NOTE: Need KMA >=1.2.0 for this to work.
-        out, err = run_cmd(cmd)
-        write_to_logfile(log, out, err, cmd)
-
+    # if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
+    #     pysam.faidx(sample_database)
+    # kma_database = sample_database.replace('.fasta', '') + '_kma'
+    #
+    # if not os.path.isfile(kma_database + '.name'):  # The .name is one of the files KMA creates when making a database.
+    #     logging.info('Since this is the first time you are using this database, it needs to be indexed by KMA. '
+    #                  'This might take a while')
+    #     cmd = 'kma index -i {} -o {}'.format(sample_database, kma_database)  # NOTE: Need KMA >=1.2.0 for this to work.
+    #     out, err = run_cmd(cmd)
+    #     write_to_logfile(log, out, err, cmd)
+    index_databases(sample_database=sample_database)
     # Run KMA.
     if paired:
         if not os.path.isfile(kma_report + '.res'):

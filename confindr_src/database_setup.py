@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-
+from confindr_src.methods import download_cgmlst_derived_data, download_mash_sketch, index
 from rauth import OAuth1Session
 from Bio import SeqIO
 import argparse
 import datetime
 import logging
-import urllib.request
-import tarfile
 import shutil
 import glob
 import csv
@@ -137,8 +135,8 @@ class RmlstRest(object):
          
         # Get the consumer secret set up.
         if not os.path.isfile(consumer_secret_file):
-            logging.error('ERROR: Could not find consumer secret file. Please make sure the file you specified ({}) exists '
-                          'and try again.'.format(consumer_secret_file))
+            logging.error('ERROR: Could not find consumer secret file. Please make sure the file you specified '
+                          '({}) exists and try again.'.format(consumer_secret_file))
             quit(code=1)
         with open(consumer_secret_file) as f:
             lines = f.readlines()
@@ -162,10 +160,15 @@ class RmlstRest(object):
 
 def create_gene_allele_file(profiles_file, gene_allele_file):
     genus_allele_info = dict()
+    genera = set()
     with open(profiles_file) as tsvfile:
         reader = csv.DictReader(tsvfile, delimiter='\t')
         for row in reader:
             genus = row['genus']
+            # If the genus is uncertain e.g. Escherichia/Shigella, split on the /, and use Escherichia as the genus
+            if '/' in genus:
+                genus = genus.split('/')[0]
+            genera.add(genus)
             if genus not in genus_allele_info:
                 genus_allele_info[genus] = list()
             for i in range(1, 66):
@@ -184,11 +187,10 @@ def create_gene_allele_file(profiles_file, gene_allele_file):
             for allele in genus_allele_info[genus]:
                 f.write(str(allele) + ',')
             f.write('\n')
+    return genera
 
 
-def setup_confindr_database(output_folder, consumer_secret):
-    # Remove previous output folder if it existed.
-
+def setup_confindr_database(output_folder, consumer_secret, index_databases=False):
     # Go through the REST API in order to get profiles downloaded.
     rmlst_rest = RmlstRest(consumer_secret_file=consumer_secret,
                            output_folder=output_folder)
@@ -206,7 +208,10 @@ def setup_confindr_database(output_folder, consumer_secret):
         for locus_file in locus_files:
             for record in SeqIO.parse(locus_file, 'fasta'):
                 record.id = record.id.replace('-', '_')
-                record.seq._data = record.seq._data.replace('-', '').replace('N', '')
+                if type(record.seq._data) is bytes:
+                    record.seq._data = record.seq._data.decode('utf-8').replace('-', '').replace('N', '')
+                else:
+                    record.seq._data = record.seq._data.replace('-', '').replace('N', '')
                 record.name = ''
                 record.description = ''
                 SeqIO.write(record, f, 'fasta')
@@ -219,25 +224,12 @@ def setup_confindr_database(output_folder, consumer_secret):
 
     logging.info('Assigning alleles to genera...')
     # Parse profiles so that we know what alleles are found with each genus.
-    create_gene_allele_file(profiles_file=os.path.join(output_folder, 'profiles.txt'),
-                            gene_allele_file=os.path.join(output_folder, 'gene_allele.txt'))
-    
-    
-def download_mash_sketch(output_folder):
-    logging.info('Downloading mash refseq sketch...')
-    urllib.request.urlretrieve('https://github.com/OLC-Bioinformatics/ConFindr/raw/master/refseq_sketch/refseq.msh',
-                               os.path.join(output_folder, 'refseq.msh'))
-
-
-def download_cgmlst_derived_data(output_folder):
-    logging.info('Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria...')
-    urllib.request.urlretrieve('https://ndownloader.figshare.com/files/14771267',
-                               os.path.join(output_folder, 'confindr_db.tar.gz'))
-    confindr_tar = os.path.join(output_folder, 'confindr_db.tar.gz')
-    tar = tarfile.open(confindr_tar)
-    tar.extractall(path=output_folder)
-    tar.close()
-    os.remove(confindr_tar)
+    genera = create_gene_allele_file(profiles_file=os.path.join(output_folder, 'profiles.txt'),
+                                     gene_allele_file=os.path.join(output_folder, 'gene_allele.txt'))
+    if index_databases:
+        index(output_folder=output_folder,
+              genera=sorted(list(genera)),
+              cgderived=False)
 
 
 def main():
@@ -247,12 +239,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output_folder',
                         default=os.environ.get('CONFINDR_DB', os.path.expanduser('~/.confindr_db')),
-                        help='Path to download databases to - if folder does not exist, will be created. If folder does '
-                             'exist, will be deleted and updated sequences downloaded. Defaults to ~/.confindr_db, or '
+                        help='Path to download databases to - if folder does not exist, will be created. If folder does'
+                             ' exist, will be deleted and updated sequences downloaded. Defaults to ~/.confindr_db, or '
                              'the CONFINDR_DB environmental variable.')
     parser.add_argument('-s', '--secret_file',
                         type=str,
                         help='Path to consumer secret file for rMLST database.')
+    parser.add_argument('-i', '--index_databases',
+                        action='store_true',
+                        help='Enable this option if you are installing the databases to a drive that will be read-only '
+                             'after the installation. The script will create and index all the necessary genus-specific'
+                             ' database files. Note that this is very slow for the rMLST database.')
     args = parser.parse_args()
     if os.path.isdir(args.output_folder):
         logging.info('Removing old databases...')
@@ -266,8 +263,9 @@ def main():
                         'instructions on how to get access to rMLST databases so ConFindr can be used for other species'
                         ' as well')
     else:
-        setup_confindr_database(args.output_folder,
-                                args.secret_file)
+        setup_confindr_database(output_folder=args.output_folder,
+                                consumer_secret=args.secret_file,
+                                index_databases=args.index_databases)
     download_mash_sketch(args.output_folder)
     current_year = datetime.datetime.utcnow().year
     current_month = datetime.datetime.utcnow().month
