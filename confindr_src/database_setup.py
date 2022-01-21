@@ -128,7 +128,7 @@ class RmlstRest(object):
             self.access_secret = r.json()['oauth_token_secret']
             if self.consumer_access_file != "":
                 try:
-                    with open(self.consumer_access_file, 'w') as f:
+                    with open(os.open(self.consumer_access_file, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
                         f.write(self.access_token)
                         f.write("\n")
                         f.write(self.access_secret)
