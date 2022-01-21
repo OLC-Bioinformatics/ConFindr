@@ -126,15 +126,36 @@ class RmlstRest(object):
             # Save the JSON-decoded token secret and token
             self.access_token = r.json()['oauth_token']
             self.access_secret = r.json()['oauth_token_secret']
+            if self.consumer_access_file != "":
+                try:
+                    with open(self.consumer_access_file, 'w') as f:
+                        f.write(self.access_token)
+                        f.write("\n")
+                        f.write(self.access_secret)
+                except:
+                     logging.warning('WARNING: Could not write consumer access file. Please make sure to have the permission to write to ({}) '
+                                     'and try again.'.format(self.consumer_access_file))
+ 
 
-    def __init__(self, consumer_secret_file, output_folder):
+    def __init__(self, consumer_secret_file, consumer_access_file, output_folder):
         self.test_rest_url = 'http://rest.pubmlst.org/db/pubmlst_rmlst_seqdef'
         self.test_web_url = 'http://pubmlst.org/cgi-bin/bigsdb/bigsdb.pl?db=pubmlst_rmlst_seqdef'
         self.request_token_url = self.test_rest_url + '/oauth/get_request_token'
         self.access_token_url = self.test_rest_url + '/oauth/get_access_token'
         self.authorize_url = self.test_web_url + '&page=authorizeClient'
         self.output_folder = output_folder
-         
+        self.consumer_access_file = consumer_access_file
+ 
+        self.session_secret = str()
+        self.session_token = str()
+        self.loci = str()
+        self.profile = str()
+        self.request_token = str()
+        self.request_secret = str()
+        self.access_token = str()
+        self.access_secret = str()
+
+
         # Get the consumer secret set up.
         if not os.path.isfile(consumer_secret_file):
             logging.error('ERROR: Could not find consumer secret file. Please make sure the file you specified ({}) exists '
@@ -149,16 +170,21 @@ class RmlstRest(object):
             logging.error('ERROR: Could not parse your consumer secret file. File should have supplied consumer key '
                           'on first line, and consumer secret on the second line.')
             quit(code=1) 
-            
-        self.session_secret = str()
-        self.session_token = str()
-        self.loci = str()
-        self.profile = str()
-        self.request_token = str()
-        self.request_secret = str()
-        self.access_token = str()
-        self.access_secret = str()
+        
+        # Get the consumer access set up.
+        if consumer_access_file != "":
+            if os.path.isfile(consumer_access_file):
+                with open(consumer_access_file) as f:
+                    lines = f.readlines()
+                    try:
+                        self.access_token = lines[0].rstrip()
+                        self.access_secret = lines[1].rstrip()
+                    except IndexError:
+                        logging.error('ERROR: Could not parse your consumer secret file. File should have supplied consumer key '
+                                      'on first line, and consumer secret on the second line.')
+                        quit(code=1) 
 
+            
 
 def create_gene_allele_file(profiles_file, gene_allele_file):
     genus_allele_info = dict()
@@ -186,15 +212,23 @@ def create_gene_allele_file(profiles_file, gene_allele_file):
             f.write('\n')
 
 
-def setup_confindr_database(output_folder, consumer_secret):
+def setup_confindr_database(output_folder, consumer_secret,access_secret):
     # Remove previous output folder if it existed.
 
     # Go through the REST API in order to get profiles downloaded.
     rmlst_rest = RmlstRest(consumer_secret_file=consumer_secret,
+                           consumer_access_file=access_secret,
                            output_folder=output_folder)
-    rmlst_rest.get_request_token()
-    rmlst_rest.get_access_token()
-    rmlst_rest.get_session_token()
+
+    if rmlst_rest.access_token != "":
+         logging.info('Using generated access token')
+         rmlst_rest.get_session_token()
+    else:
+         logging.info('Getting access token')
+         rmlst_rest.get_request_token()
+         rmlst_rest.get_access_token()
+         rmlst_rest.get_session_token()
+    
     rmlst_rest.get_loci_and_scheme_url()
     rmlst_rest.download_loci()
     rmlst_rest.download_profile()
@@ -253,6 +287,10 @@ def main():
     parser.add_argument('-s', '--secret_file',
                         type=str,
                         help='Path to consumer secret file for rMLST database.')
+    parser.add_argument('-a', '--access_file',
+                        default="",
+                        type=str,
+                        help='Path to consumer access file for rMLST database. If not existing create the file at this path')
     args = parser.parse_args()
     if os.path.isdir(args.output_folder):
         logging.info('Removing old databases...')
@@ -267,7 +305,8 @@ def main():
                         ' as well')
     else:
         setup_confindr_database(args.output_folder,
-                                args.secret_file)
+                                args.secret_file,
+                                args.access_file)
     download_mash_sketch(args.output_folder)
     current_year = datetime.datetime.utcnow().year
     current_month = datetime.datetime.utcnow().month
