@@ -13,6 +13,9 @@ import csv
 import re
 import os
 
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 
 class RmlstRest(object):
 
@@ -22,7 +25,7 @@ class RmlstRest(object):
                                         access_token=self.access_token,
                                         access_token_secret=self.access_secret)
         url = self.test_rest_url + '/oauth/get_session_token'
-        r = session_request.get(url)
+        r = session_request.get(url, verify=False)
         if r.status_code == 200:
             self.session_token = r.json()['oauth_token']
             self.session_secret = r.json()['oauth_token_secret']
@@ -36,7 +39,7 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.test_rest_url)
+        r = session.get(self.test_rest_url, verify=False)
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
@@ -55,7 +58,7 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.loci)
+        r = session.get(self.loci, verify=False)
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
@@ -66,7 +69,7 @@ class RmlstRest(object):
                 output_file = os.path.join(self.output_folder, '{}.tfa'.format(os.path.split(locus_url)[1]))
                 logging.info('Downloading {}...'.format(os.path.split(locus_url)[1]))
                 with open(output_file, 'w') as f:
-                    download = session.get(locus_url + '/alleles_fasta')
+                    download = session.get(locus_url + '/alleles_fasta', verify=False)
                     if download.status_code == 200 or download.status_code == 201:
                         if re.search('json', download.headers['content-type'], flags=0):
                             decoded = download.json()
@@ -86,7 +89,7 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.profile + '/1/profiles_csv')
+        r = session.get(self.profile + '/1/profiles_csv', verify=False)
         logging.info('Downloading rMLST profiles...')
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
@@ -117,7 +120,7 @@ class RmlstRest(object):
                                         access_token=self.request_token,
                                         access_token_secret=self.request_secret)
         # Perform a GET request with the appropriate keys and tokens
-        r = session_request.get(self.access_token_url,
+        r = session_request.get(self.access_token_url, verify=False,
                                 params={
                                     'oauth_verifier': verifier
                                 })
@@ -206,7 +209,10 @@ def setup_confindr_database(output_folder, consumer_secret):
         for locus_file in locus_files:
             for record in SeqIO.parse(locus_file, 'fasta'):
                 record.id = record.id.replace('-', '_')
-                record.seq._data = record.seq._data.replace('-', '').replace('N', '')
+                try:
+                    record.seq._data = record.seq._data.replace('-', '').replace('N', '')
+                except TypeError:
+                    record.seq._data = record.seq._data.replace(b'-', b'').replace(b'N', b'')
                 record.name = ''
                 record.description = ''
                 SeqIO.write(record, f, 'fasta')
