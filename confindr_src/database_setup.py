@@ -208,10 +208,10 @@ def setup_confindr_database(output_folder, consumer_secret, index_databases=Fals
         for locus_file in locus_files:
             for record in SeqIO.parse(locus_file, 'fasta'):
                 record.id = record.id.replace('-', '_')
-                if type(record.seq._data) is bytes:
-                    record.seq._data = record.seq._data.decode('utf-8').replace('-', '').replace('N', '')
-                else:
+                try:
                     record.seq._data = record.seq._data.replace('-', '').replace('N', '')
+                except TypeError:
+                    record.seq._data = record.seq._data.replace(b'-', b'').replace(b'N', b'')
                 record.name = ''
                 record.description = ''
                 SeqIO.write(record, f, 'fasta')
