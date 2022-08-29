@@ -181,7 +181,7 @@ def main():
                         type=float,
                         default=1.0,
                         help='Value to use for the calculated error cutoff when setting the base cutoff value. '
-                             'Default is 1.0%')
+                             'Default is 1.0%%.')
     parser.add_argument('-fid', '--forward_id',
                         type=str,
                         default='_R1',
