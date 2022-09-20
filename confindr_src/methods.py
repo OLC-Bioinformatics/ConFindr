@@ -1335,7 +1335,7 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     kma_report = os.path.join(sample_tmp_dir, '{sn}_kma'.format(sn=sample_name))
     # if not os.path.isfile(sample_database + '.fai'):  # Don't bother re-indexing, this only needs to happen once.
     #     pysam.faidx(sample_database)
-    # kma_database = sample_database.replace('.fasta', '') + '_kma'
+    kma_database = sample_database.replace('.fasta', '') + '_kma'
     #
     # if not os.path.isfile(kma_database + '.name'):  # The .name is one of the files KMA creates when making a database
     #     logging.info('Since this is the first time you are using this database, it needs to be indexed by KMA. '
