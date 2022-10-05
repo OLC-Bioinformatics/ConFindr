@@ -77,6 +77,8 @@ Before using ConFindr, you'll need to download and add the following programs to
 - [Mash (>=2.0)](https://github.com/marbl/Mash/releases)
 - [KMA (>=1.2.0)](https://bitbucket.org/genomicepidemiology/kma)
 - [Python (>=3.5)](https://www.python.org/downloads/)
+- [SAMtools (>=1.6)](https://github.com/samtools/samtools)
+- [pysam (>=0.15)](https://pypi.org/project/pysam/)
 
 If you want to run in Nanopore mode, you'll also need to get [minimap2](https://github.com/lh3/minimap2).
 
