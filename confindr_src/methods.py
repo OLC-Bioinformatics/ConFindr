@@ -576,7 +576,7 @@ def determine_cutoff(qualities, reference_sequence, error_cutoff=1.0):
     :return: The percentage error value corresponding to the base_cutoff value
     """
     # Initialise the base cutoff to be at least two - FASTA sequences are not processed by this method
-    base_cutoff = 2
+    base_cutoff = 3
     depth_prob = 0
     # Only find the cutoff if there are qualities (the gene is present in the sample)
     if qualities:
