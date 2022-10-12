@@ -98,7 +98,6 @@ def confindr(args):
                                tmpdir=args.tmp,
                                data_type=args.data_type,
                                use_rmlst=args.rmlst,
-                               cross_details=args.cross_details,
                                min_matching_hashes=min_matching_hashes,
                                fasta=args.fasta,
                                debug=args.verbosity)
@@ -111,8 +110,6 @@ def confindr(args):
                          sample_name=sample_name,
                          multi_positions=multi_positions,
                          genus=genus,
-                         percent_contam='ND',
-                         contam_stddev='ND',
                          total_gene_length=0,
                          database_download_date='ND')
             logging.warning('Encountered error when attempting to run ConFindr on sample '
@@ -221,10 +218,6 @@ def main():
                         default='info',
                         help='Amount of output you want printed to the screen. Defaults to info, which should be good '
                              'for most users.')
-    parser.add_argument('-cross_details', '--cross_details',
-                        action='store_true',
-                        help='Continue ConFindr analyses on samples with two or more genera identified. Default is '
-                             'False')
     parser.add_argument('-m', '--min_matching_hashes',
                         default=150,
                         type=int,

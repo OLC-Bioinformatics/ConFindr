@@ -951,21 +951,24 @@ def find_total_sequence_length(fasta_file):
     return total_length
 
 
-def estimate_percent_contamination(contamination_report_file):
-    """
-    Estimates the percent contamination of a sample (and standard deviation).
-    :param contamination_report_file: File created by read_contig,
-    :return: Estimated percent contamination and standard deviation.
-    """
-    # Initialise a list to store the percentage of SNVs out of the total bases
-    contam_levels = list()
-    with open(contamination_report_file) as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            base_counts = int(row['SNVCoverage'])
-            total_coverage = int(row['TotalCoverage'])
-            contam_levels.append(base_counts * 100 / total_coverage)
-    return '%.2f' % (np.mean(contam_levels)), '%.2f' % np.std(contam_levels)
+# Removing percentage contamination estimation until it can be made more 
+# accurate
+#-------------------------------------------------------------------------------
+# def estimate_percent_contamination(contamination_report_file):
+#     """
+#     Estimates the percent contamination of a sample (and standard deviation).
+#     :param contamination_report_file: File created by read_contig,
+#     :return: Estimated percent contamination and standard deviation.
+#     """
+#     # Initialise a list to store the percentage of SNVs out of the total bases
+#     contam_levels = list()
+#     with open(contamination_report_file) as csvfile:
+#         reader = csv.DictReader(csvfile)
+#         for row in reader:
+#             base_counts = int(row['SNVCoverage'])
+#             total_coverage = int(row['TotalCoverage'])
+#             contam_levels.append(base_counts * 100 / total_coverage)
+#     return '%.2f' % (np.mean(contam_levels)), '%.2f' % np.std(contam_levels)
 
 
 def load_fastq_records(gz, paired, forward):
@@ -1035,7 +1038,7 @@ def index_databases(sample_database):
 def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1,
                        keep_files=False,
                        quality_cutoff=20, base_cutoff=None, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
-                       tmpdir=None, data_type='Illumina', use_rmlst=False, cross_details=False, min_matching_hashes=40,
+                       tmpdir=None, data_type='Illumina', use_rmlst=False, min_matching_hashes=40,
                        fasta=False, error_cutoff=1.0, debug=False):
     """
     This needs some documentation fairly badly, so here we go.
@@ -1063,8 +1066,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
     :param tmpdir: if None, any genus-specifc databases that need to be created will be written to ConFindr DB location.
     :param data_type: Either Illumina or Nanopore, depending on what type your reads are. (STR)
     :param use_rmlst: If False, use cgderived data instead of rMLST where possible. If True, always use rMLST. (BOOL)
-    :param cross_details: If False, stop workflow when cross contamination is detected. If True, continue so estimates
-    of percent contamination can be found (BOOL)
     :param min_matching_hashes: Minimum number of matching hashes in a MASH screen in order for a genus to be
     considered present in a sample. Default is 40
     :param fasta: Boolean on whether the samples are in FASTA format. Default is False
@@ -1107,19 +1108,16 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                                          threads=threads,
                                          min_matching_hashes=min_matching_hashes)
     if len(genus.split(':')) > 1:
-        if not cross_details:
-            write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
-                         sample_name=sample_name,
-                         multi_positions=0,
-                         genus=genus,
-                         percent_contam='ND',
-                         contam_stddev='ND',
-                         total_gene_length=0,
-                         database_download_date=database_download_date)
-            logging.info('Found cross-contamination! Skipping rest of analysis...\n')
-            if keep_files is False:
-                shutil.rmtree(sample_tmp_dir)
-            return
+        write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
+                        sample_name=sample_name,
+                        multi_positions=0,
+                        genus=genus,
+                        total_gene_length=0,
+                        database_download_date=database_download_date)
+        logging.info('Found cross-contamination! Skipping rest of analysis...\n')
+        if keep_files is False:
+            shutil.rmtree(sample_tmp_dir)
+        return
     # Setup genus-specific databases, if necessary.
     if cgmlst_db is not None:
         # Sanity check that the DB specified is actually a file, otherwise, quit with appropriate error message.
@@ -1186,8 +1184,6 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
                      sample_name=sample_name,
                      multi_positions=0,
                      genus=genus,
-                     percent_contam='ND',
-                     contam_stddev='ND',
                      total_gene_length=0,
                      database_download_date=database_download_date)
         logging.info('Did not find databases for genus {genus}. You can download the rMLST database to get access to '
@@ -1543,18 +1539,12 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         snp_cutoff = 1
     else:
         snp_cutoff = 10
-    if multi_positions >= snp_cutoff:
-        percent_contam, contam_stddev = estimate_percent_contamination(contamination_report_file=report_file)
-    else:
-        percent_contam = 0
-        contam_stddev = 0
+
     logging.info('Done! Number of contaminating SNVs found: {}\n'.format(multi_positions))
     write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
                  sample_name=sample_name,
                  multi_positions=multi_positions,
                  genus=genus,
-                 percent_contam=percent_contam,
-                 contam_stddev=contam_stddev,
                  total_gene_length=rmlst_gene_length,
                  snp_cutoff=snp_cutoff,
                  database_download_date=database_download_date,
@@ -1563,18 +1553,16 @@ def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', 
         shutil.rmtree(sample_tmp_dir)
 
 
-def write_output(output_report, sample_name, multi_positions, genus, percent_contam, contam_stddev, total_gene_length,
+def write_output(output_report, sample_name, multi_positions, genus, total_gene_length,
                  database_download_date, snp_cutoff=3, pysam_pass=True):
     """
     Function that writes the output generated by ConFindr to a report file. Appends to a file that already exists,
     or creates the file if it doesn't already exist.
-    :param output_report: Path to CSV output report file. Should have headers SampleName,Genus,NumContamSNVs,
-    ContamStatus,PercentContam, and PercentContamStandardDeviation, in that order.
+    :param output_report: Path to CSV output report file. Should have headers SampleName,Genus,NumContamSNVs, and
+    ContamStatus, in that order.
     :param sample_name: string - name of sample
     :param multi_positions: integer - number of positions that were found to have more than one base present.
     :param genus: string - The genus of your sample
-    :param percent_contam: float - Estimated percentage contamination
-    :param contam_stddev: float - Standard deviation of percentage contamination
     :param total_gene_length: integer - number of bases examined to make a contamination call.
     :param database_download_date:
     :param snp_cutoff: Number of cSNVs to use to call a sample contaminated. Default 3. (INT)
@@ -1583,7 +1571,7 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
     # If the report file hasn't been created, make it, with appropriate header.
     if not os.path.isfile(output_report):
         with open(os.path.join(output_report), 'w') as f:
-            f.write('Sample,Genus,NumContamSNVs,ContamStatus,PercentContam,PercentContamStandardDeviation,'
+            f.write('Sample,Genus,NumContamSNVs,ContamStatus,'
                     'BasesExamined,DatabaseDownloadDate\n')
     if pysam_pass:
         if multi_positions >= snp_cutoff or len(genus.split(':')) > 1:
@@ -1593,17 +1581,12 @@ def write_output(output_report, sample_name, multi_positions, genus, percent_con
     else:
         contaminated = 'Pysam SamtoolsError'
         multi_positions = 'ND'
-        percent_contam = 'ND'
-        contam_stddev = 'ND'
     with open(output_report, 'a+') as f:
-        f.write('{samplename},{genus},{numcontamsnvs},'
-                '{contamstatus},{percent_contam},{contam_stddev},'
+        f.write('{samplename},{genus},{numcontamsnvs},{contamstatus},'
                 '{gene_length},{database_download_date}\n'.format(samplename=sample_name,
                                                                   genus=genus,
                                                                   numcontamsnvs=multi_positions,
                                                                   contamstatus=contaminated,
-                                                                  percent_contam=percent_contam,
-                                                                  contam_stddev=contam_stddev,
                                                                   gene_length=total_gene_length,
                                                                   database_download_date=database_download_date))
 

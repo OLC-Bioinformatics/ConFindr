@@ -52,7 +52,7 @@ In any future uses of ConFindr, databases will not need to be re-downloaded.
 
 The results file that ConFindr produces is in comma-separated value (CSV) format, which can be opened by any spreadsheet application (Excel, LibreOffice, etc.) or your favorite text editor.
 
-The file has the following headers: `Sample`, `Genus`, `NumContamSNVs`, `ContamStatus`, `PercentContam`, `PercentContamStandardDeviation`, and `BasesExamined`. Of these, ContamStatus is the most important - it will be `True` if a sample
+The file has the following headers: `Sample`, `Genus`, `NumContamSNVs`, `ContamStatus`, and `BasesExamined`. Of these, ContamStatus is the most important - it will be `True` if a sample
 is contaminated, and `False` if a sample is not contaminated. Detailed descriptions of each header follow.
 
 - `Sample`: The name of the sample. ConFindr will take everything before the first underscore (\_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.
@@ -62,12 +62,6 @@ If multiple genera were found, they will all be listed here, separated by a `:`
 - `ContamStatus`: The most important of all! Will read `True` if contamination is present in the sample, and `False` if contamination is not present. The result will be `True` if any of the following conditions are met:
 	- More than 1 contaminating SNV per 10000 base pairs examined was found.
 	- There is cross contamination between genera.
-- `PercentContam`: Based on the depth of the minor variant for sites with multiple bases, ConFindr guesses
-at what percent of your reads come from a contaminant. The more sequencing depth you have, the more accurate this will
-get. For lower levels of contamination (around 5 percent) this tends to get overestimated, but the number gets more accurate as
-contamination level increases, as well as sequencing depth.
-- `PercentContamStandardDeviation`: The standard deviation of the percentage contamination estimate. Very high values may
-indicate something strange is going on.
 - `BasesExamined`: The number of bases ConFindr examined when making the contamination call. Will usally be around 20kb for rMLST databases,
  and will vary when other databases are used.
 - `DatabaseDownloadDate`: Date that rMLST databases were downloaded, if you have them. As these are curated and updated regularly,
@@ -144,5 +138,3 @@ trustworthy enough to contribute to a site being multiallelic. Defaults to 20, w
 be suitable for most purposes. 
 - `--rmlst`: By default, ConFindr will use custom core-gene derived datasets for _Escherichia_, _Listeria_, and _Salmonella_
 instead of rMLST. Activate this flag to force use of rMLST genes for all genera.
-- `--cross_details`: By default, when ConFindr finds cross-contaminated samples it stops analysis. Activate
-this flag to have analysis of number of cSNVs continue in order to get an estimate of percentage contamination.
