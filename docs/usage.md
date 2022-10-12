@@ -128,7 +128,7 @@ that ConFindr creates, which are deleted by default.
 - `-verbosity, --verbosity`: How much you want printed to the screen. Choose `debug` to get some extra, or `warning` to
 get almost nothing. Default is `info`.
 - `-b`, `--base_cutoff`: The number of high-quality bases needed to call a site as multiallelic, and therefore 
-contributing to contamination. Defaults to 2, which is usually sensitive without producing false positives.
+contributing to contamination. Defaults to 3, which is usually sensitive without producing false positives.
 If dealing with high depth samples, adding the `-bf` parameter set to around `0.05` is likely to be helpful in reducing
 false positives.
 - `-bf`, `--base_fraction_cutoff`: The proportion of high-quality bases needed to call a site as multiallelic, and therefore 
