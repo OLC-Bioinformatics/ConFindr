@@ -212,6 +212,13 @@ def setup_confindr_database(output_folder, consumer_secret, index_databases=Fals
                     record.seq._data = record.seq._data.replace('-', '').replace('N', '')
                 except TypeError:
                     record.seq._data = record.seq._data.replace(b'-', b'').replace(b'N', b'')
+
+                # If the entire FASTA sequence is encoded in byte-like
+                # formatting (b' at the beginning and ' at the end of the 
+                # sequence), fix:
+                if record.seq._data[0:2] == "b'" and record.seq._data[0:2] == "'":
+                    record.seq._data = record.seq._data.replace("b'", "").replace("'", "")
+                
                 record.name = ''
                 record.description = ''
                 SeqIO.write(record, f, 'fasta')
