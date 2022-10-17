@@ -38,11 +38,11 @@ Instructions for downloading and setting up the rMLST databases can be found [he
 `wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
 
 2. As of version `0.7.0` ConFindr can be run automatically on _Escherichia_, _Salmonella_, and _Listeria_ with no further 
-work on your part. Simply run:
+work on your part, using core-gene databases (*experimental*). Simply run:
 
 `confindr -i example-data -o example-out`
 
-3. To use the recommended rMLST database (after installation):
+3. To use the *recommended* rMLST database (after installation):
 
 `confindr -i example-data -o example-out --rmlst`
 
