@@ -7,11 +7,11 @@
 This program is designed to find bacterial intra-species contamination in raw Illumina data. It does this
  by looking for multiple alleles of core, single copy genes.
 
-For complete instructions on installation and usage, please visit [the ConFindr GitHub Pages site](https://olc-bioinformatics.github.io/ConFindr/).
+For **complete instructions on installation and usage**, please visit [the ConFindr GitHub Pages site](https://olc-bioinformatics.github.io/ConFindr/).
 
 ## Important Note
 
-ConFindr has only been validated using rMLST databases. Please use them if possible (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
+ConFindr has only been validated using rMLST databases. **Please use them if possible** (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
 
 ## Quickstart
 
@@ -40,11 +40,11 @@ Instructions for downloading and setting up the rMLST databases can be found [he
 2. As of version `0.7.0` ConFindr can be run automatically on _Escherichia_, _Salmonella_, and _Listeria_ with no further 
 work on your part. Simply run:
 
-`confindr.py -i example-data -o example-out`
+`confindr -i example-data -o example-out`
 
 3. To use the recommended rMLST database (after installation):
 
-`confindr.py -i example-data -o example-out --rmlst`
+`confindr -i example-data -o example-out --rmlst`
 
 Once ConFindr finishes running, take a look at the `confindr_report.csv` file found in `example-out`—it shows that multiple
 alleles were found for many sites within the genes that ConFindr examines, meaning that this sample is quite contaminated!
@@ -78,7 +78,7 @@ please open an issue here on GitHub.
 
 ## Citing ConFindr
 
-ConFindr has been published in PeerJ - if you use it in your work, please cite the following:
+ConFindr has been published in PeerJ—if you use it in your work, please cite the following:
 
 ```
 Low AJ, Koziol AG, Manninger PA, Blais B, Carrillo CD. 2019. ConFindr: rapid detection of intraspecies and cross-species contamination in bacterial whole-genome sequence data. PeerJ 7:e6995 https://doi.org/10.7717/peerj.6995
