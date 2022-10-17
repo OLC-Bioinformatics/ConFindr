@@ -21,15 +21,15 @@ Non-academic use will require a commercial licence.
 
 Here are the steps to getting databases downloaded:
 
-- Register for a PubMLST account if you do not already have one. Link to register is [here](https://pubmlst.org/bigsdb). 
+1. Register for a PubMLST account if you do not already have one. Link to register is [here](https://pubmlst.org/bigsdb). 
 Click on `Register for a site-wide account.`
 
-- Login to your account at [https://pubmlst.org/bigsdb](https://pubmlst.org/bigsdb) and request access to 
+2. Log in to your account at [https://pubmlst.org/bigsdb](https://pubmlst.org/bigsdb) and request access to 
 Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under `Registrations`. Additionally, email Keith Jolley
 (keith.jolley@zoo.ox.ac.uk) and request a consumer key and consumer secret so that you'll be able
 to access the database programatically.
 
-- Once you've gotten your consumer key and consumer secret from Keith, put them into a text file
+3. Once you've gotten your consumer key and consumer secret from Keith, put them into a text file
 with the key on the first line and the secret on the second. It should look something like the below
 snippet:
 
@@ -38,9 +38,9 @@ efKXmqp2D0EBlMBkZaGC2lPf
 F$M+fQ2AFFB2YBDfF9fpHF^qSWJdmmN%L4Fxf5Gur3
 ```
 
-- Install ConFindr as shown in the next section.
+4. Install ConFindr as shown in the next section.
 
-- With ConFindr installed, use the command `confindr_database_setup` to have ConFindr download the latest version
+5. With ConFindr installed, use the command `confindr_database_setup` to have ConFindr download the latest version
 of the rMLST databases. This script takes two arguments - a `-s` where you give the path to the text file containing your consumer 
 key and secret, and a `-o` to specify where you want the sequences downloaded. Only the `-s` is mandatory. If your output
 directory is not specified, ConFindr will first search for an environmental variable called `CONFINDR_DB`, and if it can't
@@ -48,30 +48,34 @@ find that it will automatically download to a folder called `.confindr_db` in yo
 
 ## Installing Using Conda (Recommended)
 
-ConFindr is available within bioconda - to get bioconda installed and running see instructions [here](https://bioconda.github.io/).
+1. Follow the instructions [here](https://bioconda.github.io/) to add the Bioconda channel to your list of conda channels, if it hasn't already been added.
 
-With bioconda running, you can install ConFindr with the following command:
+2. Install ConFindr into a new conda environment named 'confindr':
 
-`conda install -c bioconda confindr`
+`conda create -n confindr -c bioconda confindr=0.8.1`
 
-With that done, typing `confindr.py` will bring access the ConFindr pipeline. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
+3. Activate the new conda environment:
 
-## Manual Install
+`conda activate confindr`
 
-#### Executable
+Typing `confindr -h` into the command-line will show the help menu for the program. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 
-ConFindr can also be installed using pip. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:
+## Manual Installation
 
-- Create an empty directory (i.e. `mkdir ~/Virtual_Environments/ConFindr`)
-- Virtualenv that directory (`virtualenv -p /usr/bin/python3 ~/Virtual_Environments/ConFindr`)
-- Activate the virtualenv (`source ~/Virtual_Environments/ConFindr/bin/activate`)
-- Install ConFindr - this should also install any packages that ConFindr depends on (`pip install confindr`)
+### Executable
+
+ConFindr can also be installed using `pip`. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:
+
+1. Create an empty directory (i.e. `mkdir ~/Virtual_Environments/ConFindr`).
+2. Virtualenv that directory (`virtualenv -p /usr/bin/python3 ~/Virtual_Environments/ConFindr`).
+3. Activate the virtualenv (`source ~/Virtual_Environments/ConFindr/bin/activate`).
+4. Install ConFindr—this should also install any packages that ConFindr depends upon (`pip install confindr`).
 
 With this done, you'll need to make sure that any necessary dependencies are installed.
 
-#### Dependencies
+### Dependencies
 
-Before using ConFindr, you'll need to download and add the following programs to your $PATH:
+Before using ConFindr when installed using `pip`, you'll need to download and add the following programs to your $PATH:
 
 - [BBTools (>=37.23)](https://jgi.doe.gov/data-and-tools/bbtools/)
 - [Mash (>=2.0)](https://github.com/marbl/Mash/releases)
@@ -80,7 +84,7 @@ Before using ConFindr, you'll need to download and add the following programs to
 - [SAMtools (>=1.6)](https://github.com/samtools/samtools)
 - [pysam (>=0.15)](https://pypi.org/project/pysam/)
 
-If you want to run in Nanopore mode, you'll also need to get [minimap2](https://github.com/lh3/minimap2).
+If you want to run ConFindr in Nanopore mode (`-dt Nanopore`), you'll also need to install [minimap2](https://github.com/lh3/minimap2).
 
 Instructions on adding programs to your $PATH can be found [here](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix).
 
