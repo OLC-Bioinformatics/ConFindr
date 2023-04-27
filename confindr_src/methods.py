@@ -566,7 +566,7 @@ fasta=False, nanopore=False):
     return filtered_read_dict, qualities
 
 
-def determine_cutoff(qualities, reference_sequence, error_cutoff=1.0):
+def determine_cutoff(qualities, reference_sequence, base_cutoff, error_cutoff=1.0):
     """
     Determine the base cutoff value to use for SNV determination
     :param qualities: List of phred scores for every base in the pileup
@@ -575,8 +575,6 @@ def determine_cutoff(qualities, reference_sequence, error_cutoff=1.0):
     :return: base_cutoff: Int of calculated gene-specific cutoff value to use
     :return: The percentage error value corresponding to the base_cutoff value
     """
-    # Initialise the base cutoff to be at least two - FASTA sequences are not processed by this method
-    base_cutoff = 3
     depth_prob = 0
     # Only find the cutoff if there are qualities (the gene is present in the sample)
     if qualities:
@@ -851,9 +849,12 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records,
         quality_list += qualities
     # Initialise the calculated error percentage to zero
     error_perc = None
-    if not base_cutoff:
+    # If the base_cutoff is not manually specified on the command-line, adjust it based
+    # upon overall sequence quality
+    if base_cutoff is not 3:
         base_cutoff, error_perc = determine_cutoff(qualities=quality_list,
                                                    reference_sequence=reference_sequence,
+                                                   base_cutoff = base_cutoff,
                                                    error_cutoff=error_cutoff)
     bamfile.close()
     # It seems that the pileup (generator?) is used up above, so it must be recreated
@@ -1035,9 +1036,9 @@ def index_databases(sample_database):
 
 
 # noinspection PyUnresolvedReferences
-def find_contamination(pair, output_folder, databases_folder, forward_id='_R1', threads=1,
+def find_contamination(pair, output_folder, databases_folder, base_cutoff, forward_id='_R1', threads=1,
                        keep_files=False,
-                       quality_cutoff=20, base_cutoff=None, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
+                       quality_cutoff=20, base_fraction_cutoff=0.05, cgmlst_db=None, xmx=None,
                        tmpdir=None, data_type='Illumina', use_rmlst=False, min_matching_hashes=40,
                        fasta=False, error_cutoff=1.0, debug=False):
     """
