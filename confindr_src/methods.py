@@ -1108,17 +1108,17 @@ def find_contamination(pair, output_folder, databases_folder, base_cutoff, forwa
                                          log=log,
                                          threads=threads,
                                          min_matching_hashes=min_matching_hashes)
-    if len(genus.split(':')) > 1:
-        write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
-                        sample_name=sample_name,
-                        multi_positions=0,
-                        genus=genus,
-                        total_gene_length=0,
-                        database_download_date=database_download_date)
-        logging.info('Found cross-contamination! Skipping rest of analysis...\n')
-        if keep_files is False:
-            shutil.rmtree(sample_tmp_dir)
-        return
+    # if len(genus.split(':')) > 1:
+    #     write_output(output_report=os.path.join(output_folder, 'confindr_report.csv'),
+    #                     sample_name=sample_name,
+    #                     multi_positions=0,
+    #                     genus=genus,
+    #                     total_gene_length=0,
+    #                     database_download_date=database_download_date)
+    #     logging.info('Found cross-contamination! Skipping rest of analysis...\n')
+    #     if keep_files is False:
+    #         shutil.rmtree(sample_tmp_dir)
+    #     return
     # Setup genus-specific databases, if necessary.
     if cgmlst_db is not None:
         # Sanity check that the DB specified is actually a file, otherwise, quit with appropriate error message.
