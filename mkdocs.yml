@@ -1,7 +1,7 @@
 site_name: ConFindr
 site_url: https://olc-bioinformatics.github.io/ConFindr
 site_description: ConFindr Pipeline for detecting intra-species contamination in raw bacterial NGS reads.
-repo_url: https://github.com/OLC-Bioinformatics/Confindr
+repo_url: https://github.com/OLC-Bioinformatics/ConFindr
 theme: flatly
 
 nav:
