@@ -851,7 +851,7 @@ def read_contig(contig_name, bamfile_name, reference_fasta, allele_records,
     error_perc = None
     # If the base_cutoff is not manually specified on the command-line, adjust it based
     # upon overall sequence quality
-    if base_cutoff is not 3:
+    if base_cutoff != 3:
         base_cutoff, error_perc = determine_cutoff(qualities=quality_list,
                                                    reference_sequence=reference_sequence,
                                                    base_cutoff = base_cutoff,
