@@ -77,12 +77,12 @@ With this done, you'll need to make sure that any necessary dependencies are ins
 
 Before using ConFindr when installed using `pip`, you'll need to download and add the following programs to your $PATH:
 
-- [BBTools (>=37.23)](https://jgi.doe.gov/data-and-tools/bbtools/)
-- [Mash (>=2.0)](https://github.com/marbl/Mash/releases)
-- [KMA (>=1.2.0)](https://bitbucket.org/genomicepidemiology/kma)
-- [Python (>=3.5)](https://www.python.org/downloads/)
-- [SAMtools (>=1.6)](https://github.com/samtools/samtools)
-- [pysam (>=0.15)](https://pypi.org/project/pysam/)
+- [BBMap (>=39.01)](https://jgi.doe.gov/data-and-tools/bbtools/)
+- [Mash (>=2.3)](https://github.com/marbl/Mash/releases)
+- [KMA (>=1.4.9)](https://bitbucket.org/genomicepidemiology/kma)
+- [Python (>=3.9.15)](https://www.python.org/downloads/)
+- [SAMtools (>=1.17)](https://github.com/samtools/samtools)
+- [pysam (>=0.21.0)](https://pypi.org/project/pysam/)
 
 If you want to run ConFindr in Nanopore mode (`-dt Nanopore`), you'll also need to install [minimap2](https://github.com/lh3/minimap2).
 
