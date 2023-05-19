@@ -33,6 +33,7 @@ jobs:
               "pytest"
             python -m pytest tests/ -vvv
 workflows:
+    build_and_test:
       jobs:
         - confindr:
             filters:
