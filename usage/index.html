@@ -1,157 +1,223 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-        
-        <link rel="canonical" href="https://olc-bioinformatics.github.io/ConFindr/usage/">
-        <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Usage - ConFindr</title>
-        <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/font-awesome.min.css" rel="stylesheet">
-        <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/docco.min.css">
-
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script> 
-    </head>
-
-    <body>
-        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
-                <a class="navbar-brand" href="..">ConFindr</a>
-                <!-- Expander button -->
-                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <!-- Expanded navigation -->
-                <div id="navbar-collapse" class="navbar-collapse collapse">
-                        <!-- Main navigation -->
-                        <ul class="nav navbar-nav">
-                            <li class="navitem">
-                                <a href=".." class="nav-link">Home</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="../install/" class="nav-link">Installation</a>
-                            </li>
-                            <li class="navitem active">
-                                <a href="./" class="nav-link">Usage</a>
-                            </li>
-                        </ul>
-
-                    <ul class="nav navbar-nav ml-auto">
-                        <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
-                                <i class="fa fa-search"></i> Search
-                            </a>
-                        </li>
-                            <li class="nav-item">
-                                <a rel="prev" href="../install/" class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" class="nav-link disabled">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="https://github.com/OLC-Bioinformatics/Confindr/edit/master/docs/usage.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
-                            </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
-    <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
-            <span class="fa fa-angle-down"></span>
-        </button>
-    </div>
-
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://olc-bioinformatics.github.io/ConFindr/usage/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Usage - ConFindr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
-        <ul class="nav flex-column">
-            
-            <li class="nav-item" data-level="2"><a href="#example-dataset" class="nav-link">Example Dataset</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="2"><a href="#interpreting-confindr-results" class="nav-link">Interpreting ConFindr Results</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="2"><a href="#using-confindr-in-a-python-script" class="nav-link">Using ConFindr in a Python Script</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="2"><a href="#using-schemes-other-than-rmlst" class="nav-link">Using Schemes other than rMLST</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="2"><a href="#optional-arguments" class="nav-link">Optional Arguments</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-        </ul>
-    </div>
-</div></div>
-                    <div class="col-md-9" role="main">
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Usage";
+        var mkdocs_page_input_path = "usage.md";
+        var mkdocs_page_url = "/ConFindr/usage/";
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
 
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> ConFindr
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Installation</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Usage</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#example-dataset">Example Dataset</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#running-confindr-using-included-core-gene-databases">Running ConFindr using included core-gene databases</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#running-confindr-using-rmlst-databases">Running ConFindr using rMLST databases</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#interpreting-confindr-results">Interpreting ConFindr Results</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#using-confindr-in-a-python-script">Using ConFindr in a Python Script</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#using-schemes-other-than-rmlst">Using Schemes other than rMLST</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optional-arguments">Optional Arguments</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">ConFindr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>Usage</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/OLC-Bioinformatics/ConFindr/edit/master/docs/usage.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="usage">Usage</h1>
 <h2 id="example-dataset">Example Dataset</h2>
-<p>An example dataset has been uploaded to FigShare. You can download it to your current working directory with the following command:</p>
-<p><code>wget https://ndownloader.figshare.com/files/9972709 &amp;&amp; tar xf 9972709</code></p>
-<p>This example dataset contains two different serotypes of <em>Escherichia coli</em> mixed together - it's about 80/20 split of O103 and O157. Contamination like this is difficult to detect
-with regular tools - it's possible to pick up that it's two different strains, but it can be finicky. ConFindr, however, has no difficulty picking up the fact that this sample is contaminated.</p>
-<p>In order to have ConFindr analyze this sample, the parameters you need to provide are:</p>
+<p>An <a href="https://figshare.com/articles/dataset/Minimal_dataset_for_ConFindr_testing_using_pytest/22852937">example dataset</a> has been uploaded to FigShare for testing ConFindr.
+This example dataset contains FASTQ reads from contaminated and uncontaminated genomes of <em>Escherichia coli</em> O121:H19, <em>Salmonella enterica</em> Heidelberg, and <em>Listeria monocytogenes</em>.
+These reads were obtained by selecting samples from the originally published dataset that was used to test ConFindr's performance, and then downsampled by different factors to obtain a more minimal dataset.
+The metadata for these samples can be downloaded from <a href="https://figshare.com/ndownloader/files/40599716">here</a>, with additional metadata available in the Supplemental Information of the <a href="https://peerj.com/articles/6995">original ConFindr publication</a>.
+The dataset may take a few minutes to download depending on your internet connection speed.</p>
+<p>If you wish to download the dataset to analyze it yourself using <code>confindr.py</code>, you can run the following command to download and extract the files within your current working directory:</p>
+<pre><code class="language-bash">wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz &amp;&amp; \
+  tar -xzvf test_samples.tar.gz &amp;&amp; \
+  rm test_samples.tar.gz
+</code></pre>
+<p>ConFindr can also be tested with <a href="https://docs.pytest.org/en/7.3.x/">pytest</a> automated testing.
+This is the recommended testing strategy for those who wish to contribute to ConFindr on GitHub.
+We recommend installing ConFindr within a virtual environment using Conda (see instructions <a href="../install/#installing-using-conda-recommended">here</a>), cloning the ConFindr GitHub repository, and then installing ConFindr in development mode using the following commands:</p>
+<pre><code class="language-bash"># Activate your ConFindr conda env
+conda activate confindr
+git clone https://github.com/OLC-Bioinformatics/ConFindr
+cd ConFindr/
+pip install -e .
+# Download the test dataset and extract the contents to tests/
+wget https://figshare.com/ndownloader/files/40598330 -O tests/test_samples.tar.gz &amp;&amp; \
+  tar -xzvf tests/test_samples.tar.gz -C tests/ &amp;&amp; \
+  rm tests/test_samples.tar.gz
+</code></pre>
+<p>To run the automated tests with pytest:</p>
+<pre><code class="language-bash">conda activate confindr
+cd ConFindr/
+</code></pre>
+<p>You should see output similar to below if all tests have passed:</p>
+<pre><code>================================================ test session starts =================================================
+platform linux -- Python 3.7.12, pytest-4.5.0, py-1.11.0, pluggy-0.11.0 -- /home/liam/miniconda3/envs/confindr-8.0/bin/python
+cachedir: .pytest_cache
+rootdir: /media/liam/Cerulean/projects/PRJ-LPB-00001/bin/confindr-8.0/ConFindr
+collected 38 items                                                                                                   
+
+tests/test_confindr.py::test_integration PASSED                                                                [  2%]
+tests/test_confindr.py::test_present_dependency PASSED                                                         [  5%]
+tests/test_confindr.py::test_nonexistent_dependency PASSED                                                     [  7%]
+tests/test_confindr.py::test_r1_fastqs PASSED                                                                  [ 10%]
+tests/test_confindr.py::test_1_fastqs PASSED                                                                   [ 13%]
+tests/test_confindr.py::test_empty_fastqs PASSED                                                               [ 15%]
+tests/test_confindr.py::test_unpaired_fastq PASSED                                                             [ 18%]
+tests/test_confindr.py::test_run_cmd_success PASSED                                                            [ 21%]
+tests/test_confindr.py::test_run_cmd_failure_exit_code PASSED                                                  [ 23%]
+tests/test_confindr.py::test_two_hq_bases_above_threshold PASSED                                               [ 26%]
+tests/test_confindr.py::test_just_one_hq_bases_above_threshold PASSED                                          [ 28%]
+tests/test_confindr.py::test_two_hq_bases_above_threshold_custom_params PASSED                                 [ 31%]
+tests/test_confindr.py::test_just_one_hq_base_above_threshold_custom_params PASSED                             [ 34%]
+tests/test_confindr.py::test_three_hq_bases_above_threshold PASSED                                             [ 36%]
+tests/test_confindr.py::test_two_out_of_three_hq_bases_above_threshold PASSED                                  [ 39%]
+tests/test_confindr.py::test_two_hq_bases_above_fraction_threshold PASSED                                      [ 42%]
+tests/test_confindr.py::test_two_hq_bases_above_fraction_threshold_low_coverage PASSED                         [ 44%]
+tests/test_confindr.py::test_two_hq_bases_above_fraction_threshold_low_coverage_one_base_counts PASSED         [ 47%]
+tests/test_confindr.py::test_just_one_hq_bases_above_fraction_threshold PASSED                                 [ 50%]
+tests/test_confindr.py::test_three_hq_bases_above_fraction_threshold PASSED                                    [ 52%]
+tests/test_confindr.py::test_two_out_of_three_hq_bases_above_fraction_threshold PASSED                         [ 55%]
+tests/test_confindr.py::test_valid_base_fraction_none PASSED                                                   [ 57%]
+tests/test_confindr.py::test_valid_base_fraction_zero PASSED                                                   [ 60%]
+tests/test_confindr.py::test_valid_base_fraction_one PASSED                                                    [ 63%]
+tests/test_confindr.py::test_valid_base_fraction_between_zero_one PASSED                                       [ 65%]
+tests/test_confindr.py::test_invalid_base_fraction PASSED                                                      [ 68%]
+tests/test_confindr.py::test_total_length_fasta PASSED                                                         [ 71%]
+tests/test_confindr.py::test_write_output_creates_file_if_does_not_exist PASSED                                [ 73%]
+tests/test_confindr.py::test_write_output_appends_if_file_does_exist PASSED                                    [ 76%]
+tests/test_confindr.py::test_base_dict_to_string_two_base_descending PASSED                                    [ 78%]
+tests/test_confindr.py::test_base_dict_to_string_two_base_ascending PASSED                                     [ 81%]
+tests/test_confindr.py::test_base_dict_to_string_three_bases PASSED                                            [ 84%]
+tests/test_confindr.py::test_valid_xmx_string_gigabytes PASSED                                                 [ 86%]
+tests/test_confindr.py::test_valid_xmx_string_megabytes PASSED                                                 [ 89%]
+tests/test_confindr.py::test_valid_xmx_string_kilobytes PASSED                                                 [ 92%]
+tests/test_confindr.py::test_invalid_xmx_bad_suffix PASSED                                                     [ 94%]
+tests/test_confindr.py::test_invalid_xmx_float PASSED                                                          [ 97%]
+tests/test_confindr.py::test_invalid_xmx_not_an_integer PASSED                                                 [100%]
+
+============================================= 38 passed in 57.70 seconds =============================================
+</code></pre>
+<h2 id="running-confindr-using-included-core-gene-databases">Running ConFindr using included core-gene databases</h2>
+<p><strong>ConFindr has only been validated using rMLST databases. Please use them if possible (<code>--rmlst</code>, see instructions below).</strong></p>
+<p>In order to analyze samples using ConFindr with the pre-included core-gene databases for <em>Escherichia</em>, <em>Listeria</em>, and <em>Salmonella</em>, the parameters you need to provide are:</p>
 <ul>
 <li><code>-i, --input_directory</code>: The path to a directory containing the reads, in FASTQ format, that you want analyzed. If you're using the example dataset, you'll want to enter <code>example-data</code></li>
-<li><code>-o, --output_name</code>: The base name for your output. If you put <code>output</code> for this parameter, a folder called <code>output</code> will be created, and a file called <code>confindr_report.csv</code> with contamination
-information will be created in this folder</li>
+<li><code>-o, --output_name</code>: The base name for your output. If you put <code>output</code> for this parameter, a folder called <code>output</code> will be created, and a file called <code>confindr_report.csv</code> with contamination information will be created in this folder</li>
 </ul>
-<p>So, if the <code>example-data</code> folder were downloaded to your current working directory and you want to have an output folder called <code>output</code>, the command to run ConFindr would be:</p>
-<p><code>confindr.py -i example-data -o output</code></p>
+<p>If your files are paired-end reads that don't following the <code>_R1</code> for forward reads and <code>_R2</code> for reverse reads naming convention, then you'll need to specify the pattern to search for using <code>-fid</code> and <code>-rid</code>.
+So, if the <code>test_samples</code> folder were downloaded to your current working directory and you want to have an output folder called <code>output</code>, the command to run ConFindr would be:</p>
+<p><code>confindr -i test_samples -o output -fid _1 -rid _2</code></p>
 <p>You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified.
 If ConFindr is properly installed, you should see something similar to the following appear on your terminal:</p>
-<pre><code class="language-bash">  2019-04-02 15:06:04  Welcome to ConFindr 0.7.0! Beginning analysis of your samples... 
-  2019-04-02 15:06:04  Could not find Escherichia_db_cgderived.fasta 
-  2019-04-02 15:06:04  Could not find Listeria_db_cgderived.fasta 
-  2019-04-02 15:06:04  Could not find Salmonella_db_cgderived.fasta 
-  2019-04-02 15:06:04  Could not find refseq.msh 
-  2019-04-02 15:06:04  Databases not present - downloading basic databases now... 
-  2019-04-02 15:06:04  Downloading mash refseq sketch... 
-  2019-04-02 15:06:07  Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria... 
-  2019-04-02 15:06:12  Did not find rMLST databases, if you want to use ConFindr on genera other than Listeria, Salmonella, and Escherichia, you'll need to download them. Instructions are available at https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases
+<pre><code class="language-bash">$ confindr -i test_samples -o output -fid _1 -rid _2
+  2023-05-16 15:25:51  Welcome to ConFindr 0.8.1! Beginning analysis of your samples... 
+  2023-05-16 15:25:51  Could not find Escherichia_db_cgderived.fasta 
+  2023-05-16 15:25:51  Could not find Listeria_db_cgderived.fasta 
+  2023-05-16 15:25:51  Could not find Salmonella_db_cgderived.fasta 
+  2023-05-16 15:25:51  Could not find refseq.msh 
+  2023-05-16 15:25:51  Databases not present - downloading basic databases now... 
+  2023-05-16 15:25:51  Downloading mash refseq sketch... 
+  2023-05-16 15:25:53  Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria... 
+  2023-05-16 15:25:55  Since this is the first time you are using this database, it needs to be indexed by KMA. This might take a while 
+  2023-05-16 15:25:57  Since this is the first time you are using this database, it needs to be indexed by KMA. This might take a while 
+  2023-05-16 15:25:58  Since this is the first time you are using this database, it needs to be indexed by KMA. This might take a while 
+  2023-05-16 15:25:59  Did not find rMLST databases, if you want to use ConFindr on genera other than Listeria, Salmonella, and Escherichia, you'll need to download them. Instructions are available at https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases
 
-  2019-04-02 15:06:12  Beginning analysis of sample example... 
-  2019-04-02 15:06:12  Checking for cross-species contamination... 
-  2019-04-02 15:06:29  Extracting conserved core genes... 
-  2019-04-02 15:06:37  Quality trimming... 
-  2019-04-02 15:06:38  Detecting contamination... 
-  2019-04-02 15:07:05  Done! Number of contaminating SNVs found: 214
+  2023-05-16 15:25:59  Beginning analysis of sample SRX5084910_SRR8268082... 
+  2023-05-16 15:25:59  Checking for cross-species contamination... 
+  2023-05-16 15:26:00  Extracting conserved core genes... 
+  2023-05-16 15:26:01  Quality trimming... 
+  2023-05-16 15:26:01  Detecting contamination... 
+  2023-05-16 15:26:05  Done! Number of contaminating SNVs found: 208
 
-  2019-04-02 15:07:05  Contamination detection complete! 
+...
+
+  2023-05-16 15:26:51  Contamination detection complete! 
 </code></pre>
-<p>The run shouldn't take too long - depending on how powerful your machine is, it should be done in
-one to two minutes (slightly longer if an <em>Escherichia</em> specific database has not yet been set up).
-Once the run is done, you'll be able to inspect your results. Take a look at <code>output/confindr_report.csv</code>:
-The <code>ContamStatus</code> column should read <code>True</code>, and the <code>NumContamSNVs</code> column should have a value of something close to 200.</p>
+<p>The run shouldn't take too long—depending on how powerful your machine is, it should be done in one to two minutes.
+Once the run is complete, you'll be able to inspect your results. Take a look at <code>output/confindr_report.csv</code>:</p>
+<h3 id="running-confindr-using-rmlst-databases">Running ConFindr using rMLST databases</h3>
+<p>The rMLST databases must be downloaded and set up prior to use. You can find the instructions for this <a href="../install/#downloading-confindr-databases">here</a>.</p>
+<p>To analyze the test samples using ConFindr with the downloaded rMLST alleles databases, you need to provide an <code>--input_directory</code> and an  <code>--output_name</code>, as well as the <code>--rmlst</code> option on the command line. The command to analyze the test sample in this case would be:</p>
+<p><code>confindr -i test_samples -o output --rmlst -fid _1 -rid _2</code></p>
 <p>In any future uses of ConFindr, databases will not need to be re-downloaded.</p>
 <h2 id="interpreting-confindr-results">Interpreting ConFindr Results</h2>
 <p>The results file that ConFindr produces is in comma-separated value (CSV) format, which can be opened by any spreadsheet application (Excel, LibreOffice, etc.) or your favorite text editor.</p>
-<p>The file has the following headers: <code>Sample</code>, <code>Genus</code>, <code>NumContamSNVs</code>, <code>ContamStatus</code>, <code>PercentContam</code>, <code>PercentContamStandardDeviation</code>, and <code>BasesExamined</code>. Of these, ContamStatus is the most important - it will be <code>True</code> if a sample
+<p>The file has the following headers: <code>Sample</code>, <code>Genus</code>, <code>NumContamSNVs</code>, <code>ContamStatus</code>, and <code>BasesExamined</code>. Of these, <strong>ContamStatus is the most important</strong>—it will be <code>True</code> if a sample
 is contaminated, and <code>False</code> if a sample is not contaminated. Detailed descriptions of each header follow.</p>
 <ul>
 <li><code>Sample</code>: The name of the sample. ConFindr will take everything before the first underscore (_) character to be the name of the sample, as done with samples coming from an Illumina MiSeq.</li>
@@ -163,18 +229,12 @@ If multiple genera were found, they will all be listed here, separated by a <cod
 <li>There is cross contamination between genera.</li>
 </ul>
 </li>
-<li><code>PercentContam</code>: Based on the depth of the minor variant for sites with multiple bases, ConFindr guesses
-at what percent of your reads come from a contaminant. The more sequencing depth you have, the more accurate this will
-get. For lower levels of contamination (around 5 percent) this tends to get overestimated, but the number gets more accurate as
-contamination level increases, as well as sequencing depth.</li>
-<li><code>PercentContamStandardDeviation</code>: The standard deviation of the percentage contamination estimate. Very high values may
-indicate something strange is going on.</li>
 <li><code>BasesExamined</code>: The number of bases ConFindr examined when making the contamination call. Will usally be around 20kb for rMLST databases,
  and will vary when other databases are used.</li>
 <li><code>DatabaseDownloadDate</code>: Date that rMLST databases were downloaded, if you have them. As these are curated and updated regularly,
 it's a good idea to re-run <code>confindr_database_setup</code> every now and then.</li>
 </ul>
-<p>ConFindr will also produce two CSV files for each sample - one called <code>samplename_contamination.csv</code>, which shows the contaminating
+<p>ConFindr will also produce two CSV files for each sample: one called <code>samplename_contamination.csv</code>, which shows the contaminating
 sites, and one called <code>samplename_rmlst.csv</code>, which shows ConFindr's guess at which allele is present for each rMLST gene.</p>
 <h2 id="using-confindr-in-a-python-script">Using ConFindr in a Python Script</h2>
 <p>In the event you'd rather integrate ConFindr into a script than run from the command line, here's how:</p>
@@ -196,7 +256,7 @@ for pair in paired_reads:
 <p>As of ConFindr 0.4.4, ConFindr has the option to use a cgMLST scheme instead of an rMLST scheme for increased
 contamination detection sensitivity. This hasn't been tested extensively, but looks to be working. Runtime is
 increased by a factor of 2 or 3 compared to running against rMLST genes. </p>
-<p>To use this option, you'll need a a cgMLST FASTA file - all FASTA headers should be in format &gt;genename_allele</p>
+<p>To use this option, you'll need a a cgMLST FASTA file—all FASTA headers should be in format &gt;genename_allele</p>
 <p>In order to decrease computation time, clustering the cgMLST FASTA before running is recommended. CD-HIT on default
 parameters does this fairly well.</p>
 <p>cgMLST files that are already clustered are available for <em>Salmonella</em> and <em>Escherichia</em>. To get them:</p>
@@ -209,8 +269,8 @@ parameters does this fairly well.</p>
 <p>ConFindr has a few optional arguments that allow you to modify its other parameters. Optional arguments are:</p>
 <ul>
 <li><code>-t, --threads</code>: The number of threads to run ConFindr analysis with. The default is to use all threads available on your machine, and ConFindr scales very well with more threads, so it's recommended that this option be left at the default unless you need the computational resources for something else.</li>
-<li><code>-d</code>, --databases`: Path to ConFindr databases. These will be downloaded automatically if not present.</li>
-<li><code>-k</code>, --keep_files`: Set this flag to keep intermediate files. Useful if you want to do manual inspection of the BAM files
+<li><code>-d</code>, <code>--databases</code>: Path to ConFindr databases. These will be downloaded automatically if not present.</li>
+<li><code>-k</code>, <code>--keep_files</code>: Set this flag to keep intermediate files. Useful if you want to do manual inspection of the BAM files
 that ConFindr creates, which are deleted by default.</li>
 <li><code>-fid, --forward_id</code>: The identifier for forward reads in your input FASTQ folder. By default, this is <code>_R1</code>. If you follow a different naming scheme, this is the parameter to change.</li>
 <li><code>-rid, --reverse_id</code>: The identifier for reverse reads in your input FASTQ folder. By default, this is <code>_R2</code>. If you follow a different naming scheme, this is the parameter to change. </li>
@@ -218,93 +278,68 @@ that ConFindr creates, which are deleted by default.</li>
 <li><code>-verbosity, --verbosity</code>: How much you want printed to the screen. Choose <code>debug</code> to get some extra, or <code>warning</code> to
 get almost nothing. Default is <code>info</code>.</li>
 <li><code>-b</code>, <code>--base_cutoff</code>: The number of high-quality bases needed to call a site as multiallelic, and therefore 
-contributing to contamination. Defaults to 2, which is usually sensitive without producing false positives.
+contributing to contamination. Defaults to 3, which is usually sensitive without producing false positives.
 If dealing with high depth samples, adding the <code>-bf</code> parameter set to around <code>0.05</code> is likely to be helpful in reducing
 false positives.</li>
 <li><code>-bf</code>, <code>--base_fraction_cutoff</code>: The proportion of high-quality bases needed to call a site as multiallelic, and therefore 
 contributing to contamination. Must be between 0 and 1. Not used by default.</li>
+<li><code>-e</code>, <code>--error_cutoff</code>: Value to use for the calculated error cutoff when setting the <code>--base_cutoff</code> value. Default is 1.0%.</li>
 <li><code>-q</code>, <code>--quality_cutoff</code>: The phred score a base needs to have before it's considered
 trustworthy enough to contribute to a site being multiallelic. Defaults to 20, which should
 be suitable for most purposes. </li>
 <li><code>--rmlst</code>: By default, ConFindr will use custom core-gene derived datasets for <em>Escherichia</em>, <em>Listeria</em>, and <em>Salmonella</em>
 instead of rMLST. Activate this flag to force use of rMLST genes for all genera.</li>
-<li><code>--cross_details</code>: By default, when ConFindr finds cross-contaminated samples it stops analysis. Activate
-this flag to have analysis of number of cSNVs continue in order to get an estimate of percentage contamination.</li>
-</ul></div>
+<li><code>-tmp</code>, <code>--tmp</code>: If your ConFindr databases are in a location that you don't have write access to, you can enter this option to specify a temporary directory to save genus-specific databases to.</li>
+<li><code>-Xmx</code>, <code>--Xmx</code>: Very occasionally, parts of the pipeline that use the BBMap suite will have their memory reservation fail and request insufficient, or sometimes negative, memory. If this happens to you, you can use this flag to override automatic memory reservation and use an amount of memory requested by you. <code>-Xmx 20g</code> will specify 20 gigabytes of RAM, and <code>-Xmx 800m</code> will specify 800 megabytes.</li>
+<li><code>-cgmlst</code>, <code>--cgmlst</code>: Path to a cgMLST database to use for contamination detection instead of using the default rMLST database. Sequences in this file should have headers in format <code>&gt;genename_allelenumber</code>. To speed up ConFindr runs, clustering the cgMLST database with CD-HIT before running ConFindr is recommended. This is highly experimental, and results should be interpreted with great care.</li>
+<li><code>--fasta</code>: If activated, ConFindr will look for FASTA files instead of FASTQ for unpaired reads.</li>
+<li><code>-m</code>, <code>--min_matching_hashes</code>: Minimum number of matching hashes in a MASH screen in order for a genus to be considered present in a sample. Default is 150.</li>
+</ul>
+              
             </div>
-        </div>
-
-        <footer class="col-md-12">
-            <hr>
-            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
-        </footer>
-        <script>
-            var base_url = "..",
-                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
-        </script>
-        <script src="../js/base.js" defer></script>
-        <script src="../search/main.js" defer></script>
-
-        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            </div>
-            <div class="modal-body">
-                <p>From here you can search these documents. Enter your search terms below.</p>
-                <form>
-                    <div class="form-group">
-                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
-                    </div>
-                </form>
-                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
-            </div>
-            <div class="modal-footer">
-            </div>
-        </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../install/" class="btn btn-neutral float-left" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
     </div>
-</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            </div>
-            <div class="modal-body">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th style="width: 20%;">Keys</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td class="help shortcut"><kbd>?</kbd></td>
-                    <td>Open this help</td>
-                  </tr>
-                  <tr>
-                    <td class="next shortcut"><kbd>n</kbd></td>
-                    <td>Next page</td>
-                  </tr>
-                  <tr>
-                    <td class="prev shortcut"><kbd>p</kbd></td>
-                    <td>Previous page</td>
-                  </tr>
-                  <tr>
-                    <td class="search shortcut"><kbd>s</kbd></td>
-                    <td>Search</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="modal-footer">
-            </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
         </div>
-    </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/OLC-Bioinformatics/ConFindr" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../install/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
 </div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
 
-    </body>
+</body>
 </html>

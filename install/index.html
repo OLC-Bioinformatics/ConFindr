@@ -1,108 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-        
-        <link rel="canonical" href="https://olc-bioinformatics.github.io/ConFindr/install/">
-        <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Installation - ConFindr</title>
-        <link href="../css/bootstrap.min.css" rel="stylesheet">
-        <link href="../css/font-awesome.min.css" rel="stylesheet">
-        <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/docco.min.css">
-
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script> 
-    </head>
-
-    <body>
-        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
-                <a class="navbar-brand" href="..">ConFindr</a>
-                <!-- Expander button -->
-                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <!-- Expanded navigation -->
-                <div id="navbar-collapse" class="navbar-collapse collapse">
-                        <!-- Main navigation -->
-                        <ul class="nav navbar-nav">
-                            <li class="navitem">
-                                <a href=".." class="nav-link">Home</a>
-                            </li>
-                            <li class="navitem active">
-                                <a href="./" class="nav-link">Installation</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="../usage/" class="nav-link">Usage</a>
-                            </li>
-                        </ul>
-
-                    <ul class="nav navbar-nav ml-auto">
-                        <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
-                                <i class="fa fa-search"></i> Search
-                            </a>
-                        </li>
-                            <li class="nav-item">
-                                <a rel="prev" href=".." class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="../usage/" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="https://github.com/OLC-Bioinformatics/Confindr/edit/master/docs/install.md" class="nav-link"><i class="fa fa-github"></i> Edit on GitHub</a>
-                            </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
-    <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
-            <span class="fa fa-angle-down"></span>
-        </button>
-    </div>
-
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://olc-bioinformatics.github.io/ConFindr/install/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Installation - ConFindr</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
-        <ul class="nav flex-column">
-            
-            <li class="nav-item" data-level="1"><a href="#system-requirements" class="nav-link">System Requirements</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#downloading-confindr-databases" class="nav-link">Downloading ConFindr Databases</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#installing-using-conda-recommended" class="nav-link">Installing Using Conda (Recommended)</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#manual-install" class="nav-link">Manual Install</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-              </ul>
-            </li>
-        </ul>
-    </div>
-</div></div>
-                    <div class="col-md-9" role="main">
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Installation";
+        var mkdocs_page_input_path = "install.md";
+        var mkdocs_page_url = "/ConFindr/install/";
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
 
-<h1 id="system-requirements">System Requirements</h1>
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> ConFindr
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Installation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#system-requirements">System Requirements</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#downloading-confindr-databases">Downloading ConFindr Databases</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#installing-using-conda-recommended">Installing Using Conda (Recommended)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#manual-installation">Manual Installation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#executable">Executable</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../usage/">Usage</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">ConFindr</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>Installation</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/OLC-Bioinformatics/ConFindr/edit/master/docs/install.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="installation">Installation</h1>
+<h2 id="system-requirements">System Requirements</h2>
 <p>ConFindr has been tested with Debian-based Linux systems, 
 but should in principle work on any flavour of Linux, as well as MacOSX. 
 Windows isn't supported, but it may very well be installable via bioconda. If you have any success running
@@ -118,13 +109,13 @@ than the ones listed above. These databases are available free for academic use,
 hoops before you can get access to them due to an associated <a href="https://pubmlst.org/rmlst/rMLST_licence.pdf">licence agreement</a>.
 Non-academic use will require a commercial licence.</p>
 <p>Here are the steps to getting databases downloaded:</p>
-<ul>
+<ol>
 <li>
 <p>Register for a PubMLST account if you do not already have one. Link to register is <a href="https://pubmlst.org/bigsdb">here</a>. 
 Click on <code>Register for a site-wide account.</code></p>
 </li>
 <li>
-<p>Login to your account at <a href="https://pubmlst.org/bigsdb">https://pubmlst.org/bigsdb</a> and request access to 
+<p>Log in to your account at <a href="https://pubmlst.org/bigsdb">https://pubmlst.org/bigsdb</a> and request access to 
 Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under <code>Registrations</code>. Additionally, email Keith Jolley
 (keith.jolley@zoo.ox.ac.uk) and request a consumer key and consumer secret so that you'll be able
 to access the database programatically.</p>
@@ -134,11 +125,11 @@ to access the database programatically.</p>
 with the key on the first line and the secret on the second. It should look something like the below
 snippet:</p>
 </li>
-</ul>
+</ol>
 <pre><code>efKXmqp2D0EBlMBkZaGC2lPf
 F$M+fQ2AFFB2YBDfF9fpHF^qSWJdmmN%L4Fxf5Gur3
 </code></pre>
-<ul>
+<ol>
 <li>
 <p>Install ConFindr as shown in the next section.</p>
 </li>
@@ -149,107 +140,93 @@ key and secret, and a <code>-o</code> to specify where you want the sequences do
 directory is not specified, ConFindr will first search for an environmental variable called <code>CONFINDR_DB</code>, and if it can't
 find that it will automatically download to a folder called <code>.confindr_db</code> in your home directory.</p>
 </li>
-</ul>
+</ol>
 <h2 id="installing-using-conda-recommended">Installing Using Conda (Recommended)</h2>
-<p>ConFindr is available within bioconda - to get bioconda installed and running see instructions <a href="https://bioconda.github.io/">here</a>.</p>
-<p>With bioconda running, you can install ConFindr with the following command:</p>
-<p><code>conda install -c bioconda confindr</code></p>
-<p>With that done, typing <code>confindr.py</code> will bring access the ConFindr pipeline. See the <a href="../usage/">Usage</a> section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.</p>
-<h2 id="manual-install">Manual Install</h2>
-<h4 id="executable">Executable</h4>
-<p>ConFindr can also be installed using pip. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:</p>
-<ul>
-<li>Create an empty directory (i.e. <code>mkdir ~/Virtual_Environments/ConFindr</code>)</li>
-<li>Virtualenv that directory (<code>virtualenv -p /usr/bin/python3 ~/Virtual_Environments/ConFindr</code>)</li>
-<li>Activate the virtualenv (<code>source ~/Virtual_Environments/ConFindr/bin/activate</code>)</li>
-<li>Install ConFindr - this should also install any packages that ConFindr depends on (<code>pip install confindr</code>)</li>
-</ul>
+<ol>
+<li>
+<p>Follow the instructions <a href="https://bioconda.github.io/">here</a> to add the Bioconda channel to your list of conda channels, if it hasn't already been added.</p>
+</li>
+<li>
+<p>Install ConFindr into a new conda environment named 'confindr':</p>
+</li>
+</ol>
+<p><code>conda create -n confindr -c bioconda confindr=0.8.1</code></p>
+<ol>
+<li>Activate the new conda environment:</li>
+</ol>
+<p><code>conda activate confindr</code></p>
+<p>Typing <code>confindr -h</code> into the command-line will show the help menu for the program. See the <a href="../usage/">Usage</a> section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.</p>
+<h2 id="manual-installation">Manual Installation</h2>
+<h3 id="executable">Executable</h3>
+<p>ConFindr can also be installed using <code>pip</code>. Use of a virtual environment for ConFindr is highly recommended. To create a virtualenv:</p>
+<ol>
+<li>Create an empty directory (i.e. <code>mkdir ~/Virtual_Environments/ConFindr</code>).</li>
+<li>Virtualenv that directory (<code>virtualenv -p /usr/bin/python3 ~/Virtual_Environments/ConFindr</code>).</li>
+<li>Activate the virtualenv (<code>source ~/Virtual_Environments/ConFindr/bin/activate</code>).</li>
+<li>Install ConFindr—this should also install any packages that ConFindr depends upon (<code>pip install confindr</code>).</li>
+</ol>
 <p>With this done, you'll need to make sure that any necessary dependencies are installed.</p>
-<h4 id="dependencies">Dependencies</h4>
-<p>Before using ConFindr, you'll need to download and add the following programs to your $PATH:</p>
+<h3 id="dependencies">Dependencies</h3>
+<p>Before using ConFindr when installed using <code>pip</code>, you'll need to download and add the following programs to your $PATH:</p>
 <ul>
-<li><a href="https://jgi.doe.gov/data-and-tools/bbtools/">BBTools (&gt;=37.23)</a></li>
-<li><a href="https://github.com/marbl/Mash/releases">Mash (&gt;=2.0)</a></li>
-<li><a href="https://bitbucket.org/genomicepidemiology/kma">KMA (&gt;=1.2.0)</a></li>
-<li><a href="https://www.python.org/downloads/">Python (&gt;=3.5)</a></li>
+<li><a href="https://jgi.doe.gov/data-and-tools/bbtools/">BBMap (&gt;=39.01)</a></li>
+<li><a href="https://github.com/marbl/Mash/releases">Mash (&gt;=2.3)</a></li>
+<li><a href="https://bitbucket.org/genomicepidemiology/kma">KMA (&gt;=1.4.9)</a></li>
+<li><a href="https://www.python.org/downloads/">Python (&gt;=3.9.15)</a></li>
+<li><a href="https://github.com/samtools/samtools">SAMtools (&gt;=1.17)</a></li>
+<li><a href="https://pypi.org/project/pysam/">pysam (&gt;=0.21.0)</a></li>
 </ul>
-<p>If you want to run in Nanopore mode, you'll also need to get <a href="https://github.com/lh3/minimap2">minimap2</a>.</p>
+<p>If you want to run ConFindr in Nanopore mode (<code>-dt Nanopore</code>), you'll also need to install <a href="https://github.com/lh3/minimap2">minimap2</a>.</p>
 <p>Instructions on adding programs to your $PATH can be found <a href="https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix">here</a>.</p>
-<p>If ConFindr can't find these dependencies when you try to run it, you will see an error message and the program will quit.</p></div>
+<p>If ConFindr can't find these dependencies when you try to run it, you will see an error message and the program will quit.</p>
+              
             </div>
-        </div>
-
-        <footer class="col-md-12">
-            <hr>
-            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
-        </footer>
-        <script>
-            var base_url = "..",
-                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
-        </script>
-        <script src="../js/base.js" defer></script>
-        <script src="../search/main.js" defer></script>
-
-        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            </div>
-            <div class="modal-body">
-                <p>From here you can search these documents. Enter your search terms below.</p>
-                <form>
-                    <div class="form-group">
-                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
-                    </div>
-                </form>
-                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
-            </div>
-            <div class="modal-footer">
-            </div>
-        </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../usage/" class="btn btn-neutral float-right" title="Usage">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
-</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            </div>
-            <div class="modal-body">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th style="width: 20%;">Keys</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td class="help shortcut"><kbd>?</kbd></td>
-                    <td>Open this help</td>
-                  </tr>
-                  <tr>
-                    <td class="next shortcut"><kbd>n</kbd></td>
-                    <td>Next page</td>
-                  </tr>
-                  <tr>
-                    <td class="prev shortcut"><kbd>p</kbd></td>
-                    <td>Previous page</td>
-                  </tr>
-                  <tr>
-                    <td class="search shortcut"><kbd>s</kbd></td>
-                    <td>Search</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="modal-footer">
-            </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
         </div>
-    </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/OLC-Bioinformatics/ConFindr" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../usage/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
 </div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
 
-    </body>
+</body>
 </html>
