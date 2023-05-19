@@ -104,6 +104,7 @@ The dataset may take a few minutes to download depending on your internet connec
 <p>If you wish to download the dataset to analyze it yourself using <code>confindr.py</code>, you can run the following command to download and extract the files within your current working directory:</p>
 <pre><code class="language-bash">wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz &amp;&amp; \
   tar -xzvf test_samples.tar.gz &amp;&amp; \
+  mv test_samples/ tests/ &amp;&amp; \
   rm test_samples.tar.gz
 </code></pre>
 <p>ConFindr can also be tested with <a href="https://docs.pytest.org/en/7.3.x/">pytest</a> automated testing.
