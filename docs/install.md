@@ -1,4 +1,6 @@
-# System Requirements
+# Installation
+
+## System Requirements
 
 ConFindr has been tested with Debian-based Linux systems, 
 but should in principle work on any flavour of Linux, as well as MacOSX. 

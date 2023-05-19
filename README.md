@@ -1,6 +1,7 @@
-[![Build status](https://travis-ci.org/OLC-Bioinformatics/ConFindr.svg?master)](https://travis-ci.org/OLC-Bioinformatics)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/OLC-Bioinformatics/ConFindr/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/OLC-Bioinformatics/ConFindr/tree/main)
 [![PyPI version](https://badge.fury.io/py/confindr.svg)](https://badge.fury.io/py/confindr)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/confindr/README.html)
+
 
 # ConFindr
 

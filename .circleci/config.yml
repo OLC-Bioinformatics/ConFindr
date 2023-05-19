@@ -1,0 +1,46 @@
+version: 2.1
+
+# orbs:
+#   python: circleci/python@1.5.0
+
+jobs:
+  confindr:
+    docker:
+      - image: ubuntu:22.04
+    steps:
+      - checkout
+      - run:
+          name: Setup Environment and Run Tests
+          command: |
+            apt update
+            apt install -y wget coreutils curl gnupg
+            wget -O Mambaforge.sh  "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
+            bash Mambaforge.sh -b -p "${HOME}/conda"
+            source "${HOME}/conda/etc/profile.d/conda.sh"
+            source "${HOME}/conda/etc/profile.d/mamba.sh"
+            conda config --add channels bioconda
+            conda config --set always_yes yes --set changeps1 no
+            conda activate
+            mamba create -n confindr -c olcbioinformatics python=3.9.15
+            source activate confindr
+            mamba install \
+              "bbmap>=38" \
+              "mash>=2.0" \
+              "kma>=1.2.0" \
+              "samtools>=1.6" \
+              "pysam>=0.15" \
+              "biopython=1.81" \
+              "pytest"
+            pip install -e .
+            wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
+              tar -xzvf test_samples.tar.gz && \
+              mv test_samples/ tests/ && \
+              rm test_samples.tar.gz
+            python -m pytest tests/ -vvv
+workflows:
+    build_and_test:
+      jobs:
+        - confindr:
+            filters:
+              branches:
+                ignore: gh-pages
