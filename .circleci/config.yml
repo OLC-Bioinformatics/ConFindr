@@ -34,6 +34,7 @@ jobs:
             pip install -e .
             wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
               tar -xzvf test_samples.tar.gz && \
+              mv test_samples/ tests/ && \
               rm test_samples.tar.gz
             python -m pytest tests/ -vvv
 workflows:
