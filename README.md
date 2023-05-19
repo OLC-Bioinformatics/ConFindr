@@ -12,7 +12,8 @@ For **complete instructions on installation and usage**, please visit [the ConFi
 
 ## Important Note
 
-ConFindr has only been validated using rMLST databases. **Please use them if possible** (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
+- The ConFindr v0.8.1 Bioconda package is currently unavailable due to an issue with Azure (see https://github.com/bioconda/bioconda-recipes/issues/41025 for updates). Please refer to the manual installation instructions in the mean time, if you wish to install v0.8.1.
+- ConFindr has only been validated using rMLST databases. **Please use them if possible** (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
 
 ## Quickstart
 
