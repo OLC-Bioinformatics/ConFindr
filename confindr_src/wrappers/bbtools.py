@@ -83,7 +83,7 @@ def bbduk_trim(forward_in, forward_out, reverse_in='NA', reverse_out='NA', retur
             else:
                 raise ValueError('If you do not specify reverse_out, forward_out must contain R1.\n\n')
         cmd = 'bbduk.sh in1={f_in} in2={r_in} out1={f_out} out2={r_out} qtrim=w trimq=20 k=25 minlength=50 ' \
-              'forcetrimleft=15 ref=adapters overwrite hdist=1 tpe tbo{optn}'\
+              'forcetrimleft=15 ref=adapters overwrite hdist=1 qin=33 tpe tbo{optn}'\
             .format(f_in=forward_in,
                     r_in=reverse_in,
                     f_out=forward_out,
@@ -91,7 +91,7 @@ def bbduk_trim(forward_in, forward_out, reverse_in='NA', reverse_out='NA', retur
                     optn=options)
     elif reverse_in == 'NA':
         cmd = 'bbduk.sh in={f_in} out={f_out} qtrim=w trimq=20 k=25 minlength=50 forcetrimleft=15' \
-              ' ref=adapters overwrite hdist=1 tpe tbo{optn}'\
+              ' ref=adapters overwrite hdist=1 qin=33 tpe tbo{optn}'\
             .format(f_in=forward_in,
                     f_out=forward_out,
                     optn=options)
@@ -99,7 +99,7 @@ def bbduk_trim(forward_in, forward_out, reverse_in='NA', reverse_out='NA', retur
         if reverse_out == 'NA':
             raise ValueError('Reverse output reads must be specified.')
         cmd = 'bbduk.sh in1={f_in} in2={r_in} out1={f_out} out2={r_out} qtrim=w trimq=20 k=25 minlength=50 ' \
-              'forcetrimleft=15 ref=adapters overwrite hdist=1 tpe tbo{optn}'\
+              'forcetrimleft=15 ref=adapters overwrite hdist=1 qin=33 tpe tbo{optn}'\
             .format(f_in=forward_in,
                     r_in=reverse_in,
                     f_out=forward_out,
@@ -244,15 +244,15 @@ def bbduk_bait(reference, forward_in, forward_out, returncmd=False, reverse_in='
                 reverse_out = forward_out.replace('_R1', '_R2')
             else:
                 raise ValueError('If you do not specify reverse_out, forward_out must contain _R1.\n\n')
-        cmd = 'bbduk.sh in={} in2={} outm={} outm2={} ref={}{}'.format(forward_in, reverse_in,
+        cmd = 'bbduk.sh qin=33 in={} in2={} outm={} outm2={} ref={}{}'.format(forward_in, reverse_in,
                                                                        forward_out, reverse_out,
                                                                        reference, options)
     elif reverse_in == 'NA':
-        cmd = 'bbduk.sh in={} outm={} ref={}{}'.format(forward_in, forward_out, reference, options)
+        cmd = 'bbduk.sh qin=33 in={} outm={} ref={}{}'.format(forward_in, forward_out, reference, options)
     else:
         if reverse_out == 'NA':
             raise ValueError('Reverse output reads must be specified.')
-        cmd = 'bbduk.sh in={} in2={} outm={} outm2={} ref={}{}'.format(forward_in, reverse_in,
+        cmd = 'bbduk.sh qin=33 in={} in2={} outm={} outm2={} ref={}{}'.format(forward_in, reverse_in,
                                                                        forward_out, reverse_out,
                                                                        reference, options)
     out, err = run_subprocess(cmd)
@@ -282,15 +282,15 @@ def bbduk_filter(reference, forward_in, forward_out, returncmd=False, reverse_in
                 reverse_out = forward_out.replace('_R1', '_R2')
             else:
                 raise ValueError('If you do not specify reverse_out, forward_out must contain _R1.\n\n')
-        cmd = 'bbduk.sh in={} in2={} out={} out2={} ref={}{}'.format(forward_in, reverse_in,
+        cmd = 'bbduk.sh qin=33 in={} in2={} out={} out2={} ref={}{}'.format(forward_in, reverse_in,
                                                                      forward_out, reverse_out,
                                                                      reference, options)
     elif reverse_in == 'NA':
-        cmd = 'bbduk.sh in={} out={} ref={}{}'.format(forward_in, forward_out, reference, options)
+        cmd = 'bbduk.sh qin=33 in={} out={} ref={}{}'.format(forward_in, forward_out, reference, options)
     else:
         if reverse_out == 'NA':
             raise ValueError('Reverse output reads must be specified.')
-        cmd = 'bbduk.sh in={} in2={} out={} out2={} ref={}{}'.format(forward_in, reverse_in,
+        cmd = 'bbduk.sh qin=33 in={} in2={} out={} out2={} ref={}{}'.format(forward_in, reverse_in,
                                                                      forward_out, reverse_out,
                                                                      reference, options)
     out, err = run_subprocess(cmd)

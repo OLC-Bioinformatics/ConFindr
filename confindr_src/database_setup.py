@@ -1,21 +1,16 @@
 #!/usr/bin/env python
-
+from confindr_src.methods import download_cgmlst_derived_data, download_mash_sketch, index
 from rauth import OAuth1Session
 from Bio import SeqIO
 import argparse
 import datetime
 import logging
-import urllib.request
-import tarfile
 import shutil
 import glob
+import ssl
 import csv
 import re
 import os
-
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
-
 
 class RmlstRest(object):
 
@@ -25,7 +20,10 @@ class RmlstRest(object):
                                         access_token=self.access_token,
                                         access_token_secret=self.access_secret)
         url = self.test_rest_url + '/oauth/get_session_token'
-        r = session_request.get(url, verify=False)
+        if self.unverified:
+            r = session_request.get(url, verify=False)
+        else:
+            r = session_request.get(url)
         if r.status_code == 200:
             self.session_token = r.json()['oauth_token']
             self.session_secret = r.json()['oauth_token_secret']
@@ -39,7 +37,10 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.test_rest_url, verify=False)
+        if self.unverified:
+            r = session.get(self.test_rest_url, verify=False)
+        else:
+            r = session.get(self.test_rest_url)
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
@@ -58,7 +59,10 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.loci, verify=False)
+        if self.unverified:
+            r = session.get(self.loci, verify=False)
+        else:
+            r = session.get(self.loci)
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
@@ -69,7 +73,10 @@ class RmlstRest(object):
                 output_file = os.path.join(self.output_folder, '{}.tfa'.format(os.path.split(locus_url)[1]))
                 logging.info('Downloading {}...'.format(os.path.split(locus_url)[1]))
                 with open(output_file, 'w') as f:
-                    download = session.get(locus_url + '/alleles_fasta', verify=False)
+                    if self.unverified:
+                        download = session.get(locus_url + '/alleles_fasta', verify=False)
+                    else:
+                        download = session.get(locus_url + '/alleles_fasta')
                     if download.status_code == 200 or download.status_code == 201:
                         if re.search('json', download.headers['content-type'], flags=0):
                             decoded = download.json()
@@ -89,7 +96,10 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.profile + '/1/profiles_csv', verify=False)
+        if self.unverified:
+            r = session.get(self.profile + '/1/profiles_csv', verify=False)
+        else:
+            r = session.get(self.profile + '/1/profiles_csv')
         logging.info('Downloading rMLST profiles...')
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
@@ -120,28 +130,35 @@ class RmlstRest(object):
                                         access_token=self.request_token,
                                         access_token_secret=self.request_secret)
         # Perform a GET request with the appropriate keys and tokens
-        r = session_request.get(self.access_token_url, verify=False,
-                                params={
-                                    'oauth_verifier': verifier
-                                })
+        if self.unverified:
+            r = session_request.get(self.access_token_url, verify=False,
+                                    params={
+                                        'oauth_verifier': verifier
+                                    })
+        else:
+            r = session_request.get(self.access_token_url,
+                                    params={
+                                        'oauth_verifier': verifier
+                                    })
         # If the status code is '200' (OK), proceed
         if r.status_code == 200:
             # Save the JSON-decoded token secret and token
             self.access_token = r.json()['oauth_token']
             self.access_secret = r.json()['oauth_token_secret']
 
-    def __init__(self, consumer_secret_file, output_folder):
+    def __init__(self, consumer_secret_file, output_folder, unverified=False):
         self.test_rest_url = 'http://rest.pubmlst.org/db/pubmlst_rmlst_seqdef'
         self.test_web_url = 'http://pubmlst.org/cgi-bin/bigsdb/bigsdb.pl?db=pubmlst_rmlst_seqdef'
         self.request_token_url = self.test_rest_url + '/oauth/get_request_token'
         self.access_token_url = self.test_rest_url + '/oauth/get_access_token'
         self.authorize_url = self.test_web_url + '&page=authorizeClient'
         self.output_folder = output_folder
+        self.unverified = unverified
          
         # Get the consumer secret set up.
         if not os.path.isfile(consumer_secret_file):
-            logging.error('ERROR: Could not find consumer secret file. Please make sure the file you specified ({}) exists '
-                          'and try again.'.format(consumer_secret_file))
+            logging.error('ERROR: Could not find consumer secret file. Please make sure the file you specified '
+                          '({}) exists and try again.'.format(consumer_secret_file))
             quit(code=1)
         with open(consumer_secret_file) as f:
             lines = f.readlines()
@@ -165,10 +182,15 @@ class RmlstRest(object):
 
 def create_gene_allele_file(profiles_file, gene_allele_file):
     genus_allele_info = dict()
+    genera = set()
     with open(profiles_file) as tsvfile:
         reader = csv.DictReader(tsvfile, delimiter='\t')
         for row in reader:
             genus = row['genus']
+            # If the genus is uncertain e.g. Escherichia/Shigella, split on the /, and use Escherichia as the genus
+            if '/' in genus:
+                genus = genus.split('/')[0]
+            genera.add(genus)
             if genus not in genus_allele_info:
                 genus_allele_info[genus] = list()
             for i in range(1, 66):
@@ -187,14 +209,13 @@ def create_gene_allele_file(profiles_file, gene_allele_file):
             for allele in genus_allele_info[genus]:
                 f.write(str(allele) + ',')
             f.write('\n')
+    return genera
 
 
-def setup_confindr_database(output_folder, consumer_secret):
-    # Remove previous output folder if it existed.
-
+def setup_confindr_database(output_folder, consumer_secret, index_databases=False, unverified=False):
     # Go through the REST API in order to get profiles downloaded.
     rmlst_rest = RmlstRest(consumer_secret_file=consumer_secret,
-                           output_folder=output_folder)
+                           output_folder=output_folder, unverified=unverified)
     rmlst_rest.get_request_token()
     rmlst_rest.get_access_token()
     rmlst_rest.get_session_token()
@@ -213,6 +234,13 @@ def setup_confindr_database(output_folder, consumer_secret):
                     record.seq._data = record.seq._data.replace('-', '').replace('N', '')
                 except TypeError:
                     record.seq._data = record.seq._data.replace(b'-', b'').replace(b'N', b'')
+
+                # If the entire FASTA sequence is encoded in byte-like
+                # formatting (b' at the beginning and ' at the end of the 
+                # sequence), fix:
+                if record.seq._data[0:2] == "b'" and record.seq._data[-1] == "'":
+                    record.seq._data = record.seq._data.replace("b'", "").replace("'", "")
+                
                 record.name = ''
                 record.description = ''
                 SeqIO.write(record, f, 'fasta')
@@ -225,25 +253,12 @@ def setup_confindr_database(output_folder, consumer_secret):
 
     logging.info('Assigning alleles to genera...')
     # Parse profiles so that we know what alleles are found with each genus.
-    create_gene_allele_file(profiles_file=os.path.join(output_folder, 'profiles.txt'),
-                            gene_allele_file=os.path.join(output_folder, 'gene_allele.txt'))
-    
-    
-def download_mash_sketch(output_folder):
-    logging.info('Downloading mash refseq sketch...')
-    urllib.request.urlretrieve('https://github.com/OLC-Bioinformatics/ConFindr/raw/master/refseq_sketch/refseq.msh',
-                               os.path.join(output_folder, 'refseq.msh'))
-
-
-def download_cgmlst_derived_data(output_folder):
-    logging.info('Downloading cgMLST-derived data for Escherichia, Salmonella, and Listeria...')
-    urllib.request.urlretrieve('https://ndownloader.figshare.com/files/14771267',
-                               os.path.join(output_folder, 'confindr_db.tar.gz'))
-    confindr_tar = os.path.join(output_folder, 'confindr_db.tar.gz')
-    tar = tarfile.open(confindr_tar)
-    tar.extractall(path=output_folder)
-    tar.close()
-    os.remove(confindr_tar)
+    genera = create_gene_allele_file(profiles_file=os.path.join(output_folder, 'profiles.txt'),
+                                     gene_allele_file=os.path.join(output_folder, 'gene_allele.txt'))
+    if index_databases:
+        index(output_folder=output_folder,
+              genera=sorted(list(genera)),
+              cgderived=False)
 
 
 def main():
@@ -253,17 +268,28 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output_folder',
                         default=os.environ.get('CONFINDR_DB', os.path.expanduser('~/.confindr_db')),
-                        help='Path to download databases to - if folder does not exist, will be created. If folder does '
-                             'exist, will be deleted and updated sequences downloaded. Defaults to ~/.confindr_db, or '
+                        help='Path to download databases to - if folder does not exist, will be created. If folder does'
+                             ' exist, will be deleted and updated sequences downloaded. Defaults to ~/.confindr_db, or '
                              'the CONFINDR_DB environmental variable.')
     parser.add_argument('-s', '--secret_file',
                         type=str,
                         help='Path to consumer secret file for rMLST database.')
+    parser.add_argument('-i', '--index_databases',
+                        action='store_true',
+                        help='Enable this option if you are installing the databases to a drive that will be read-only '
+                             'after the installation. The script will create and index all the necessary genus-specific'
+                             ' database files. Note that this is very slow for the rMLST database.')
+    parser.add_argument('-u', '--unverified',
+                        action='store_true',
+                        help="Enable this option if you plan on running ConFindr behind a firewall and/or have a self- "
+                        "signed certificate. Adds 'verify=False' during session requests.")
     args = parser.parse_args()
     if os.path.isdir(args.output_folder):
         logging.info('Removing old databases...')
         shutil.rmtree(args.output_folder)
     os.makedirs(args.output_folder)
+    if args.unverified:
+        ssl._create_default_https_context = ssl._create_unverified_context
     download_cgmlst_derived_data(args.output_folder)
     if args.secret_file is None:
         logging.warning('WARNING: Without an rMLST secret file, data will only be downloaded for Escherichia, '
@@ -272,8 +298,10 @@ def main():
                         'instructions on how to get access to rMLST databases so ConFindr can be used for other species'
                         ' as well')
     else:
-        setup_confindr_database(args.output_folder,
-                                args.secret_file)
+        setup_confindr_database(output_folder=args.output_folder,
+                                consumer_secret=args.secret_file,
+                                index_databases=args.index_databases,
+                                unverified=args.unverified)
     download_mash_sketch(args.output_folder)
     current_year = datetime.datetime.utcnow().year
     current_month = datetime.datetime.utcnow().month
