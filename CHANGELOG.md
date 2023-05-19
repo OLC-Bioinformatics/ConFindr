@@ -8,6 +8,7 @@ This is a major release.
 
 - Integrated congruency of SNVs within paired-end reads into contamination calculations (a1744a4).
 - Base cutoff values are now dynamically calculated based upon gene-specific quality score, length, and depth of coverage, with a starting cutoff of 3 which can be changed using `--base_cutoff` (880445d, 84b7d91, c06d438).
+- Option to download rMLST databases using `-u/--unverified` within the `confindr_database_setup` command, for downloading databases behind a firewall and/or have a self-signed certificate.
 
 ### Changed
 
