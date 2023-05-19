@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.1 - 2023-05-17
+## 0.8.1 - 2023-05-19
 
 This is a major release.
 
