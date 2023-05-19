@@ -1,3 +1,5 @@
+# Usage
+
 ## Example Dataset
 
 An [example dataset](https://figshare.com/articles/dataset/Minimal_dataset_for_ConFindr_testing_using_pytest/22852937) has been uploaded to FigShare for testing ConFindr.
@@ -11,6 +13,7 @@ If you wish to download the dataset to analyze it yourself using `confindr.py`, 
 ```bash
 wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
   tar -xzvf test_samples.tar.gz && \
+  mv test_samples/ tests/ && \
   rm test_samples.tar.gz
 ```
 
