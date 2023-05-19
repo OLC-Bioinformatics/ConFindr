@@ -7,10 +7,10 @@ import datetime
 import logging
 import shutil
 import glob
+import ssl
 import csv
 import re
 import os
-
 
 class RmlstRest(object):
 
@@ -20,7 +20,10 @@ class RmlstRest(object):
                                         access_token=self.access_token,
                                         access_token_secret=self.access_secret)
         url = self.test_rest_url + '/oauth/get_session_token'
-        r = session_request.get(url)
+        if self.unverified:
+            r = session_request.get(url, verify=False)
+        else:
+            r = session_request.get(url)
         if r.status_code == 200:
             self.session_token = r.json()['oauth_token']
             self.session_secret = r.json()['oauth_token_secret']
@@ -34,7 +37,10 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.test_rest_url)
+        if self.unverified:
+            r = session.get(self.test_rest_url, verify=False)
+        else:
+            r = session.get(self.test_rest_url)
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
@@ -53,7 +59,10 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.loci)
+        if self.unverified:
+            r = session.get(self.loci, verify=False)
+        else:
+            r = session.get(self.loci)
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
@@ -64,7 +73,10 @@ class RmlstRest(object):
                 output_file = os.path.join(self.output_folder, '{}.tfa'.format(os.path.split(locus_url)[1]))
                 logging.info('Downloading {}...'.format(os.path.split(locus_url)[1]))
                 with open(output_file, 'w') as f:
-                    download = session.get(locus_url + '/alleles_fasta')
+                    if self.unverified:
+                        download = session.get(locus_url + '/alleles_fasta', verify=False)
+                    else:
+                        download = session.get(locus_url + '/alleles_fasta')
                     if download.status_code == 200 or download.status_code == 201:
                         if re.search('json', download.headers['content-type'], flags=0):
                             decoded = download.json()
@@ -84,7 +96,10 @@ class RmlstRest(object):
                                 self.consumer_secret,
                                 access_token=self.session_token,
                                 access_token_secret=self.session_secret)
-        r = session.get(self.profile + '/1/profiles_csv')
+        if self.unverified:
+            r = session.get(self.profile + '/1/profiles_csv', verify=False)
+        else:
+            r = session.get(self.profile + '/1/profiles_csv')
         logging.info('Downloading rMLST profiles...')
         if r.status_code == 200 or r.status_code == 201:
             if re.search('json', r.headers['content-type'], flags=0):
@@ -115,23 +130,30 @@ class RmlstRest(object):
                                         access_token=self.request_token,
                                         access_token_secret=self.request_secret)
         # Perform a GET request with the appropriate keys and tokens
-        r = session_request.get(self.access_token_url,
-                                params={
-                                    'oauth_verifier': verifier
-                                })
+        if self.unverified:
+            r = session_request.get(self.access_token_url, verify=False,
+                                    params={
+                                        'oauth_verifier': verifier
+                                    })
+        else:
+            r = session_request.get(self.access_token_url,
+                                    params={
+                                        'oauth_verifier': verifier
+                                    })
         # If the status code is '200' (OK), proceed
         if r.status_code == 200:
             # Save the JSON-decoded token secret and token
             self.access_token = r.json()['oauth_token']
             self.access_secret = r.json()['oauth_token_secret']
 
-    def __init__(self, consumer_secret_file, output_folder):
+    def __init__(self, consumer_secret_file, output_folder, unverified=False):
         self.test_rest_url = 'http://rest.pubmlst.org/db/pubmlst_rmlst_seqdef'
         self.test_web_url = 'http://pubmlst.org/cgi-bin/bigsdb/bigsdb.pl?db=pubmlst_rmlst_seqdef'
         self.request_token_url = self.test_rest_url + '/oauth/get_request_token'
         self.access_token_url = self.test_rest_url + '/oauth/get_access_token'
         self.authorize_url = self.test_web_url + '&page=authorizeClient'
         self.output_folder = output_folder
+        self.unverified = unverified
          
         # Get the consumer secret set up.
         if not os.path.isfile(consumer_secret_file):
@@ -190,10 +212,10 @@ def create_gene_allele_file(profiles_file, gene_allele_file):
     return genera
 
 
-def setup_confindr_database(output_folder, consumer_secret, index_databases=False):
+def setup_confindr_database(output_folder, consumer_secret, index_databases=False, unverified=False):
     # Go through the REST API in order to get profiles downloaded.
     rmlst_rest = RmlstRest(consumer_secret_file=consumer_secret,
-                           output_folder=output_folder)
+                           output_folder=output_folder, unverified=unverified)
     rmlst_rest.get_request_token()
     rmlst_rest.get_access_token()
     rmlst_rest.get_session_token()
@@ -257,11 +279,17 @@ def main():
                         help='Enable this option if you are installing the databases to a drive that will be read-only '
                              'after the installation. The script will create and index all the necessary genus-specific'
                              ' database files. Note that this is very slow for the rMLST database.')
+    parser.add_argument('-u', '--unverified',
+                        action='store_true',
+                        help="Enable this option if you plan on running ConFindr behind a firewall and/or have a self- "
+                        "signed certificate. Adds 'verify=False' during session requests.")
     args = parser.parse_args()
     if os.path.isdir(args.output_folder):
         logging.info('Removing old databases...')
         shutil.rmtree(args.output_folder)
     os.makedirs(args.output_folder)
+    if args.unverified:
+        ssl._create_default_https_context = ssl._create_unverified_context
     download_cgmlst_derived_data(args.output_folder)
     if args.secret_file is None:
         logging.warning('WARNING: Without an rMLST secret file, data will only be downloaded for Escherichia, '
@@ -272,7 +300,8 @@ def main():
     else:
         setup_confindr_database(output_folder=args.output_folder,
                                 consumer_secret=args.secret_file,
-                                index_databases=args.index_databases)
+                                index_databases=args.index_databases,
+                                unverified=args.unverified)
     download_mash_sketch(args.output_folder)
     current_year = datetime.datetime.utcnow().year
     current_month = datetime.datetime.utcnow().month
