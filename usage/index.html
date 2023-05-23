@@ -103,19 +103,16 @@ The metadata for these samples can be downloaded from <a href="https://figshare.
 The dataset may take a few minutes to download depending on your internet connection speed.</p>
 <p>If you wish to download the dataset to analyze it yourself using <code>confindr.py</code>, you can run the following command to download and extract the files within your current working directory:</p>
 <pre><code class="language-bash">wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz &amp;&amp; \
-  tar -xzvf test_samples.tar.gz &amp;&amp; \
-  mv test_samples/ tests/ &amp;&amp; \
-  rm test_samples.tar.gz
+    tar -xzvf test_samples.tar.gz &amp;&amp; \
+    rm test_samples.tar.gz
 </code></pre>
 <p>ConFindr can also be tested with <a href="https://docs.pytest.org/en/7.3.x/">pytest</a> automated testing.
 This is the recommended testing strategy for those who wish to contribute to ConFindr on GitHub.
 We recommend installing ConFindr within a virtual environment using Conda (see instructions <a href="../install/#installing-using-conda-recommended">here</a>), cloning the ConFindr GitHub repository, and then installing ConFindr in development mode using the following commands:</p>
-<pre><code class="language-bash"># Activate your ConFindr conda env
-conda activate confindr
+<pre><code class="language-bash">conda activate confindr
 git clone https://github.com/OLC-Bioinformatics/ConFindr
 cd ConFindr/
 pip install -e .
-# Download the test dataset and extract the contents to tests/
 wget https://figshare.com/ndownloader/files/40598330 -O tests/test_samples.tar.gz &amp;&amp; \
   tar -xzvf tests/test_samples.tar.gz -C tests/ &amp;&amp; \
   rm tests/test_samples.tar.gz
@@ -123,6 +120,7 @@ wget https://figshare.com/ndownloader/files/40598330 -O tests/test_samples.tar.g
 <p>To run the automated tests with pytest:</p>
 <pre><code class="language-bash">conda activate confindr
 cd ConFindr/
+python -m pytest tests/ -vvv
 </code></pre>
 <p>You should see output similar to below if all tests have passed:</p>
 <pre><code>================================================ test session starts =================================================
