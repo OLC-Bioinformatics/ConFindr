@@ -12,9 +12,8 @@ If you wish to download the dataset to analyze it yourself using `confindr.py`, 
 
 ```bash
 wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
-  tar -xzvf test_samples.tar.gz && \
-  mv test_samples/ tests/ && \
-  rm test_samples.tar.gz
+    tar -xzvf test_samples.tar.gz && \
+    rm test_samples.tar.gz
 ```
 
 ConFindr can also be tested with [pytest](https://docs.pytest.org/en/7.3.x/) automated testing.
@@ -22,12 +21,10 @@ This is the recommended testing strategy for those who wish to contribute to Con
 We recommend installing ConFindr within a virtual environment using Conda (see instructions [here](install.md#installing-using-conda-recommended)), cloning the ConFindr GitHub repository, and then installing ConFindr in development mode using the following commands:
 
 ```bash
-# Activate your ConFindr conda env
 conda activate confindr
 git clone https://github.com/OLC-Bioinformatics/ConFindr
 cd ConFindr/
 pip install -e .
-# Download the test dataset and extract the contents to tests/
 wget https://figshare.com/ndownloader/files/40598330 -O tests/test_samples.tar.gz && \
   tar -xzvf tests/test_samples.tar.gz -C tests/ && \
   rm tests/test_samples.tar.gz
@@ -38,6 +35,7 @@ To run the automated tests with pytest:
 ```bash
 conda activate confindr
 cd ConFindr/
+python -m pytest tests/ -vvv
 ```
 
 You should see output similar to below if all tests have passed:

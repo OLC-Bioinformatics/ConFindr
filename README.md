@@ -12,8 +12,7 @@ For **complete instructions on installation and usage**, please visit [the ConFi
 
 ## Important Note
 
-- The ConFindr v0.8.1 Bioconda package is currently unavailable due to an issue with Azure (see https://github.com/bioconda/bioconda-recipes/issues/41025 for updates). Please refer to the manual installation instructions in the mean time, if you wish to install v0.8.1.
-- ConFindr has only been validated using rMLST databases. **Please use them if possible** (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
+ConFindr has only been validated using rMLST databases. **Please use them if possible** (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
 
 ## Quickstart
 
@@ -35,21 +34,25 @@ Instructions for downloading and setting up the rMLST databases can be found [he
 
 ### Testing ConFindr
 
-1. To obtain an example dataset, run the following command, which will create a folder named `example-data` in your current working directory: 
+1. To obtain an example dataset, run the following command, which will create a folder named `test_samples` in your current working directory: 
 
-`wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
+```bash
+wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
+    tar -xzvf test_samples.tar.gz && \
+    rm test_samples.tar.gz
+```
 
 2. As of version `0.7.0` ConFindr can be run automatically on _Escherichia_, _Salmonella_, and _Listeria_ with no further 
 work on your part, using core-gene databases (*experimental*). Simply run:
 
-`confindr -i example-data -o example-out`
+`confindr -i test_samples -o test_out`
 
 3. To use the *recommended* rMLST database (after installation):
 
-`confindr -i example-data -o example-out --rmlst`
+`confindr -i test_samples -o test_out --rmlst`
 
-Once ConFindr finishes running, take a look at the `confindr_report.csv` file found in `example-out`—it shows that multiple
-alleles were found for many sites within the genes that ConFindr examines, meaning that this sample is quite contaminated!
+The results for this analysis can be found within `test_out/confindr_report.csv`.
+More extensive tests can be performed by following the instructions [here](https://olc-bioinformatics.github.io/ConFindr/usage/#example-dataset).
 
 If you want to run ConFindr on genera other than the 3 listed above, you'll need to get access to and download the rMLST databases by following the instructions [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
 
