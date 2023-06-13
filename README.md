@@ -37,7 +37,7 @@ Instructions for downloading and setting up the rMLST databases can be found [he
 1. To obtain an example dataset, run the following command, which will create a folder named `test_samples` in your current working directory: 
 
 ```bash
-wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
+wget https://figshare.com/ndownloader/files/41228403 -O test_samples.tar.gz && \
     tar -xzvf test_samples.tar.gz && \
     rm test_samples.tar.gz
 ```

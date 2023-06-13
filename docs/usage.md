@@ -11,7 +11,7 @@ The dataset may take a few minutes to download depending on your internet connec
 If you wish to download the dataset to analyze it yourself using `confindr.py`, you can run the following command to download and extract the files within your current working directory:
 
 ```bash
-wget https://figshare.com/ndownloader/files/40598330 -O test_samples.tar.gz && \
+wget https://figshare.com/ndownloader/files/41228403 -O test_samples.tar.gz && \
     tar -xzvf test_samples.tar.gz && \
     rm test_samples.tar.gz
 ```
@@ -25,7 +25,7 @@ conda activate confindr
 git clone https://github.com/OLC-Bioinformatics/ConFindr
 cd ConFindr/
 pip install -e .
-wget https://figshare.com/ndownloader/files/40598330 -O tests/test_samples.tar.gz && \
+wget https://figshare.com/ndownloader/files/41228403 -O tests/test_samples.tar.gz && \
   tar -xzvf tests/test_samples.tar.gz -C tests/ && \
   rm tests/test_samples.tar.gz
 ```
@@ -98,16 +98,15 @@ In order to analyze samples using ConFindr with the pre-included core-gene datab
 - `-i, --input_directory`: The path to a directory containing the reads, in FASTQ format, that you want analyzed. If you're using the example dataset, you'll want to enter `example-data`
 - `-o, --output_name`: The base name for your output. If you put `output` for this parameter, a folder called `output` will be created, and a file called `confindr_report.csv` with contamination information will be created in this folder
 
-If your files are paired-end reads that don't following the `_R1` for forward reads and `_R2` for reverse reads naming convention, then you'll need to specify the pattern to search for using `-fid` and `-rid`.
 So, if the `test_samples` folder were downloaded to your current working directory and you want to have an output folder called `output`, the command to run ConFindr would be:
 
-`confindr -i test_samples -o output -fid _1 -rid _2`
+`confindr -i test_samples -o output`
 
 You can use absolute or relative paths, and trailing slashes are also acceptable for the directories specified.
 If ConFindr is properly installed, you should see something similar to the following appear on your terminal:
 
 ```bash
-$ confindr -i test_samples -o output -fid _1 -rid _2
+$ confindr -i test_samples -o output
   2023-05-16 15:25:51  Welcome to ConFindr 0.8.1! Beginning analysis of your samples... 
   2023-05-16 15:25:51  Could not find Escherichia_db_cgderived.fasta 
   2023-05-16 15:25:51  Could not find Listeria_db_cgderived.fasta 
@@ -134,7 +133,10 @@ $ confindr -i test_samples -o output -fid _1 -rid _2
 ```
 
 The run shouldn't take too long—depending on how powerful your machine is, it should be done in one to two minutes.
-Once the run is complete, you'll be able to inspect your results. Take a look at `output/confindr_report.csv`:
+Once the run is complete, you'll be able to inspect your results.
+Take a look at `output/confindr_report.csv`.
+
+If your files are paired-end reads that don't following the `_R1` for forward reads and `_R2` for reverse reads naming convention, then you'll need to specify the pattern to search for using `-fid` and `-rid`.
 
 ### Running ConFindr using rMLST databases
 
@@ -142,7 +144,7 @@ The rMLST databases must be downloaded and set up prior to use. You can find the
 
 To analyze the test samples using ConFindr with the downloaded rMLST alleles databases, you need to provide an `--input_directory` and an  `--output_name`, as well as the `--rmlst` option on the command line. The command to analyze the test sample in this case would be:
 
-`confindr -i test_samples -o output --rmlst -fid _1 -rid _2`
+`confindr -i test_samples -o output --rmlst`
 
 In any future uses of ConFindr, databases will not need to be re-downloaded.
 

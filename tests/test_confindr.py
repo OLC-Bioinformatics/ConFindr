@@ -28,7 +28,7 @@ def test_integration():
                       'SRX5084940_SRR8268052': 'Listeria',
                       'SRX5084941_SRR8268051': 'Listeria',
                       'SRX5084995_SRR8267997': 'Salmonella:Citrobacter'}
-    subprocess.call("confindr.py -i tests/test_samples -o confindr_integration_output -d databases -k -fid '_1' -rid '_2'",
+    subprocess.call("confindr.py -i tests/test_samples -o confindr_integration_output -d databases -k",
                      shell=True)
     with open('confindr_integration_output/confindr_report.csv') as csvfile:
         reader = csv.DictReader(csvfile)
