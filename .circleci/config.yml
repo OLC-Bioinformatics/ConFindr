@@ -21,17 +21,8 @@ jobs:
             conda config --add channels bioconda
             conda config --set always_yes yes --set changeps1 no
             conda activate
-            mamba create -n confindr -c olcbioinformatics python=3.9.15
+            mamba create -n confindr bioconda::confindr=0.8.1
             source activate confindr
-            mamba install \
-              "bbmap>=38" \
-              "mash>=2.0" \
-              "kma>=1.2.0" \
-              "samtools>=1.6" \
-              "pysam>=0.15" \
-              "biopython=1.81" \
-              "pytest"
-            pip install -e .
             wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
               tar -xzvf test_samples.tar.gz && \
               mv test_samples/ tests/ && \
