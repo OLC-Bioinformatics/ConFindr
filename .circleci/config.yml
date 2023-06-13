@@ -32,7 +32,7 @@ jobs:
               "biopython=1.81" \
               "pytest"
             pip install -e .
-            wget https://figshare.com/ndownloader/files/41228403 -O test_samples.tar.gz && \
+            wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
               tar -xzvf test_samples.tar.gz && \
               mv test_samples/ tests/ && \
               rm test_samples.tar.gz

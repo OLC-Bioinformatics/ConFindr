@@ -11,7 +11,7 @@ The dataset may take a few minutes to download depending on your internet connec
 If you wish to download the dataset to analyze it yourself using `confindr.py`, you can run the following command to download and extract the files within your current working directory:
 
 ```bash
-wget https://figshare.com/ndownloader/files/41228403 -O test_samples.tar.gz && \
+wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
     tar -xzvf test_samples.tar.gz && \
     rm test_samples.tar.gz
 ```
@@ -25,7 +25,7 @@ conda activate confindr
 git clone https://github.com/OLC-Bioinformatics/ConFindr
 cd ConFindr/
 pip install -e .
-wget https://figshare.com/ndownloader/files/41228403 -O tests/test_samples.tar.gz && \
+wget https://figshare.com/ndownloader/files/41228577 -O tests/test_samples.tar.gz && \
   tar -xzvf tests/test_samples.tar.gz -C tests/ && \
   rm tests/test_samples.tar.gz
 ```
