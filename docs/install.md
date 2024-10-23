@@ -25,9 +25,9 @@ Here are the steps to getting databases downloaded:
 Click on `Register for a site-wide account.`
 
 - Login to your account at [https://pubmlst.org/bigsdb](https://pubmlst.org/bigsdb) and request access to 
-Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under `Registrations`. Additionally, email Keith Jolley
-(keith.jolley@zoo.ox.ac.uk) and request a consumer key and consumer secret so that you'll be able
-to access the database programatically.
+Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under `Registrations`. Additionally, create a
+PubMLST API key on the same page. The generated consumer key and consumer secret will enable you to access the
+database programatically.
 
 - Once you've gotten your consumer key and consumer secret from Keith, put them into a text file
 with the key on the first line and the secret on the second. It should look something like the below
