@@ -669,10 +669,10 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
                 snv_dict['total_reverse'] += count
     # Initialise a dictionary to store the summary of characterised base types
     passing_snv_dict = {
-        'congruent': dict(),
-        'forward': dict(),
-        'reverse': dict(),
-        'paired': dict()
+        'congruent': {'A': 0, 'C': 0, 'G': 0, 'T': 0},
+        'forward': {'A': 0, 'C': 0, 'G': 0, 'T': 0},
+        'reverse': {'A': 0, 'C': 0, 'G': 0, 'T': 0},
+        'paired': {'A': 0, 'C': 0, 'G': 0, 'T': 0}
     }
     # Boolean of whether there are bases passing filter, and the passing_snv_dict should be used
     return_dict = False
