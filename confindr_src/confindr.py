@@ -118,7 +118,8 @@ def confindr(args):
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
     if args.keep_files is False and args.tmp is not None:
-        shutil.rmtree(args.tmp)
+        if os.path.isdir(args.tmp):
+            shutil.rmtree(args.tmp)
     logging.info('Contamination detection complete!')
 
 
