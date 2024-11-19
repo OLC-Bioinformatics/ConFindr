@@ -28,9 +28,17 @@ def test_integration():
                       'SRX5084940_SRR8268052': 'Listeria',
                       'SRX5084941_SRR8268051': 'Listeria',
                       'SRX5084995_SRR8267997': 'Salmonella:Citrobacter'}
-    subprocess.call("confindr.py -i tests/test_samples -o confindr_integration_output -d databases -k -Xmx 6g",
-                     shell=True)
-    with open('confindr_integration_output/confindr_report.csv') as csvfile:
+    
+    cmd = [
+        "confindr.py",
+        "-i", "tests/test_samples",
+        "-o", "confindr_integration_output_1",
+        "-d", "databases",
+        "-k",
+        "-Xmx", "6g"
+    ]
+    subprocess.call(" ".join(cmd), shell=True)
+    with open('confindr_integration_output_1/confindr_report.csv') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             sample = row['Sample']
@@ -41,7 +49,7 @@ def test_integration():
                 assert row['ContamStatus'] == correct_contamination_calls[sample]
                 genera = row['Genus'].split(':')
                 assert 'Salmonella' in genera and 'Escherichia' in genera and 'Listeria' in genera
-    shutil.rmtree('confindr_integration_output')
+    shutil.rmtree('confindr_integration_output_1')
     shutil.rmtree('databases')
 
 #-------------------
