@@ -147,8 +147,8 @@ class RmlstRest(object):
             self.access_secret = r.json()['oauth_token_secret']
 
     def __init__(self, consumer_secret_file, output_folder, unverified=False):
-        self.test_rest_url = 'http://rest.pubmlst.org/db/pubmlst_rmlst_seqdef'
-        self.test_web_url = 'http://pubmlst.org/cgi-bin/bigsdb/bigsdb.pl?db=pubmlst_rmlst_seqdef'
+        self.test_rest_url = 'https://rest.pubmlst.org/db/pubmlst_rmlst_seqdef'
+        self.test_web_url = 'https://pubmlst.org/cgi-bin/bigsdb/bigsdb.pl?db=pubmlst_rmlst_seqdef'
         self.request_token_url = self.test_rest_url + '/oauth/get_request_token'
         self.access_token_url = self.test_rest_url + '/oauth/get_access_token'
         self.authorize_url = self.test_web_url + '&page=authorizeClient'
