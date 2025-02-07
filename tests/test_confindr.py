@@ -1,4 +1,5 @@
 from confindr_src.methods import *
+from Bio import SeqIO
 import subprocess
 import pytest
 import shutil
@@ -63,9 +64,9 @@ def test_present_dependency():
 def test_nonexistent_dependency():
     assert dependency_check('fake_dependency') is False
 
-#-------------------------------
-# Test file pattern recognition
-#-------------------------------
+#------------------------------------
+# Test filename pattern recognition
+#------------------------------------
 
 def test_r1_fastqs():
     assert find_paired_reads('tests/fake_fastqs/') == [['tests/fake_fastqs/test_R1.fastq.gz',
@@ -247,3 +248,176 @@ def test_invalid_xmx_float():
 
 def test_invalid_xmx_not_an_integer():
     assert check_acceptable_xmx('asdfK') is False
+
+#---------------------------
+# Test FASTQ header parsing
+#---------------------------
+# FASTQ headers can be in different formats, e.g. Casava 1.8, deposited in SRA,
+# pre-Casava, etc., and may also be split across multiple lines.
+# A Pytest fixture is defined first, and then the unit tests for each different
+# FASTQ header format afterwards.
+
+# TODO: Make this fixture more representative of what's actually happening in
+# characterise_read() in the future.
+# Right now, this is the best we can do without actually calling
+# characterise_read(), which currently requires a pileup file to have been 
+# generated.
+@pytest.fixture
+def test_parse_fastq_header(request):
+    """
+    Fixture to compare the FASTQ headers obtained from two different methods:
+    `load_fastq_records` and `SeqIO.parse`. It ensures that the headers are 
+    parsed consistently by both methods.
+
+    :param request: A pytest request object that provides access to the parameters 
+    passed to the fixture.
+    :return: A tuple containing four lists:
+        - r1_load_fastq_names: Sorted list of FASTQ header names from `load_fastq_records` for forward reads.
+        - r2_load_fastq_names: Sorted list of FASTQ header names from `load_fastq_records` for reverse reads.
+        - r1_characterise_read_names: Sorted list of FASTQ header names from `SeqIO.parse` for forward reads.
+        - r2_characterise_read_names: Sorted list of FASTQ header names from `SeqIO.parse` for reverse reads.
+    """
+    r1_path, r2_path = request.param
+    # Obtain the parts of the FASTQ headers from load_fastq_records()
+    r1_load_fastq = load_fastq_records(
+        gz = r1_path,
+        paired = True,
+        forward = True
+    )
+    r2_load_fastq = load_fastq_records(
+        gz = r2_path,
+        paired = True,
+        forward = False
+    )
+    r1_load_fastq_names = sorted(list(r1_load_fastq.keys()))
+    r2_load_fastq_names = sorted(list(r2_load_fastq.keys()))
+    # Obtain the parts of the FASTQ headers from characterise_read()
+    r1_characterise_read = SeqIO.to_dict(
+        SeqIO.parse(
+            r1_path, 'fastq'
+        )
+    )
+    r2_characterise_read = SeqIO.to_dict(
+        SeqIO.parse(
+            r2_path, 'fastq'
+        )
+    )
+    r1_characterise_read_names = list()
+    r2_characterise_read_names = list()
+    # Similar logic as in characterise_read() to extract the read names
+    for record in r1_characterise_read.values():
+        if record.description.split(' ')[0].endswith('/1'):
+            r1_characterise_read_names.append(record.description.split(' ')[0])
+        else:
+            r1_characterise_read_names.append(record.description.split(' ')[0] + '/1')
+    for record in r2_characterise_read.values():
+        if record.description.split(' ')[0].endswith('/2'):
+            r2_characterise_read_names.append(record.description.split(' ')[0])
+        else:
+            r2_characterise_read_names.append(record.description.split(' ')[0] + '/2')    
+    r1_characterise_read_names = sorted(r1_characterise_read_names)
+    r2_characterise_read_names = sorted(r2_characterise_read_names)
+
+    return r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names
+
+# Miseq Casava
+@pytest.mark.parametrize('test_parse_fastq_header', [
+    (
+        'tests/real_fastqs/miseq_casava_R1.fastq',
+        'tests/real_fastqs/miseq_casava_R2.fastq'
+    )
+], indirect=True)
+def test_parse_fastq_header_miseq_casava(test_parse_fastq_header):
+    """
+    Test that the headers are parsed correctly for the MiSeq Casava-formatted
+    FASTQ files
+    """
+    r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names = test_parse_fastq_header
+    assert r1_load_fastq_names == r1_characterise_read_names
+    assert r2_load_fastq_names == r2_characterise_read_names
+    assert [name.split('/1')[0] for name in r1_load_fastq_names] == [name.split('/2')[0] for name in r2_load_fastq_names]
+
+# Miseq Casava SRA
+@pytest.mark.parametrize('test_parse_fastq_header', [
+    (
+        'tests/real_fastqs/miseq_casava_sra_R1.fastq',
+        'tests/real_fastqs/miseq_casava_sra_R2.fastq'
+    )
+], indirect=True)
+def test_parse_fastq_header_miseq_casava_sra(test_parse_fastq_header):
+    """
+    Test that the headers are parsed correctly for the SRA version of the MiSeq
+    Casava-formatted FASTQ files
+    """
+    r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names = test_parse_fastq_header
+    assert r1_load_fastq_names == r1_characterise_read_names
+    assert r2_load_fastq_names == r2_characterise_read_names
+    assert [name.split('/1')[0] for name in r1_load_fastq_names] == [name.split('/2')[0] for name in r2_load_fastq_names]
+
+# Miseq Casava multilane
+@pytest.mark.parametrize('test_parse_fastq_header', [
+    (
+        'tests/real_fastqs/miseq_casava_multilane_R1.fastq',
+        'tests/real_fastqs/miseq_casava_multilane_R2.fastq'
+    )
+], indirect=True)
+def test_parse_fastq_header_miseq_casava_multilane(test_parse_fastq_header):
+    """
+    Test that the headers are parsed correctly for the multilane version of the
+    MiSeq Casava-formatted FASTQ files
+    """
+    r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names = test_parse_fastq_header
+    assert r1_load_fastq_names == r1_characterise_read_names
+    assert r2_load_fastq_names == r2_characterise_read_names
+    assert [name.split('/1')[0] for name in r1_load_fastq_names] == [name.split('/2')[0] for name in r2_load_fastq_names]
+
+# Hiseq pre-Casava
+@pytest.mark.parametrize('test_parse_fastq_header', [
+    (
+        'tests/real_fastqs/hiseq_precasava_R1.fastq',
+        'tests/real_fastqs/hiseq_precasava_R2.fastq'
+    )
+], indirect=True)
+def test_parse_fastq_header_hiseq_precasava(test_parse_fastq_header):
+    """
+    Test that the headers are parsed correctly for the HiSeq pre-Casava-
+    formatted FASTQ files
+    """
+    r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names = test_parse_fastq_header
+    assert r1_load_fastq_names == r1_characterise_read_names
+    assert r2_load_fastq_names == r2_characterise_read_names
+    assert [name.split('/1')[0] for name in r1_load_fastq_names] == [name.split('/2')[0] for name in r2_load_fastq_names]
+
+# Hiseq pre-Casava SRA
+@pytest.mark.parametrize('test_parse_fastq_header', [
+    (
+        'tests/real_fastqs/hiseq_precasava_sra_R1.fastq',
+        'tests/real_fastqs/hiseq_precasava_sra_R2.fastq'
+    )
+], indirect=True)
+def test_parse_fastq_header_hiseq_precasava_sra(test_parse_fastq_header):
+    """
+    Test that the headers are parsed correctly for the SRA version of the HiSeq
+    pre-Casava-formatted FASTQ files
+    """
+    r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names = test_parse_fastq_header
+    assert r1_load_fastq_names == r1_characterise_read_names
+    assert r2_load_fastq_names == r2_characterise_read_names
+    assert [name.split('/1')[0] for name in r1_load_fastq_names] == [name.split('/2')[0] for name in r2_load_fastq_names]
+
+# Hiseq pre-Casava multilane
+@pytest.mark.parametrize('test_parse_fastq_header', [
+    (
+        'tests/real_fastqs/hiseq_precasava_multilane_R1.fastq',
+        'tests/real_fastqs/hiseq_precasava_multilane_R2.fastq'
+    )
+], indirect=True)
+def test_parse_fastq_header_hiseq_precasava_multilane(test_parse_fastq_header):
+    """
+    Test that the headers are parsed correctly for the multilane version of the
+    HiSeq pre-Casava-formatted FASTQ files
+    """
+    r1_load_fastq_names, r2_load_fastq_names, r1_characterise_read_names, r2_characterise_read_names = test_parse_fastq_header
+    assert r1_load_fastq_names == r1_characterise_read_names
+    assert r2_load_fastq_names == r2_characterise_read_names
+    assert [name.split('/1')[0] for name in r1_load_fastq_names] == [name.split('/2')[0] for name in r2_load_fastq_names]
