@@ -356,8 +356,16 @@ fasta=False, nanopore=False):
             # Read names in the pileup have the direction removed - add it back for future parsing. Not an issue for
             # FASTA files
             if not fasta and not nanopore:
-                read_name = read.alignment.qname.split(' ')[0] + '/1' if read.alignment.is_read1 else \
-                    read.alignment.qname.split(' ')[0] + '/2'
+                if read.alignment.is_read1:
+                    if read.alignment.qname.split(' ')[0].endswith('/1'):
+                        read_name = read.alignment.qname.split(' ')[0]
+                    else:
+                        read_name = read.alignment.qname.split(' ')[0] + '/1'
+                else:
+                    if read.alignment.qname.split(' ')[0].endswith('/2'):
+                        read_name = read.alignment.qname.split(' ')[0]
+                    else:
+                        read_name = read.alignment.qname.split(' ')[0] + '/2'
             else:
                 read_name = read.alignment.qname
             # Extract the phred quality score from the FASTQ records
@@ -987,22 +995,12 @@ def load_fastq_records(gz, paired, forward):
         # Only update the naming scheme for paired reads
         if paired:
             if forward:
-                # Change a :1: to /1 in the record.id
-                if ':1:' in record.id:
-                    record.id = record.id + '/1'
                 # Don't worry if the record.id already has a /1
-                elif '/1' in record.id:
-                    pass
-                # If the record.id doesn't have a read direction, add /1
-                else:
+                if not record.id.endswith('/1'):
                     record.id = record.id + '/1'
             # Process reverse reads in a similar fashion to forward reads
             else:
-                if ':2:' in record.id:
-                    record.id = record.id + '/2'
-                elif '/2' in record.id:
-                    pass
-                else:
+                if not record.id.endswith('/2'):
                     record.id = record.id + '/2'
         else:
             pass
