@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.8.2 - 2025-02-07
+
+This is a minor release. The most important changes include updates to URL schemes, improvements in handling temporary directories, and enhancements in read name processing.
+
+### Added
+
+- Added checks to ensure temporary directories exist before attempting to remove them in `confindr_src/confindr.py` (#65).
+- Initialized dictionaries for summarizing base types with specific keys in `confindr_src/methods.py` to prevent key errors (#65).
+- Added Pytest unit tests and test FASTQ files for ensuring proper parsing of paired-end Illumina FASTQ headers (#70).
+
+### Changed
+
+- Improved logic for using temporary directories during database creation in `confindr_src/methods.py` (#65). Fixes #57.
+- Updated the installation guide to reflect changes in the PubMLST API key generation process in `docs/install.md` (#62, #71).
+- Corrected the URL for the example dataset in `docs/usage.md` to point to the latest version.
+
+### Fixed
+
+- Updated URLs from HTTP to HTTPS in the `__init__` method of `confindr_src/database_setup.py` to ensure secure connections and allow for successful downloads of databases (#69). Fixes #67.
+- Improved addition of read direction suffixes to read names in `confindr_src/methods.py` to handle cases where the suffix already exists (#70). Fixes #63 and resolves #54.
+
 ## 0.8.1 - 2023-05-19
 
 This is a major release.
