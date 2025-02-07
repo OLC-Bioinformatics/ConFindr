@@ -2,7 +2,7 @@
 
 ## Example Dataset
 
-An [example dataset](https://figshare.com/articles/dataset/Minimal_dataset_for_ConFindr_testing_using_pytest/22852937) has been uploaded to FigShare for testing ConFindr.
+An [example dataset](https://figshare.com/articles/dataset/Minimal_dataset_for_ConFindr_testing_using_pytest/22852937/3) has been uploaded to FigShare for testing ConFindr.
 This example dataset contains FASTQ reads from contaminated and uncontaminated genomes of _Escherichia coli_ O121:H19, _Salmonella enterica_ Heidelberg, and _Listeria monocytogenes_.
 These reads were obtained by selecting samples from the originally published dataset that was used to test ConFindr's performance, and then downsampled by different factors to obtain a more minimal dataset.
 The metadata for these samples can be downloaded from [here](https://figshare.com/ndownloader/files/40599716), with additional metadata available in the Supplemental Information of the [original ConFindr publication](https://peerj.com/articles/6995).

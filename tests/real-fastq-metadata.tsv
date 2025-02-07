@@ -1,0 +1,355 @@
+name	attribute	value
+hiseq_precasava_sra	cmd	seqkit sample --threads 12 --rand-seed 123 -p 0.01 SRR3712208_1.fastq.gz | head -n 128 > real_fastqs/hiseq_precasava_sra_R1.fastq && seqkit sample --threads 12 --rand-seed 123 -p 0.01 SRR3712208_2.fastq.gz | head -n 128 > real_fastqs/hiseq_precasava_sra_R2.fastq
+hiseq_precasava_sra	cmd_explanation	Downsample the original files to 1% using a set random seed to keep the same mate pairs in both forward and reverse read files, and keep the first 32 records (128 lines) in each file.
+hiseq_precasava_sra	run_accession	SRR3712208
+hiseq_precasava_sra	experiment_title	Illumina HiSeq 2500 sequencing: WGS of Salmonella enterica subsp. enterica serovar Heidelberg: SH14-028
+hiseq_precasava_sra	sample_accession	SAMN04334672
+hiseq_precasava_sra	project_name	Salmonella enterica subsp. enterica
+hiseq_precasava_sra	submission_accession	SRA435197
+hiseq_precasava_sra	library_selection	RANDOM
+hiseq_precasava_sra	last_updated	2016-06-29
+hiseq_precasava_sra	sra_bytes	1403674973
+hiseq_precasava_sra	collected_by	ministe_re de l'Agriculture des Pe_cheries et de l'Alimentation du Que_bec
+hiseq_precasava_sra	fastq_bytes	924442764;904135507
+hiseq_precasava_sra	instrument_platform	ILLUMINA
+hiseq_precasava_sra	sra_aspera	fasp.sra.ebi.ac.uk:/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava_sra	fastq_galaxy	ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava_sra	country	Canada: Quebec
+hiseq_precasava_sra	ncbi_reporting_standard	Pathogen.env
+hiseq_precasava_sra	sample_description	Pathogen: environmental/food/other sample from Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava_sra	sra_galaxy	ftp.sra.ebi.ac.uk/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava_sra	fastq_md5	15241a7924bf93d85be4c91e87eb0b08;572521e4fa129d9d28a86d4ac4d2c64d
+hiseq_precasava_sra	secondary_study_accession	SRP067504
+hiseq_precasava_sra	read_count	11628012
+hiseq_precasava_sra	study_title	Salmonella serovar Heidelberg genome sequencing
+hiseq_precasava_sra	collection_date_end	2014-08-31
+hiseq_precasava_sra	sample_title	Pathogen: environmental/food/other sample from Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava_sra	instrument_model	Illumina HiSeq 2500
+hiseq_precasava_sra	description	Illumina HiSeq 2500 sequencing: WGS of Salmonella enterica subsp. enterica serovar Heidelberg: SH14-028
+hiseq_precasava_sra	sra_md5	87b34ae3c49f7d03477c46bc00ca3184
+hiseq_precasava_sra	fastq_ftp	ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava_sra	base_count	2348858424
+hiseq_precasava_sra	library_strategy	WGS
+hiseq_precasava_sra	serovar	Heidelberg
+hiseq_precasava_sra	library_source	GENOMIC
+hiseq_precasava_sra	sra_ftp	ftp.sra.ebi.ac.uk/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava_sra	library_layout	PAIRED
+hiseq_precasava_sra	datahub	dcc_compare
+hiseq_precasava_sra	status	public
+hiseq_precasava_sra	fastq_aspera	fasp.sra.ebi.ac.uk:/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava_sra	tax_lineage	1;131567;2;3379134;1224;1236;91347;543;590;28901;59201;611
+hiseq_precasava_sra	sample_alias	SH14-028
+hiseq_precasava_sra	collection_date_start	2014-07-31
+hiseq_precasava_sra	sub_species	enterica
+hiseq_precasava_sra	run_alias	15_505_R2.fastq
+hiseq_precasava_sra	collection_date	2014-08
+hiseq_precasava_sra	experiment_alias	4334672
+hiseq_precasava_sra	library_name	4334672
+hiseq_precasava_sra	tag	pathogen;pathogen:priority;pathogen:bacterium
+hiseq_precasava_sra	first_created	2016-06-29
+hiseq_precasava_sra	strain	SH14-028
+hiseq_precasava_sra	experiment_accession	SRX1871996
+hiseq_precasava_sra	scientific_name	Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava_sra	tax_id	611
+hiseq_precasava_sra	study_accession	PRJNA305824
+hiseq_precasava_sra	accession	SRR3712208
+hiseq_precasava_sra	secondary_sample_accession	SRS1211385
+hiseq_precasava_sra	first_public	2016-06-29
+hiseq_precasava_sra	study_alias	PRJNA305824
+hiseq_precasava_sra	isolation_source	food
+hiseq_precasava_sra	center_name	NA
+hiseq_precasava	cmd	sed 's/@.*\(HWI.*\)/@\1/' hiseq_precasava_sra_R1.fastq > hiseq_precasava_R1.fastq && sed 's/@.*\(HWI.*\)/@\1/' hiseq_precasava_sra_R2.fastq > hiseq_precasava_R2.fastq
+hiseq_precasava	cmd_explanation	Remove the SRA run_accession from the beginning of each record’s header in the downsampled FASTQ files to match the original FASTQ headers prior to SRA upload.
+hiseq_precasava	run_accession	SRR3712208
+hiseq_precasava	experiment_title	Illumina HiSeq 2500 sequencing: WGS of Salmonella enterica subsp. enterica serovar Heidelberg: SH14-028
+hiseq_precasava	sample_accession	SAMN04334672
+hiseq_precasava	project_name	Salmonella enterica subsp. enterica
+hiseq_precasava	submission_accession	SRA435197
+hiseq_precasava	library_selection	RANDOM
+hiseq_precasava	last_updated	2016-06-29
+hiseq_precasava	sra_bytes	1403674973
+hiseq_precasava	collected_by	ministe_re de l'Agriculture des Pe_cheries et de l'Alimentation du Que_bec
+hiseq_precasava	fastq_bytes	924442764;904135507
+hiseq_precasava	instrument_platform	ILLUMINA
+hiseq_precasava	sra_aspera	fasp.sra.ebi.ac.uk:/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava	fastq_galaxy	ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava	country	Canada: Quebec
+hiseq_precasava	ncbi_reporting_standard	Pathogen.env
+hiseq_precasava	sample_description	Pathogen: environmental/food/other sample from Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava	sra_galaxy	ftp.sra.ebi.ac.uk/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava	fastq_md5	15241a7924bf93d85be4c91e87eb0b08;572521e4fa129d9d28a86d4ac4d2c64d
+hiseq_precasava	secondary_study_accession	SRP067504
+hiseq_precasava	read_count	11628012
+hiseq_precasava	study_title	Salmonella serovar Heidelberg genome sequencing
+hiseq_precasava	collection_date_end	2014-08-31
+hiseq_precasava	sample_title	Pathogen: environmental/food/other sample from Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava	instrument_model	Illumina HiSeq 2500
+hiseq_precasava	description	Illumina HiSeq 2500 sequencing: WGS of Salmonella enterica subsp. enterica serovar Heidelberg: SH14-028
+hiseq_precasava	sra_md5	87b34ae3c49f7d03477c46bc00ca3184
+hiseq_precasava	fastq_ftp	ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava	base_count	2348858424
+hiseq_precasava	library_strategy	WGS
+hiseq_precasava	serovar	Heidelberg
+hiseq_precasava	library_source	GENOMIC
+hiseq_precasava	sra_ftp	ftp.sra.ebi.ac.uk/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava	library_layout	PAIRED
+hiseq_precasava	datahub	dcc_compare
+hiseq_precasava	status	public
+hiseq_precasava	fastq_aspera	fasp.sra.ebi.ac.uk:/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava	tax_lineage	1;131567;2;3379134;1224;1236;91347;543;590;28901;59201;611
+hiseq_precasava	sample_alias	SH14-028
+hiseq_precasava	collection_date_start	2014-07-31
+hiseq_precasava	sub_species	enterica
+hiseq_precasava	run_alias	15_505_R2.fastq
+hiseq_precasava	collection_date	2014-08
+hiseq_precasava	experiment_alias	4334672
+hiseq_precasava	library_name	4334672
+hiseq_precasava	tag	pathogen;pathogen:priority;pathogen:bacterium
+hiseq_precasava	first_created	2016-06-29
+hiseq_precasava	strain	SH14-028
+hiseq_precasava	experiment_accession	SRX1871996
+hiseq_precasava	scientific_name	Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava	tax_id	611
+hiseq_precasava	study_accession	PRJNA305824
+hiseq_precasava	accession	SRR3712208
+hiseq_precasava	secondary_sample_accession	SRS1211385
+hiseq_precasava	first_public	2016-06-29
+hiseq_precasava	study_alias	PRJNA305824
+hiseq_precasava	isolation_source	food
+hiseq_precasava	center_name	NA
+hiseq_precasava_multilane	cmd	head -n 64 hiseq_precasava_R1.fastq > hiseq_precasava_multilane_R1.fastq && tail -n 64 hiseq_precasava_R1.fastq | sed 's/:1:/:2:/' >> hiseq_precasava_multilane_R1.fastq; head -n 64 hiseq_precasava_R2.fastq > hiseq_precasava_multilane_R2.fastq && tail -n 64 hiseq_precasava_R2.fastq | sed 's/:1:/:2:/' >> hiseq_precasava_multilane_R2.fastq
+hiseq_precasava_multilane	cmd_explanation	Modify the FASTQ record headers in the ‘original header-formatted’ FASTQ files so that the first 16 records will have a lane number of 1, and the remaining 16 records will have a lane number of 2.
+hiseq_precasava_multilane	run_accession	SRR3712208
+hiseq_precasava_multilane	experiment_title	Illumina HiSeq 2500 sequencing: WGS of Salmonella enterica subsp. enterica serovar Heidelberg: SH14-028
+hiseq_precasava_multilane	sample_accession	SAMN04334672
+hiseq_precasava_multilane	project_name	Salmonella enterica subsp. enterica
+hiseq_precasava_multilane	submission_accession	SRA435197
+hiseq_precasava_multilane	library_selection	RANDOM
+hiseq_precasava_multilane	last_updated	2016-06-29
+hiseq_precasava_multilane	sra_bytes	1403674973
+hiseq_precasava_multilane	collected_by	ministe_re de l'Agriculture des Pe_cheries et de l'Alimentation du Que_bec
+hiseq_precasava_multilane	fastq_bytes	924442764;904135507
+hiseq_precasava_multilane	instrument_platform	ILLUMINA
+hiseq_precasava_multilane	sra_aspera	fasp.sra.ebi.ac.uk:/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava_multilane	fastq_galaxy	ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava_multilane	country	Canada: Quebec
+hiseq_precasava_multilane	ncbi_reporting_standard	Pathogen.env
+hiseq_precasava_multilane	sample_description	Pathogen: environmental/food/other sample from Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava_multilane	sra_galaxy	ftp.sra.ebi.ac.uk/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava_multilane	fastq_md5	15241a7924bf93d85be4c91e87eb0b08;572521e4fa129d9d28a86d4ac4d2c64d
+hiseq_precasava_multilane	secondary_study_accession	SRP067504
+hiseq_precasava_multilane	read_count	11628012
+hiseq_precasava_multilane	study_title	Salmonella serovar Heidelberg genome sequencing
+hiseq_precasava_multilane	collection_date_end	2014-08-31
+hiseq_precasava_multilane	sample_title	Pathogen: environmental/food/other sample from Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava_multilane	instrument_model	Illumina HiSeq 2500
+hiseq_precasava_multilane	description	Illumina HiSeq 2500 sequencing: WGS of Salmonella enterica subsp. enterica serovar Heidelberg: SH14-028
+hiseq_precasava_multilane	sra_md5	87b34ae3c49f7d03477c46bc00ca3184
+hiseq_precasava_multilane	fastq_ftp	ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava_multilane	base_count	2348858424
+hiseq_precasava_multilane	library_strategy	WGS
+hiseq_precasava_multilane	serovar	Heidelberg
+hiseq_precasava_multilane	library_source	GENOMIC
+hiseq_precasava_multilane	sra_ftp	ftp.sra.ebi.ac.uk/vol1/srr/SRR371/008/SRR3712208
+hiseq_precasava_multilane	library_layout	PAIRED
+hiseq_precasava_multilane	datahub	dcc_compare
+hiseq_precasava_multilane	status	public
+hiseq_precasava_multilane	fastq_aspera	fasp.sra.ebi.ac.uk:/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR371/008/SRR3712208/SRR3712208_2.fastq.gz
+hiseq_precasava_multilane	tax_lineage	1;131567;2;3379134;1224;1236;91347;543;590;28901;59201;611
+hiseq_precasava_multilane	sample_alias	SH14-028
+hiseq_precasava_multilane	collection_date_start	2014-07-31
+hiseq_precasava_multilane	sub_species	enterica
+hiseq_precasava_multilane	run_alias	15_505_R2.fastq
+hiseq_precasava_multilane	collection_date	2014-08
+hiseq_precasava_multilane	experiment_alias	4334672
+hiseq_precasava_multilane	library_name	4334672
+hiseq_precasava_multilane	tag	pathogen;pathogen:priority;pathogen:bacterium
+hiseq_precasava_multilane	first_created	2016-06-29
+hiseq_precasava_multilane	strain	SH14-028
+hiseq_precasava_multilane	experiment_accession	SRX1871996
+hiseq_precasava_multilane	scientific_name	Salmonella enterica subsp. enterica serovar Heidelberg
+hiseq_precasava_multilane	tax_id	611
+hiseq_precasava_multilane	study_accession	PRJNA305824
+hiseq_precasava_multilane	accession	SRR3712208
+hiseq_precasava_multilane	secondary_sample_accession	SRS1211385
+hiseq_precasava_multilane	first_public	2016-06-29
+hiseq_precasava_multilane	study_alias	PRJNA305824
+hiseq_precasava_multilane	isolation_source	food
+hiseq_precasava_multilane	center_name	NA
+miseq_casava	cmd	seqkit sample --threads 12 --rand-seed 123 -p 0.01 2024-SEQ-1113_S9_L001_R1.fastq.gz | head -n 128 > real_fastqs/miseq_casava_R1.fastq && seqkit sample --threads 12 --rand-seed 123 -p 0.01 2024-SEQ-1113_S9_L001_R2.fastq.gz | head -n 128 > real_fastqs/miseq_casava_R2.fastq
+miseq_casava	cmd_explanation	Downsample the original files to 1% using a set random seed to keep the same mate pairs in both forward and reverse read files, and keep the first 32 records (128 lines) in each file.
+miseq_casava	run_accession	SRR31134600
+miseq_casava	experiment_title	Illumina MiSeq sequencing: CFIARB20230647
+miseq_casava	sample_accession	SAMN44471076
+miseq_casava	project_name	NA
+miseq_casava	submission_accession	SRA1998635
+miseq_casava	library_selection	RANDOM
+miseq_casava	last_updated	2024-11-03
+miseq_casava	sra_bytes	234086820
+miseq_casava	collected_by	NA
+miseq_casava	fastq_bytes	135885803;164895280
+miseq_casava	instrument_platform	ILLUMINA
+miseq_casava	sra_aspera	fasp.sra.ebi.ac.uk:/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava	fastq_galaxy	ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava	country	NA
+miseq_casava	ncbi_reporting_standard	NA
+miseq_casava	sample_description	NA
+miseq_casava	sra_galaxy	ftp.sra.ebi.ac.uk/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava	fastq_md5	d850a943dc4a7ac969c4079c75660e4d;3066f7124ef6c869f0552a827b03531d
+miseq_casava	secondary_study_accession	SRP510218
+miseq_casava	read_count	920050
+miseq_casava	study_title	ESKAPEE Pathogens from Foods
+miseq_casava	collection_date_end	NA
+miseq_casava	sample_title	NA
+miseq_casava	instrument_model	Illumina MiSeq
+miseq_casava	description	Illumina MiSeq sequencing: CFIARB20230647
+miseq_casava	sra_md5	6af860091dfc785e0d33733578e49ef7
+miseq_casava	fastq_ftp	ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava	base_count	407285920
+miseq_casava	library_strategy	WGS
+miseq_casava	serovar	NA
+miseq_casava	library_source	GENOMIC
+miseq_casava	sra_ftp	ftp.sra.ebi.ac.uk/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava	library_layout	PAIRED
+miseq_casava	datahub	dcc_compare
+miseq_casava	status	public
+miseq_casava	fastq_aspera	fasp.sra.ebi.ac.uk:/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava	tax_lineage	1;131567;2;3379134;1224;1236;91347;543;579
+miseq_casava	sample_alias	NA
+miseq_casava	collection_date_start	NA
+miseq_casava	sub_species	NA
+miseq_casava	run_alias	2024-SEQ-1113_R1.fastq.gz
+miseq_casava	collection_date	NA
+miseq_casava	experiment_alias	2024-SEQ-1113
+miseq_casava	library_name	2024-SEQ-1113
+miseq_casava	tag	NA
+miseq_casava	first_created	2024-11-03
+miseq_casava	strain	NA
+miseq_casava	experiment_accession	SRX26516507
+miseq_casava	scientific_name	Kluyvera
+miseq_casava	tax_id	579
+miseq_casava	study_accession	PRJNA1070647
+miseq_casava	accession	SRR31134600
+miseq_casava	secondary_sample_accession	SRS23028444
+miseq_casava	first_public	2024-11-03
+miseq_casava	study_alias	PRJNA1070647
+miseq_casava	isolation_source	NA
+miseq_casava	center_name	SUB14817923
+miseq_casava_sra	cmd	seqkit sample --threads 12 --rand-seed 123 -p 0.01 SRR31134600_1.fastq.gz | head -n 128 > real_fastqs/miseq_casava_sra_R1.fastq && seqkit sample --threads 12 --rand-seed 123 -p 0.01 SRR31134600_2.fastq.gz | head -n 128 > real_fastqs/miseq_casava_sra_R2.fastq
+miseq_casava_sra	cmd_explanation	Downsample the original files to 1% using a set random seed to keep the same mate pairs in both forward and reverse read files, and keep the first 32 records (128 lines) in each file.
+miseq_casava_sra	run_accession	SRR31134600
+miseq_casava_sra	experiment_title	Illumina MiSeq sequencing: CFIARB20230647
+miseq_casava_sra	sample_accession	SAMN44471076
+miseq_casava_sra	project_name	NA
+miseq_casava_sra	submission_accession	SRA1998635
+miseq_casava_sra	library_selection	RANDOM
+miseq_casava_sra	last_updated	2024-11-03
+miseq_casava_sra	sra_bytes	234086820
+miseq_casava_sra	collected_by	NA
+miseq_casava_sra	fastq_bytes	135885803;164895280
+miseq_casava_sra	instrument_platform	ILLUMINA
+miseq_casava_sra	sra_aspera	fasp.sra.ebi.ac.uk:/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava_sra	fastq_galaxy	ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava_sra	country	NA
+miseq_casava_sra	ncbi_reporting_standard	NA
+miseq_casava_sra	sample_description	NA
+miseq_casava_sra	sra_galaxy	ftp.sra.ebi.ac.uk/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava_sra	fastq_md5	d850a943dc4a7ac969c4079c75660e4d;3066f7124ef6c869f0552a827b03531d
+miseq_casava_sra	secondary_study_accession	SRP510218
+miseq_casava_sra	read_count	920050
+miseq_casava_sra	study_title	ESKAPEE Pathogens from Foods
+miseq_casava_sra	collection_date_end	NA
+miseq_casava_sra	sample_title	NA
+miseq_casava_sra	instrument_model	Illumina MiSeq
+miseq_casava_sra	description	Illumina MiSeq sequencing: CFIARB20230647
+miseq_casava_sra	sra_md5	6af860091dfc785e0d33733578e49ef7
+miseq_casava_sra	fastq_ftp	ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava_sra	base_count	407285920
+miseq_casava_sra	library_strategy	WGS
+miseq_casava_sra	serovar	NA
+miseq_casava_sra	library_source	GENOMIC
+miseq_casava_sra	sra_ftp	ftp.sra.ebi.ac.uk/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava_sra	library_layout	PAIRED
+miseq_casava_sra	datahub	dcc_compare
+miseq_casava_sra	status	public
+miseq_casava_sra	fastq_aspera	fasp.sra.ebi.ac.uk:/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava_sra	tax_lineage	1;131567;2;3379134;1224;1236;91347;543;579
+miseq_casava_sra	sample_alias	NA
+miseq_casava_sra	collection_date_start	NA
+miseq_casava_sra	sub_species	NA
+miseq_casava_sra	run_alias	2024-SEQ-1113_R1.fastq.gz
+miseq_casava_sra	collection_date	NA
+miseq_casava_sra	experiment_alias	2024-SEQ-1113
+miseq_casava_sra	library_name	2024-SEQ-1113
+miseq_casava_sra	tag	NA
+miseq_casava_sra	first_created	2024-11-03
+miseq_casava_sra	strain	NA
+miseq_casava_sra	experiment_accession	SRX26516507
+miseq_casava_sra	scientific_name	Kluyvera
+miseq_casava_sra	tax_id	579
+miseq_casava_sra	study_accession	PRJNA1070647
+miseq_casava_sra	accession	SRR31134600
+miseq_casava_sra	secondary_sample_accession	SRS23028444
+miseq_casava_sra	first_public	2024-11-03
+miseq_casava_sra	study_alias	PRJNA1070647
+miseq_casava_sra	isolation_source	NA
+miseq_casava_sra	center_name	SUB14817923
+miseq_casava_multilane	cmd	head -n 64 miseq_casava_R1.fastq > miseq_casava_multilane_R1.fastq && tail -n 64 miseq_casava_R1.fastq | sed 's/:1:/:2:/' >> miseq_casava_multilane_R1.fastq; head -n 64 miseq_casava_R2.fastq > miseq_casava_multilane_R2.fastq && tail -n 64 miseq_casava_R2.fastq | sed 's/:1:/:2:/' >> miseq_casava_multilane_R2.fastq
+miseq_casava_multilane	cmd_explanation	Modify the FASTQ record headers in the ‘original header-formatted’ FASTQ files so that the first 16 records will have a lane number of 1, and the remaining 16 records will have a lane number of 2.
+miseq_casava_multilane	run_accession	SRR31134600
+miseq_casava_multilane	experiment_title	Illumina MiSeq sequencing: CFIARB20230647
+miseq_casava_multilane	sample_accession	SAMN44471076
+miseq_casava_multilane	project_name	NA
+miseq_casava_multilane	submission_accession	SRA1998635
+miseq_casava_multilane	library_selection	RANDOM
+miseq_casava_multilane	last_updated	2024-11-03
+miseq_casava_multilane	sra_bytes	234086820
+miseq_casava_multilane	collected_by	NA
+miseq_casava_multilane	fastq_bytes	135885803;164895280
+miseq_casava_multilane	instrument_platform	ILLUMINA
+miseq_casava_multilane	sra_aspera	fasp.sra.ebi.ac.uk:/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava_multilane	fastq_galaxy	ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava_multilane	country	NA
+miseq_casava_multilane	ncbi_reporting_standard	NA
+miseq_casava_multilane	sample_description	NA
+miseq_casava_multilane	sra_galaxy	ftp.sra.ebi.ac.uk/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava_multilane	fastq_md5	d850a943dc4a7ac969c4079c75660e4d;3066f7124ef6c869f0552a827b03531d
+miseq_casava_multilane	secondary_study_accession	SRP510218
+miseq_casava_multilane	read_count	920050
+miseq_casava_multilane	study_title	ESKAPEE Pathogens from Foods
+miseq_casava_multilane	collection_date_end	NA
+miseq_casava_multilane	sample_title	NA
+miseq_casava_multilane	instrument_model	Illumina MiSeq
+miseq_casava_multilane	description	Illumina MiSeq sequencing: CFIARB20230647
+miseq_casava_multilane	sra_md5	6af860091dfc785e0d33733578e49ef7
+miseq_casava_multilane	fastq_ftp	ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava_multilane	base_count	407285920
+miseq_casava_multilane	library_strategy	WGS
+miseq_casava_multilane	serovar	NA
+miseq_casava_multilane	library_source	GENOMIC
+miseq_casava_multilane	sra_ftp	ftp.sra.ebi.ac.uk/vol1/srr/SRR311/000/SRR31134600/SRR31134600
+miseq_casava_multilane	library_layout	PAIRED
+miseq_casava_multilane	datahub	dcc_compare
+miseq_casava_multilane	status	public
+miseq_casava_multilane	fastq_aspera	fasp.sra.ebi.ac.uk:/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_1.fastq.gz;fasp.sra.ebi.ac.uk:/vol1/fastq/SRR311/000/SRR31134600/SRR31134600_2.fastq.gz
+miseq_casava_multilane	tax_lineage	1;131567;2;3379134;1224;1236;91347;543;579
+miseq_casava_multilane	sample_alias	NA
+miseq_casava_multilane	collection_date_start	NA
+miseq_casava_multilane	sub_species	NA
+miseq_casava_multilane	run_alias	2024-SEQ-1113_R1.fastq.gz
+miseq_casava_multilane	collection_date	NA
+miseq_casava_multilane	experiment_alias	2024-SEQ-1113
+miseq_casava_multilane	library_name	2024-SEQ-1113
+miseq_casava_multilane	tag	NA
+miseq_casava_multilane	first_created	2024-11-03
+miseq_casava_multilane	strain	NA
+miseq_casava_multilane	experiment_accession	SRX26516507
+miseq_casava_multilane	scientific_name	Kluyvera
+miseq_casava_multilane	tax_id	579
+miseq_casava_multilane	study_accession	PRJNA1070647
+miseq_casava_multilane	accession	SRR31134600
+miseq_casava_multilane	secondary_sample_accession	SRS23028444
+miseq_casava_multilane	first_public	2024-11-03
+miseq_casava_multilane	study_alias	PRJNA1070647
+miseq_casava_multilane	isolation_source	NA
+miseq_casava_multilane	center_name	SUB14817923

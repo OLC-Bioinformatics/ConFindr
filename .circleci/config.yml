@@ -14,14 +14,14 @@ jobs:
           command: |
             apt update
             apt install -y wget coreutils curl gnupg
-            wget -O Mambaforge.sh  "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
-            bash Mambaforge.sh -b -p "${HOME}/conda"
+            wget -O Miniforge3.sh  "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+            bash Miniforge3.sh -b -p "${HOME}/conda"
             source "${HOME}/conda/etc/profile.d/conda.sh"
             source "${HOME}/conda/etc/profile.d/mamba.sh"
             conda config --add channels bioconda
             conda config --set always_yes yes --set changeps1 no
             conda activate
-            mamba create -n confindr bioconda::confindr=0.8.1
+            mamba create -n confindr bioconda::confindr=0.8.2
             source activate confindr
             wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
               tar -xzvf test_samples.tar.gz && \

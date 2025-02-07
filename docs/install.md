@@ -26,12 +26,9 @@ Here are the steps to getting databases downloaded:
 1. Register for a PubMLST account if you do not already have one. Link to register is [here](https://pubmlst.org/bigsdb). 
 Click on `Register for a site-wide account.`
 
-2. Log in to your account at [https://pubmlst.org/bigsdb](https://pubmlst.org/bigsdb) and request access to 
-Ribosomal MLST genome and Ribosomal MLST locus/sequence definitions under `Registrations`. Additionally, email Keith Jolley
-(keith.jolley@zoo.ox.ac.uk) and request a consumer key and consumer secret so that you'll be able
-to access the database programatically.
+2. Login to your account at [https://pubmlst.org/bigsdb](https://pubmlst.org/bigsdb) and request access to `Ribosomal MLST genomes (pubmlst_rmlst_isolates)` and `Ribosomal MLST typing (pubmlst_rmlst_seqdef)` under 'Database registrations'. Additionally, create a PubMLST API key on the same page under 'API keys'. The generated client ID (consumer key) and client secret (consumer secret) will enable you to access the database programatically.
 
-3. Once you've gotten your consumer key and consumer secret from Keith, put them into a text file
+3. Once you've gotten your consumer key and consumer secret, put them into a text file
 with the key on the first line and the secret on the second. It should look something like the below
 snippet:
 
@@ -54,7 +51,7 @@ find that it will automatically download to a folder called `.confindr_db` in yo
 
 2. Install ConFindr into a new conda environment named 'confindr':
 
-`conda create -n confindr -c bioconda confindr=0.8.1`
+`conda create -n confindr -c bioconda confindr=0.8.2`
 
 3. Activate the new conda environment:
 

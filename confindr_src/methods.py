@@ -356,8 +356,16 @@ fasta=False, nanopore=False):
             # Read names in the pileup have the direction removed - add it back for future parsing. Not an issue for
             # FASTA files
             if not fasta and not nanopore:
-                read_name = read.alignment.qname.split(' ')[0] + '/1' if read.alignment.is_read1 else \
-                    read.alignment.qname.split(' ')[0] + '/2'
+                if read.alignment.is_read1:
+                    if read.alignment.qname.split(' ')[0].endswith('/1'):
+                        read_name = read.alignment.qname.split(' ')[0]
+                    else:
+                        read_name = read.alignment.qname.split(' ')[0] + '/1'
+                else:
+                    if read.alignment.qname.split(' ')[0].endswith('/2'):
+                        read_name = read.alignment.qname.split(' ')[0]
+                    else:
+                        read_name = read.alignment.qname.split(' ')[0] + '/2'
             else:
                 read_name = read.alignment.qname
             # Extract the phred quality score from the FASTQ records
@@ -669,10 +677,10 @@ def find_multibase_positions(ref_base, filtered_read_dict, base_cutoff, base_fra
                 snv_dict['total_reverse'] += count
     # Initialise a dictionary to store the summary of characterised base types
     passing_snv_dict = {
-        'congruent': dict(),
-        'forward': dict(),
-        'reverse': dict(),
-        'paired': dict()
+        'congruent': {'A': 0, 'C': 0, 'G': 0, 'T': 0},
+        'forward': {'A': 0, 'C': 0, 'G': 0, 'T': 0},
+        'reverse': {'A': 0, 'C': 0, 'G': 0, 'T': 0},
+        'paired': {'A': 0, 'C': 0, 'G': 0, 'T': 0}
     }
     # Boolean of whether there are bases passing filter, and the passing_snv_dict should be used
     return_dict = False
@@ -987,22 +995,12 @@ def load_fastq_records(gz, paired, forward):
         # Only update the naming scheme for paired reads
         if paired:
             if forward:
-                # Change a :1: to /1 in the record.id
-                if ':1:' in record.id:
-                    record.id = record.id + '/1'
                 # Don't worry if the record.id already has a /1
-                elif '/1' in record.id:
-                    pass
-                # If the record.id doesn't have a read direction, add /1
-                else:
+                if not record.id.endswith('/1'):
                     record.id = record.id + '/1'
             # Process reverse reads in a similar fashion to forward reads
             else:
-                if ':2:' in record.id:
-                    record.id = record.id + '/2'
-                elif '/2' in record.id:
-                    pass
-                else:
+                if not record.id.endswith('/2'):
                     record.id = record.id + '/2'
         else:
             pass
@@ -1128,9 +1126,7 @@ def find_contamination(pair, output_folder, databases_folder, base_cutoff, forwa
             quit(code=1)
         sample_database = cgmlst_db
     else:
-        db_folder = databases_folder if tmpdir is None else tmpdir
-        if not os.path.isdir(db_folder):
-            os.makedirs(db_folder)
+        db_folder = databases_folder
         if genus != 'ND':
             # Logic here is as follows: users can either have both rMLST databases, which cover all of bacteria,
             # cgmlst-derived databases, which cover only Escherichia, Salmonella, and Listeria (may add more at some
@@ -1153,10 +1149,19 @@ def find_contamination(pair, output_folder, databases_folder, base_cutoff, forwa
                                      .format(predominant_genus))
                         allele_list = find_genus_specific_allele_list(os.path.join(db_folder, 'gene_allele.txt'),
                                                                       predominant_genus)
-                        # Create the allele-specific database
-                        setup_allelespecific_database(fasta_file=sample_database,
-                                                      database_folder=db_folder,
-                                                      allele_list=allele_list)
+                        if tmpdir:
+                            logging.info('Using temporary directory for database creation: {}'.format(tmpdir))
+                            if not os.path.isdir(tmpdir):
+                                os.makedirs(tmpdir)
+                            sample_database = os.path.join(tmpdir, '{}_db.fasta'.format(predominant_genus))
+                            # Create the allele-specific database
+                            setup_allelespecific_database(fasta_file=sample_database,
+                                                          database_folder=db_folder,
+                                                          allele_list=allele_list)
+                        else:
+                            setup_allelespecific_database(fasta_file=sample_database,
+                                                        database_folder=db_folder,
+                                                        allele_list=allele_list)
             else:
                 # Check if a cgderived database is available. If not, try to use rMLST database.
                 sample_database = os.path.join(db_folder, '{}_db_cgderived.fasta'.format(predominant_genus))
@@ -1170,9 +1175,19 @@ def find_contamination(pair, output_folder, databases_folder, base_cutoff, forwa
                                      .format(predominant_genus))
                         allele_list = find_genus_specific_allele_list(os.path.join(db_folder, 'gene_allele.txt'),
                                                                       predominant_genus)
-                        setup_allelespecific_database(fasta_file=sample_database,
-                                                      database_folder=db_folder,
-                                                      allele_list=allele_list)
+                        if tmpdir:
+                            logging.info('Using temporary directory for database creation: {}'.format(tmpdir))
+                            if not os.path.isdir(tmpdir):
+                                os.makedirs(tmpdir)
+                            sample_database = os.path.join(tmpdir, '{}_db.fasta'.format(predominant_genus))
+                            # Create the allele-specific database
+                            setup_allelespecific_database(fasta_file=sample_database,
+                                                          database_folder=db_folder,
+                                                          allele_list=allele_list)
+                        else:
+                            setup_allelespecific_database(fasta_file=sample_database,
+                                                        database_folder=db_folder,
+                                                        allele_list=allele_list)
 
         else:
             sample_database = os.path.join(db_folder, 'rMLST_combined.fasta')
