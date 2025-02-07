@@ -21,7 +21,7 @@ jobs:
             conda config --add channels bioconda
             conda config --set always_yes yes --set changeps1 no
             conda activate
-            mamba create -n confindr bioconda::confindr=0.8.1
+            mamba create -n confindr bioconda::confindr=0.8.2
             source activate confindr
             wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
               tar -xzvf test_samples.tar.gz && \

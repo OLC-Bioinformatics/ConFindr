@@ -22,7 +22,7 @@ ConFindr has only been validated using rMLST databases. **Please use them if pos
 
 2. Install ConFindr into a new conda environment named 'confindr':
 
-`conda create -n confindr -c bioconda confindr=0.8.1`
+`conda create -n confindr -c bioconda confindr=0.8.2`
 
 3. Activate the new conda environment:
 
