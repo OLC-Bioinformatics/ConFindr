@@ -98,7 +98,6 @@ def confindr(args):
                                tmpdir=args.tmp,
                                data_type=args.data_type,
                                use_rmlst=args.rmlst,
-                               cross_details=args.cross_details,
                                min_matching_hashes=min_matching_hashes,
                                fasta=args.fasta,
                                debug=args.verbosity)
@@ -111,8 +110,6 @@ def confindr(args):
                          sample_name=sample_name,
                          multi_positions=multi_positions,
                          genus=genus,
-                         percent_contam='ND',
-                         contam_stddev='ND',
                          total_gene_length=0,
                          database_download_date='ND')
             logging.warning('Encountered error when attempting to run ConFindr on sample '
@@ -121,7 +118,8 @@ def confindr(args):
             if args.keep_files is False:
                 shutil.rmtree(os.path.join(args.output_name, sample_name))
     if args.keep_files is False and args.tmp is not None:
-        shutil.rmtree(args.tmp)
+        if os.path.isdir(args.tmp):
+            shutil.rmtree(args.tmp)
     logging.info('Contamination detection complete!')
 
 
@@ -169,9 +167,10 @@ def main():
                         help='Base quality needed to support a multiple allele call. Defaults to 20.')
     parser.add_argument('-b', '--base_cutoff',
                         type=int,
-                        default=None,
-                        help='Number of bases necessary to support a multiple allele call. Is automatically calculated '
-                             'based on gene-specific quality score, length and depth of coverage.')
+                        default=3,
+                        help='Number of bases necessary to support a multiple allele call, and automatically '
+                        'increments based upon gene-specific quality score, length and depth of coverage. '
+                        'Default is 3.')
     parser.add_argument('-bf', '--base_fraction_cutoff',
                         type=float,
                         default=0.05,
@@ -181,7 +180,7 @@ def main():
                         type=float,
                         default=1.0,
                         help='Value to use for the calculated error cutoff when setting the base cutoff value. '
-                             'Default is 1.0%')
+                             'Default is 1.0%%.')
     parser.add_argument('-fid', '--forward_id',
                         type=str,
                         default='_R1',
@@ -221,10 +220,6 @@ def main():
                         default='info',
                         help='Amount of output you want printed to the screen. Defaults to info, which should be good '
                              'for most users.')
-    parser.add_argument('-cross_details', '--cross_details',
-                        action='store_true',
-                        help='Continue ConFindr analyses on samples with two or more genera identified. Default is '
-                             'False')
     parser.add_argument('-m', '--min_matching_hashes',
                         default=150,
                         type=int,

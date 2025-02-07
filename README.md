@@ -1,46 +1,62 @@
-[![Build status](https://travis-ci.org/OLC-Bioinformatics/ConFindr.svg?master)](https://travis-ci.org/OLC-Bioinformatics)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/OLC-Bioinformatics/ConFindr/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/OLC-Bioinformatics/ConFindr/tree/main)
 [![PyPI version](https://badge.fury.io/py/confindr.svg)](https://badge.fury.io/py/confindr)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/confindr/README.html)
+
 
 # ConFindr
 
 This program is designed to find bacterial intra-species contamination in raw Illumina data. It does this
  by looking for multiple alleles of core, single copy genes.
 
-For complete instructions on installation and usage, please visit [the ConFindr github pages site](https://olc-bioinformatics.github.io/ConFindr/).
+For **complete instructions on installation and usage**, please visit [the ConFindr GitHub Pages site](https://olc-bioinformatics.github.io/ConFindr/).
 
 ## Important Note
 
-ConFindr has only been validated using rMLST databases. Please use them if possible. Installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases)
+ConFindr has only been validated using rMLST databases. **Please use them if possible** (`--rmlst`). Complete installation instructions can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
 
 ## Quickstart
 
-To install ConFindr, use conda (see [here](https://bioconda.github.io/) for instructions on getting bioconda set up): 
+### Installing ConFindr
 
-`conda install -c bioconda confindr`
+1. Follow the instructions [here](https://bioconda.github.io/) to add the Bioconda channel to your list of conda channels, if it hasn't already been added.
 
-Note that we are aware of some issues with installing ConFindr via conda with Python 3.8. Until this is resolved, if you run into any issues, please try using Python 3.7.
+2. Install ConFindr into a new conda environment named 'confindr':
 
-To get an example dataset, use this command, which will create a folder called `example-data` in your current working directory: 
+`conda create -n confindr -c bioconda confindr=0.8.1`
 
-`wget https://ndownloader.figshare.com/files/9972709 && tar xf 9972709 && rm 9972709`
+3. Activate the new conda environment:
 
-As of version `0.7.0` ConFindr can run automatically on _Escherichia_, _Salmonella_, and _Listeria_ with no further 
-work on your part - just run:
+`conda activate confindr`
 
-`confindr.py -i example-data -o example-out`
+### Downloading and setting up the rMLST databases
 
-To use the recommended rMLST database (after installation)
+Instructions for downloading and setting up the rMLST databases can be found [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
 
-`confindr.py -i example-data -o example-out --rmlst`
+### Testing ConFindr
 
-Once ConFindr finishes running, take a look at the `confindr_report.csv` file found in `example-out` - it shows that multiple
-alleles were found for many sites within the genes that ConFindr examines, meaning that this sample is quite contaminated!
+1. To obtain an example dataset, run the following command, which will create a folder named `test_samples` in your current working directory: 
 
-If you want to run ConFindr on genera other than the 3 listed above, you'll need to get access to and download rMLST databases. 
-[You can find instructions on how to do that here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
+```bash
+wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
+    tar -xzvf test_samples.tar.gz && \
+    rm test_samples.tar.gz
+```
 
-### Running ConFindr in a Python Script
+2. As of version `0.7.0` ConFindr can be run automatically on _Escherichia_, _Salmonella_, and _Listeria_ with no further 
+work on your part, using core-gene databases (*experimental*). Simply run:
+
+`confindr -i test_samples -o test_out`
+
+3. To use the *recommended* rMLST database (after installation):
+
+`confindr -i test_samples -o test_out --rmlst`
+
+The results for this analysis can be found within `test_out/confindr_report.csv`.
+More extensive tests can be performed by following the instructions [here](https://olc-bioinformatics.github.io/ConFindr/usage/#example-dataset).
+
+If you want to run ConFindr on genera other than the 3 listed above, you'll need to get access to and download the rMLST databases by following the instructions [here](https://olc-bioinformatics.github.io/ConFindr/install/#downloading-confindr-databases).
+
+## Running ConFindr in a Python Script
 
 If you want to run ConFindr from within a script instead of running from the command line, here's how:
 
@@ -60,18 +76,15 @@ for pair in paired_reads:
                                 
 ```
 
-
 ## Reporting Issues
 
 If you have any problems installing or running ConFindr, or have feature request,
 please open an issue here on GitHub.
 
-
 ## Citing ConFindr
 
-ConFindr has been published in PeerJ - if you use it in your work, please cite the following:
+ConFindr has been published in PeerJ—if you use it in your work, please cite the following:
 
 ```
 Low AJ, Koziol AG, Manninger PA, Blais B, Carrillo CD. 2019. ConFindr: rapid detection of intraspecies and cross-species contamination in bacterial whole-genome sequence data. PeerJ 7:e6995 https://doi.org/10.7717/peerj.6995
 ```
-
