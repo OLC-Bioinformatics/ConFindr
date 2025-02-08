@@ -2,17 +2,14 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://olc-bioinformatics.github.io/ConFindr/</loc>
-         <lastmod>2023-06-13</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-02-08</lastmod>
     </url>
     <url>
          <loc>https://olc-bioinformatics.github.io/ConFindr/install/</loc>
-         <lastmod>2023-06-13</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-02-08</lastmod>
     </url>
     <url>
          <loc>https://olc-bioinformatics.github.io/ConFindr/usage/</loc>
-         <lastmod>2023-06-13</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-02-08</lastmod>
     </url>
 </urlset>

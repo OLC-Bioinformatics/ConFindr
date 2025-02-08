@@ -8,7 +8,7 @@
     <title>Usage - ConFindr</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
     
       <script>
         // Current page data
@@ -17,12 +17,11 @@
         var mkdocs_page_url = "/ConFindr/usage/";
       </script>
     
-    <script src="../js/jquery-3.6.0.min.js" defer></script>
     <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
     <![endif]-->
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-      <script>hljs.initHighlightingOnLoad();</script> 
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
 </head>
 
 <body class="wy-body-for-nav" role="document">
@@ -49,7 +48,7 @@
                 </li>
               </ul>
               <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="./">Usage</a>
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Usage</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#example-dataset">Example Dataset</a>
     </li>
@@ -83,8 +82,8 @@
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
-      <li>Usage</li>
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Usage</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/OLC-Bioinformatics/ConFindr/edit/master/docs/usage.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -96,13 +95,13 @@
               
                 <h1 id="usage">Usage</h1>
 <h2 id="example-dataset">Example Dataset</h2>
-<p>An <a href="https://figshare.com/articles/dataset/Minimal_dataset_for_ConFindr_testing_using_pytest/22852937">example dataset</a> has been uploaded to FigShare for testing ConFindr.
+<p>An <a href="https://figshare.com/articles/dataset/Minimal_dataset_for_ConFindr_testing_using_pytest/22852937/3">example dataset</a> has been uploaded to FigShare for testing ConFindr.
 This example dataset contains FASTQ reads from contaminated and uncontaminated genomes of <em>Escherichia coli</em> O121:H19, <em>Salmonella enterica</em> Heidelberg, and <em>Listeria monocytogenes</em>.
 These reads were obtained by selecting samples from the originally published dataset that was used to test ConFindr's performance, and then downsampled by different factors to obtain a more minimal dataset.
 The metadata for these samples can be downloaded from <a href="https://figshare.com/ndownloader/files/40599716">here</a>, with additional metadata available in the Supplemental Information of the <a href="https://peerj.com/articles/6995">original ConFindr publication</a>.
 The dataset may take a few minutes to download depending on your internet connection speed.</p>
 <p>If you wish to download the dataset to analyze it yourself using <code>confindr.py</code>, you can run the following command to download and extract the files within your current working directory:</p>
-<pre><code class="language-bash">wget https://figshare.com/ndownloader/files/41228403 -O test_samples.tar.gz &amp;&amp; \
+<pre><code class="language-bash">wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz &amp;&amp; \
     tar -xzvf test_samples.tar.gz &amp;&amp; \
     rm test_samples.tar.gz
 </code></pre>
@@ -113,7 +112,7 @@ We recommend installing ConFindr within a virtual environment using Conda (see i
 git clone https://github.com/OLC-Bioinformatics/ConFindr
 cd ConFindr/
 pip install -e .
-wget https://figshare.com/ndownloader/files/41228403 -O tests/test_samples.tar.gz &amp;&amp; \
+wget https://figshare.com/ndownloader/files/41228577 -O tests/test_samples.tar.gz &amp;&amp; \
   tar -xzvf tests/test_samples.tar.gz -C tests/ &amp;&amp; \
   rm tests/test_samples.tar.gz
 </code></pre>
@@ -331,14 +330,15 @@ instead of rMLST. Activate this flag to force use of rMLST genes for all genera.
     
   </span>
 </div>
-    <script>var base_url = '..';</script>
-    <script src="../js/theme_extra.js" defer></script>
-    <script src="../js/theme.js" defer></script>
-      <script src="../search/main.js" defer></script>
-    <script defer>
-        window.onload = function () {
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
             SphinxRtdTheme.Navigation.enable(true);
-        };
+        });
     </script>
 
 </body>
