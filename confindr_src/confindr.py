@@ -36,9 +36,9 @@ from confindr_src.methods import (
     find_contamination,
     find_paired_reads,
     find_unpaired_reads,
-    get_version,
     write_output,
 )
+from confindr_src.version import __version__
 
 
 def confindr(
@@ -284,8 +284,7 @@ def main() -> None:
     Returns:
         None
     """
-    # Get version and CPU count for defaults
-    version = get_version()
+    # Get CPU count for defaults
     cpu_count = multiprocessing.cpu_count()
 
     # Create the argument parser
@@ -425,7 +424,7 @@ def main() -> None:
     parser.add_argument(
         '-v', '--version',
         action='version',
-        version=version
+        version=__version__
     )
     parser.add_argument(
         '-dt', '--data_type',
@@ -504,7 +503,7 @@ def main() -> None:
 
     logging.info(
         'Welcome to %s! Beginning analysis of your samples...',
-        version,
+        __version__,
     )
 
     confindr(
