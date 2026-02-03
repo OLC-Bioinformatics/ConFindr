@@ -27,8 +27,12 @@ import subprocess
 import sys
 import traceback
 
+# Third party imports
+import coloredlogs
+
 # Local imports
 from confindr_src.methods import (
+    _valid_downsample_depth,
     check_acceptable_xmx,
     check_for_databases_and_download,
     check_valid_base_fraction,
@@ -36,8 +40,10 @@ from confindr_src.methods import (
     find_contamination,
     find_paired_reads,
     find_unpaired_reads,
+    recommend_xmx,
     write_output,
 )
+import confindr_src.methods as methods  # module import for runtime config
 from confindr_src.version import __version__
 
 
@@ -130,8 +136,7 @@ def confindr(
         )
 
     # Make the output directory.
-    if not os.path.isdir(args.output_name):
-        os.makedirs(args.output_name)
+    os.makedirs(args.output_name, exist_ok=True)
 
     # Remove any reports created by previous iterations of ConFindr
     try:
@@ -189,9 +194,13 @@ def confindr(
                 use_rmlst=args.rmlst,
                 min_matching_hashes=min_matching_hashes,
                 fasta=args.fasta,
-                debug=args.verbosity,
                 use_prob_scoring=args.use_prob_scoring,
-                score_threshold=args.score_threshold
+                score_threshold=args.score_threshold,
+                max_expected_positions=args.max_expected_positions,
+                downsample_depth=args.downsample_depth,
+                subreplicates=args.subreplicates,
+                subreplicate_seed=args.subreplicate_seed,
+                subreplicate_consensus=args.subreplicate_consensus,
             )
 
             # Debug: scan per-sample position-level TSV files to check for
@@ -221,12 +230,7 @@ def confindr(
                                 if len(parts) >= 2:
                                     coords.add(f'{parts[0]}:{parts[1]}')
                                     total_lines += 1
-                    logging.debug(
-                        'Sample %s: found %d position lines across %d files '
-                        '(%d unique coords). Files: %s',
-                        sample_name, total_lines, len(pos_files), len(coords),
-                        pos_files
-                    )
+                    # Check for duplicated coordinates
                     if len(coords) > 0:
                         sample_coords_list = list(sorted(coords))[:10]
                         logging.debug(
@@ -410,6 +414,56 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        '--max-expected-positions',
+        type=float,
+        default=0.001,
+        help=(
+            'Maximum expected number of false-positive positions allowed '
+            'per gene when using dynamic cutoff (default 0.001). Set to 0 to '
+            'disable tightening.'
+        ),
+    )
+    parser.add_argument(
+        '--downsample_depth',
+        type=_valid_downsample_depth,
+        default=None,
+        metavar='DEPTH',
+        help=(
+            'Approximate target coverage depth to downsample reads to. '
+            'Integer between 10 and 100. If not set, no downsampling will '
+            'be performed.'
+        ),
+    )
+    parser.add_argument(
+        '--subreplicates',
+        type=int,
+        default=1,
+        help=(
+            'Number of independent downsample replicates to run. Default is 1 '
+            '(no replicates). If >1, each replicate is downsampled separately '
+            'and results are aggregated by consensus.'
+        ),
+    )
+    parser.add_argument(
+        '--subreplicate-seed',
+        type=int,
+        default=None,
+        help=(
+            'Optional seed to make downsample replicates deterministic. '
+            'If provided, replicate i will use seed+i as its PRNG seed.'
+        ),
+    )
+    parser.add_argument(
+        '--subreplicate-consensus',
+        type=float,
+        default=0.5,
+        help=(
+            'Fraction (0-1) of replicates that must agree on a multibase '
+            'position for it to be reported in the final aggregated output. '
+            'Default 0.5 (majority).'
+        ),
+    )
+    parser.add_argument(
         '-fid', '--forward_id',
         type=str,
         default='_R1',
@@ -438,10 +492,12 @@ def main() -> None:
     parser.add_argument(
         '-Xmx', '--Xmx',
         type=str,
+        default=recommend_xmx(),
         help=(
             'Very occasionally, parts of the pipeline that use BBMap may '
             'fail to reserve memory correctly. Use this option to override '
-            'automatic memory reservation, e.g. -Xmx 20g or -Xmx 800m.'
+            'automatic memory reservation, e.g. -Xmx 20g or -Xmx 800m. '
+            'Default is 80%% of the available virtual memory'
         ),
     )
     parser.add_argument(
@@ -460,6 +516,24 @@ def main() -> None:
         action='store_true',
         help='If activated, will look for FASTA files instead of FASTQ for '
              'unpaired reads.',
+    )
+    parser.add_argument(
+        '--contig-chunk-multiplier',
+        type=int,
+        default=3,
+        help=(
+            'Multiplier for number of chunks per thread (threads * multiplier '
+            'chunks created). Default 3.'
+        )
+    )
+    parser.add_argument(
+        '--contig-chunk-bases',
+        type=int,
+        default=200000,
+        help=(
+            'Maximum bases per chunk; contigs larger than this are split into '
+            'subranges (default 200000).'
+        )
     )
     parser.add_argument(
         '-verbosity', '--verbosity',
@@ -481,31 +555,40 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
-    # Setup the logger. TODO: Different colors for different levels.
-    if args.verbosity == 'info':
-        logging.basicConfig(
-            format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
-            level=logging.INFO,
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
-    elif args.verbosity == 'debug':
-        logging.basicConfig(
-            format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
-            level=logging.DEBUG,
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
-    elif args.verbosity == 'warning':
-        logging.basicConfig(
-            format='\033[92m \033[1m %(asctime)s \033[0m %(message)s ',
-            level=logging.WARNING,
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
+
+    # Setup the logger
+    fmt = '%(asctime)s %(message)s'
+    datefmt = '%Y-%m-%d %H:%M:%S'
+    level = {
+        'info': 'INFO',
+        'debug': 'DEBUG',
+        'warning': 'WARNING'
+    }.get(args.verbosity, 'INFO')
+
+    coloredlogs.install(level=level, fmt=fmt, datefmt=datefmt)
 
     logging.info(
         'Welcome to %s! Beginning analysis of your samples...',
         __version__,
     )
 
+    logging.debug(
+        'Parsed command-line arguments: %s',
+        args
+    )
+
+    # Propagate chunking options into methods module
+    try:
+        methods.CONTIG_CHUNK_MULTIPLIER = int(args.contig_chunk_multiplier)
+        methods.CONTIG_CHUNK_MAX_BASES = int(args.contig_chunk_bases)
+    except (ValueError, TypeError) as exc:
+        logging.debug(
+            'Could not configure contig chunking parameters from CLI; using '
+            'defaults: %s',
+            exc
+        )
+
+    # Run ConFindr with the parsed arguments
     confindr(
         args=args,
     )
