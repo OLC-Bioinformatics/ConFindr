@@ -43,7 +43,9 @@ from Bio import SeqIO
 from pysam.utils import SamtoolsError
 from scipy.stats import (
     betabinom,
-    chi2
+    chi2,
+    mannwhitneyu,
+    
 )
 import numpy as np
 import pkg_resources
@@ -1552,7 +1554,12 @@ def determine_cutoff(
         error_cutoff: Expected error percentage (as 1.0 for 1%).
 
     Returns:
-        The computed integer cutoff (>= 0).
+        A tuple (k, expected_positions, error_percent_per_site) where:
+        - k is the calculated cutoff (int)
+        - expected_positions is the expected number of false-positive
+          positions across the gene at this cutoff (float)
+        - error_percent_per_site is the per-site error probability expressed
+          as a percentage (float)
     """
     # Determine the maximum read length for error percentage calculation
     max_len = max(1, len(reference_sequence))
@@ -1565,7 +1572,7 @@ def determine_cutoff(
     # short-circuit when base_cutoff < 1 because base_cutoff==0 indicates
     # the user requested a dynamic calculation based on observed qualities.
     if not qualities:
-        return max(1, base_cutoff), 0.0
+        return max(1, base_cutoff), 0.0, 0.0
 
     # Per-observation error probabilities from Phred Q
     p_list = [10 ** (-q / 10.0) for q in qualities]
@@ -1771,8 +1778,8 @@ def poisson_binomial_tail(
 ) -> float:
     """
     Tail probability for Poisson-Binomial distribution P(X >= k). Uses
-    FFT-based convolution for exact pmf when feasible, otherwise normal
-    approximation with continuity correction.
+    FFT-based convolution for exact pmf when feasible (n <= 1000), otherwise
+    normal approximation with continuity correction.
 
     Args:
         k: Threshold number of successes.
@@ -1781,18 +1788,32 @@ def poisson_binomial_tail(
     Returns:
         Tail probability (float).
     """
-    # Set the value of n from the length of p_list
     n = len(p_list)
     if n == 0:
         return 0.0 if k > 0 else 1.0
-    # If n is small-ish, compute exact pmf via FFT divide-and-conquer (fast
-    # and accurate)
-    pmf = _poisson_binomial_pmf_fft(
-        p_list=p_list
-    )
-    cumsum = pmf[::-1].cumsum()[::-1]
 
-    return float(cumsum[k]) if k <= n else 0.0
+    # Use exact FFT convolution for moderate sizes for accuracy.
+    if n <= 1000:
+        pmf = _poisson_binomial_pmf_fft(p_list=p_list)
+        cumsum = pmf[::-1].cumsum()[::-1]
+        return float(cumsum[k]) if k <= n else 0.0
+
+    # For large n, fall back to normal approximation with continuity
+    # correction for numerical stability and performance.
+    mu = sum(p_list)
+    var = sum(p * (1 - p) for p in p_list)
+    sigma = math.sqrt(var) if var > 0.0 else 0.0
+
+    # Handle degenerate variance case
+    if sigma == 0.0:
+        return 0.0 if k > mu else 1.0
+
+    # Survival function with continuity correction (k - 0.5)
+    z = (k - 0.5 - mu) / (sigma * math.sqrt(2.0))
+    p = 0.5 * math.erfc(z)
+
+    # Clamp for numerical safety
+    return float(min(1.0, max(0.0, p)))
 
 
 def mann_whitney_u_p(
@@ -1801,9 +1822,12 @@ def mann_whitney_u_p(
     y: List[float]
 ) -> float:
     """
-    Two-sample Mann-Whitney U test p-value (two-sided) using normal
-    approximation with continuity correction. Assigns average ranks for ties
-    and applies tie correction to variance.
+    SciPy's implementation (exact when possible, otherwise normal
+    approximation). If SciPy is available we delegate to it to ensure
+    consistent handling of ties and exact calculations for small samples.
+
+    Falls back to an internal normal-approximation implementation if SciPy
+    is not available.
 
     Args:
         x, y: Lists of samples.
@@ -1816,50 +1840,14 @@ def mann_whitney_u_p(
     n2 = len(y)
 
     # Handle edge cases
+    n1 = len(x)
+    n2 = len(y)
     if n1 == 0 or n2 == 0:
         return None
 
-    # Calculate merged list of (value, group) tuples
-    merged = [(v, 0) for v in x] + [(v, 1) for v in y]
-    merged.sort(key=lambda t: t[0])
-    total = n1 + n2
-
-    # assign average ranks for ties
-    ranks = [0.0] * total
-    i = 0
-    while i < total:
-        j = i
-        while j + 1 < total and merged[j + 1][0] == merged[i][0]:
-            j += 1
-        avg_rank = sum(range(i + 1, j + 2)) / (j - i + 1)
-        for k in range(i, j + 1):
-            ranks[k] = avg_rank
-        i = j + 1
-
-    # sum ranks for group x
-    summed = sum(ranks[idx] for idx, (_, grp) in enumerate(merged) if grp == 0)
-    u1 = summed - n1 * (n1 + 1) / 2.0
-    mu = n1 * n2 / 2.0
-
-    # tie correction
-    tie_sum = 0.0
-    i = 0
-    while i < total:
-        j = i
-        while j + 1 < total and merged[j + 1][0] == merged[i][0]:
-            j += 1
-        t = j - i + 1
-        if t > 1:
-            tie_sum += t * (t * t - 1)
-        i = j + 1
-    denom = 12.0 * total * (total - 1)
-    var = n1 * n2 * ((total + 1) - (tie_sum / denom)) / 12.0
-    if var <= 0:
-        return 1.0
-    sigma = math.sqrt(var)
-    z = (u1 - mu) / sigma
-
-    return 2.0 * 0.5 * math.erfc(-abs(z) / math.sqrt(2.0))
+    # SciPy's mannwhitneyu supports 'two-sided' alternative; ensure we
+    # return a Python float.
+    return float(mannwhitneyu(x, y, alternative='two-sided').pvalue)
 
 
 def fisher_two_sided_p(

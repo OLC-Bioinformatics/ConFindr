@@ -107,3 +107,8 @@ confindr_integration*
 
 # Rope project settings
 .ropeproject
+
+# Certain test files
+tests/*.gz
+tests/test_samples/
+tests/*.

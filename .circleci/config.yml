@@ -23,7 +23,11 @@ jobs:
             conda activate
             mamba create -n confindr bioconda::confindr=0.8.2
             source activate confindr
-            wget https://figshare.com/ndownloader/files/41228577 -O test_samples.tar.gz && \
+            wget --retry-connrefused --waitretry=5 --tries=6 --timeout=30 \
+              --user-agent='Mozilla/5.0 (X11; Linux x86_64)' \
+              --referer='https://figshare.com' \
+              'https://figshare.com/ndownloader/files/41228577' -O test_samples.tar.gz && \
+              [ -s test_samples.tar.gz ] || { echo "Download failed or file empty"; exit 1; } && \
               tar -xzvf test_samples.tar.gz && \
               mv test_samples/ tests/ && \
               rm test_samples.tar.gz
