@@ -6,7 +6,7 @@ from itertools import chain
 from statistics import mean
 import multiprocessing
 import urllib.request
-import pkg_resources
+from importlib.metadata import version as get_package_version, PackageNotFoundError
 import numpy as np
 import subprocess
 import logging
@@ -1672,7 +1672,7 @@ def check_acceptable_xmx(xmx_string):
 
 def get_version():
     try:
-        version = 'ConFindr {}'.format(pkg_resources.get_distribution('confindr').version)
-    except pkg_resources.DistributionNotFound:
+        version = 'ConFindr {}'.format(get_package_version('confindr'))
+    except PackageNotFoundError:
         version = 'ConFindr (Unknown version)'
     return version
