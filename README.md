@@ -18,6 +18,8 @@ ConFindr has only been validated using rMLST databases. **Please use them if pos
 
 ### Installing ConFindr
 
+#### Option A: Conda (recommended)
+
 1. Follow the instructions [here](https://bioconda.github.io/) to add the Bioconda channel to your list of conda channels, if it hasn't already been added.
 
 2. Install ConFindr into a new conda environment named 'confindr':
@@ -27,6 +29,22 @@ ConFindr has only been validated using rMLST databases. **Please use them if pos
 3. Activate the new conda environment:
 
 `conda activate confindr`
+
+#### Option B: Docker (Biocontainers)
+
+ConFindr is available as a Docker image from [Biocontainers](https://quay.io/organization/biocontainers). Pull and run:
+
+```bash
+docker pull quay.io/biocontainers/confindr:<tag>
+```
+
+Replace `<tag>` with a specific version tag (e.g. `0.8.2--pyhdfd78af_0`). Browse available tags at [quay.io/biocontainers/confindr/tags](https://quay.io/repository/biocontainers/confindr?tab=tags).
+
+Example run (mount your data and output directories):
+
+```bash
+docker run -v /path/to/input:/data -v /path/to/output:/output quay.io/biocontainers/confindr:<tag> confindr -i /data -o /output
+```
 
 ### Downloading and setting up the rMLST databases
 

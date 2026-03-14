@@ -59,6 +59,22 @@ find that it will automatically download to a folder called `.confindr_db` in yo
 
 Typing `confindr -h` into the command-line will show the help menu for the program. See the [Usage](usage.md) section for instructions on how to use ConFindr, including a ConFindr run on an example dataset.
 
+## Installing Using Docker (Biocontainers)
+
+ConFindr is available as a Docker image from [Biocontainers](https://quay.io/organization/biocontainers). Pull the image:
+
+```bash
+docker pull quay.io/biocontainers/confindr:<tag>
+```
+
+Replace `<tag>` with a specific version tag (e.g. `0.8.2--pyhdfd78af_0`). Browse available tags at [quay.io/biocontainers/confindr/tags](https://quay.io/repository/biocontainers/confindr?tab=tags).
+
+Example run (mount your data and output directories):
+
+```bash
+docker run -v /path/to/input:/data -v /path/to/output:/output quay.io/biocontainers/confindr:<tag> confindr -i /data -o /output
+```
+
 ## Manual Installation
 
 ### Executable
