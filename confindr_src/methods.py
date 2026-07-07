@@ -44,15 +44,14 @@ from pysam.utils import SamtoolsError
 from scipy.stats import (
     betabinom,
     chi2,
-    mannwhitneyu,
-    
+    mannwhitneyu
 )
 import numpy as np
-import pkg_resources
 import psutil
 import pysam
 
 # Local imports
+from confindr_src.version import __version__
 from confindr_src.wrappers import (
     bbtools,
     mash,
@@ -66,6 +65,14 @@ CONTIG_CHUNK_MAX_BASES = 200_000  # maximum bases per chunk before splitting
 # contents without using the 'global' statement). This keeps state local to
 # each process (initializer sets indexes in worker processes).
 _FASTQ_INDEX_STATE = {'fwd': None, 'rev': None, 'paired': False}
+
+# Minimum base count cutoff for dynamic calculation of expected positions. If
+# base_cutoff is set to 0, the expected positions will be calculated based on
+# the number of bases at the position, but this minimum cutoff will be applied
+# to avoid extremely low cutoffs for low-coverage positions. Setting this to 0
+# will disable the safety floor and allow dynamic calculation to produce very
+# low cutoffs for low-coverage positions.
+MIN_DYNAMIC_CUTOFF = 3
 
 
 def _format_seconds(
@@ -276,37 +283,499 @@ def run_cmd(
 
 def estimate_genome_size(
     *,  # Enforce keyword arguments
-    genus: str
+    genus: str,
 ) -> int:
     """
-    Return an estimated genome size (in bases) for a genus. These are
-    heuristic defaults for common bacterial genera. If the genus is not
-    recognised, return a sensible default (4,000,000 bp).
+    Return an estimated genome size in bases for a bacterial/archaeal genus.
+
+    These are heuristic genus-level defaults intended for rough parameter
+    selection, e.g. expected assembly size, coverage estimation, QC thresholds,
+    or downsampling. They are not authoritative strain-level genome sizes.
+
+    If the genus is not recognised, return a broad bacterial default of
+    4,000,000 bp.
 
     Args:
-        genus: Genus name (string).
+        genus: Genus name, or a taxonomic string beginning with the genus.
 
     Returns:
-        Estimated genome size in bases (integer).
+        Estimated genome size in bases.
     """
-    # Define heuristic genome sizes for common genera
-    g = genus.lower()
+    if not genus or not str(genus).strip():
+        return 4_000_000
+
+    g = str(genus).strip().lower().split()[0]
+
+    # Some common historical/renamed genera or spelling variants.
+    aliases = {
+        "chlamydophila": "chlamydia",
+        "propionibacterium": "cutibacterium",
+        "ensifer": "sinorhizobium",
+        "clostridioides": "clostridioides",
+        "lacticaseibacillus": "lacticaseibacillus",
+        "lactiplantibacillus": "lactiplantibacillus",
+        "lentilactobacillus": "lentilactobacillus",
+        "ligilactobacillus": "ligilactobacillus",
+        "limosilactobacillus": "limosilactobacillus",
+    }
+    g = aliases.get(g, g)
+
     sizes = {
-        'escherichia': 4_600_000,
-        'salmonella': 4_800_000,
-        'listeria': 3_000_000,
-        'staphylococcus': 2_800_000,
-        'streptococcus': 2_200_000,
-        'pseudomonas': 6_500_000,
-        'bacillus': 4_200_000
+        # ------------------------------------------------------------------
+        # Enterobacterales and related common clinical/food genera
+        # ------------------------------------------------------------------
+        "escherichia": 4_600_000,
+        "salmonella": 4_800_000,
+        "shigella": 4_600_000,
+        "klebsiella": 5_500_000,
+        "raoultella": 5_500_000,
+        "enterobacter": 4_800_000,
+        "cronobacter": 4_500_000,
+        "citrobacter": 5_000_000,
+        "yersinia": 4_600_000,
+        "proteus": 4_000_000,
+        "serratia": 5_100_000,
+        "morganella": 3_800_000,
+        "providencia": 4_300_000,
+        "edwardsiella": 3_800_000,
+        "hafnia": 4_700_000,
+        "kluyvera": 4_800_000,
+        "leclercia": 4_800_000,
+        "plausibacter": 5_000_000,
+        "kosakonia": 5_000_000,
+        "pantoea": 4_800_000,
+        "erwinia": 4_800_000,
+        "pectobacterium": 4_900_000,
+        "dickeya": 4_900_000,
+        "pragia": 4_500_000,
+        "rouxiella": 5_000_000,
+        "tatumella": 4_000_000,
+        "moellerella": 4_000_000,
+        "obesumbacterium": 5_000_000,
+        "buttiauxella": 4_700_000,
+        "cedecea": 4_800_000,
+        "evingella": 5_000_000,
+        "grimontia": 5_000_000,
+        "sodalis": 4_500_000,
+        "xenorhabdus": 4_500_000,
+        "photorhabdus": 5_000_000,
+        # ------------------------------------------------------------------
+        # Pseudomonadota / non-fermenters / environmental opportunists
+        # ------------------------------------------------------------------
+        "pseudomonas": 6_500_000,
+        "acinetobacter": 4_000_000,
+        "stenotrophomonas": 4_700_000,
+        "burkholderia": 7_500_000,
+        "paraburkholderia": 8_000_000,
+        "caballeronia": 7_500_000,
+        "ralstonia": 5_800_000,
+        "cupriavidus": 7_000_000,
+        "achromobacter": 6_500_000,
+        "alcaligenes": 4_000_000,
+        "bordetella": 4_100_000,
+        "comamonas": 4_800_000,
+        "acidovorax": 5_000_000,
+        "delftia": 6_500_000,
+        "variovorax": 6_500_000,
+        "herbaspirillum": 5_400_000,
+        "polaromonas": 5_000_000,
+        "janthinobacterium": 6_000_000,
+        "collimonas": 5_500_000,
+        "massilia": 5_500_000,
+        "limnohabitans": 3_500_000,
+        "methylobacterium": 6_500_000,
+        "methylorubrum": 6_500_000,
+        "sphingomonas": 4_200_000,
+        "sphingobium": 4_500_000,
+        "novosphingobium": 4_200_000,
+        "sphingopyxis": 4_200_000,
+        "zymomonas": 2_100_000,
+        "gluconobacter": 3_300_000,
+        "acetobacter": 3_500_000,
+        "komagataeibacter": 3_700_000,
+        "azospirillum": 7_000_000,
+        "magnetospirillum": 5_000_000,
+        "rhodospirillum": 4_000_000,
+        "caulobacter": 4_000_000,
+        "brevundimonas": 3_500_000,
+        "phenylobacterium": 4_500_000,
+        "maricaulis": 4_000_000,
+        "hyphomonas": 3_500_000,
+        # ------------------------------------------------------------------
+        # Plant-associated Alphaproteobacteria / nitrogen fixers
+        # ------------------------------------------------------------------
+        "agrobacterium": 5_500_000,
+        "rhizobium": 6_700_000,
+        "sinorhizobium": 6_700_000,
+        "bradyrhizobium": 8_500_000,
+        "mesorhizobium": 7_000_000,
+        "azorhizobium": 5_300_000,
+        "neorhizobium": 6_500_000,
+        "allorhizobium": 6_500_000,
+        "azotobacter": 6_500_000,
+        "beijerinckia": 7_000_000,
+        "methylocystis": 4_500_000,
+        "methylosinus": 4_500_000,
+        # ------------------------------------------------------------------
+        # Vibrionales / Aeromonadales / water-associated Gram-negatives
+        # ------------------------------------------------------------------
+        "vibrio": 4_000_000,
+        "photobacterium": 5_000_000,
+        "aliivibrio": 4_500_000,
+        "aeromonas": 4_700_000,
+        "plesiomonas": 3_400_000,
+        "tolumonas": 3_500_000,
+        "shewanella": 5_000_000,
+        "alteromonas": 4_500_000,
+        "pseudoalteromonas": 5_000_000,
+        "colwellia": 5_000_000,
+        "idiomarina": 2_800_000,
+        "marinobacter": 4_500_000,
+        "thalassomonas": 4_000_000,
+        # ------------------------------------------------------------------
+        # Xanthomonadales
+        # ------------------------------------------------------------------
+        "xanthomonas": 5_000_000,
+        "xylella": 2_600_000,
+        "lysobacter": 4_500_000,
+        "dokdonella": 3_800_000,
+        "dyella": 4_800_000,
+        "luteimonas": 4_500_000,
+        # ------------------------------------------------------------------
+        # Campylobacterales / related epsilonproteobacteria
+        # ------------------------------------------------------------------
+        "campylobacter": 1_700_000,
+        "helicobacter": 1_700_000,
+        "arcobacter": 2_500_000,
+        "wolinella": 2_100_000,
+        "sulfurospirillum": 3_000_000,
+        # ------------------------------------------------------------------
+        # Pasteurellaceae and other respiratory/animal-associated genera
+        # ------------------------------------------------------------------
+        "haemophilus": 1_800_000,
+        "pasteurella": 2_300_000,
+        "actinobacillus": 2_300_000,
+        "mannheimia": 2_600_000,
+        "aggregatibacter": 2_200_000,
+        "gallibacterium": 2_400_000,
+        "histophilus": 2_000_000,
+        "avibacterium": 2_400_000,
+        # ------------------------------------------------------------------
+        # Neisseriaceae and related
+        # ------------------------------------------------------------------
+        "neisseria": 2_200_000,
+        "moraxella": 2_200_000,
+        "kingella": 2_000_000,
+        "eikenella": 2_200_000,
+        "simonsiella": 2_500_000,
+        "chromobacterium": 4_700_000,
+        # ------------------------------------------------------------------
+        # Intracellular / vector-borne / zoonotic Gram-negatives
+        # ------------------------------------------------------------------
+        "brucella": 3_300_000,
+        "bartonella": 1_900_000,
+        "rickettsia": 1_300_000,
+        "orientia": 2_100_000,
+        "ehrlichia": 1_200_000,
+        "anaplasma": 1_200_000,
+        "wolbachia": 1_300_000,
+        "coxiella": 2_000_000,
+        "francisella": 1_900_000,
+        "legionella": 3_400_000,
+        "afipia": 5_000_000,
+        # ------------------------------------------------------------------
+        # Spirochetes
+        # ------------------------------------------------------------------
+        "leptospira": 4_600_000,
+        "borrelia": 1_500_000,
+        "treponema": 1_100_000,
+        "brachyspira": 3_200_000,
+        "spirochaeta": 3_000_000,
+        # ------------------------------------------------------------------
+        # Bacillota/Firmicutes: Bacillales and relatives
+        # ------------------------------------------------------------------
+        "bacillus": 4_200_000,
+        "geobacillus": 3_600_000,
+        "parageobacillus": 3_600_000,
+        "paenibacillus": 6_000_000,
+        "brevibacillus": 5_500_000,
+        "aneurinibacillus": 5_000_000,
+        "virgibacillus": 4_000_000,
+        "halobacillus": 4_000_000,
+        "oceanobacillus": 4_000_000,
+        "lysinibacillus": 4_700_000,
+        "solibacillus": 4_500_000,
+        "thermobacillus": 3_500_000,
+        "staphylococcus": 2_800_000,
+        "macrococcus": 2_500_000,
+        "mammaliicoccus": 2_500_000,
+        "jeotgalicoccus": 2_500_000,
+        "salinicoccus": 2_800_000,
+        "listeria": 3_000_000,
+        "brochothrix": 2_900_000,
+        "kurthia": 3_500_000,
+        "exiguobacterium": 3_000_000,
+        "planococcus": 3_500_000,
+        "sporosarcina": 4_000_000,
+        # ------------------------------------------------------------------
+        # Clostridia / anaerobic Firmicutes
+        # ------------------------------------------------------------------
+        "clostridium": 4_000_000,
+        "clostridioides": 4_300_000,
+        "paraclostridium": 4_000_000,
+        "perfringens": 3_300_000,
+        "desulfotomaculum": 3_500_000,
+        "thermoanaerobacter": 2_800_000,
+        "thermoanaerobacterium": 3_000_000,
+        "caldicellulosiruptor": 2_800_000,
+        "acetobacterium": 4_000_000,
+        "moorella": 3_000_000,
+        "eubacterium": 3_300_000,
+        "roseburia": 4_300_000,
+        "faecalibacterium": 3_000_000,
+        "ruminococcus": 3_500_000,
+        "butyrivibrio": 3_500_000,
+        "anaerostipes": 3_000_000,
+        "coprococcus": 3_000_000,
+        "dorea": 3_000_000,
+        "blautia": 3_500_000,
+        "lachnoclostridium": 3_500_000,
+        "oscillibacter": 3_500_000,
+        "subdoligranulum": 3_000_000,
+        "veillonella": 2_100_000,
+        "megasphaera": 2_600_000,
+        "megamonas": 2_700_000,
+        "selenomonas": 2_500_000,
+        "anaerococcus": 2_100_000,
+        "peptoniphilus": 2_000_000,
+        "peptostreptococcus": 2_000_000,
+        "finegoldia": 2_000_000,
+        "parvimonas": 1_800_000,
+        # ------------------------------------------------------------------
+        # Lactic acid bacteria
+        # ------------------------------------------------------------------
+        "streptococcus": 2_200_000,
+        "enterococcus": 3_000_000,
+        "lactococcus": 2_500_000,
+        "lactobacillus": 2_000_000,
+        "lacticaseibacillus": 2_000_000,
+        "lactiplantibacillus": 3_000_000,
+        "lentilactobacillus": 2_000_000,
+        "ligilactobacillus": 2_000_000,
+        "limosilactobacillus": 2_000_000,
+        "leuconostoc": 2_000_000,
+        "pediococcus": 2_000_000,
+        "weissella": 2_200_000,
+        "carnobacterium": 2_500_000,
+        "oenococcus": 1_800_000,
+        "tetragenococcus": 2_400_000,
+        "aerococcus": 2_000_000,
+        "gemella": 1_900_000,
+        "vagococcus": 2_200_000,
+        # ------------------------------------------------------------------
+        # Bacteroidota / gut, oral, environmental
+        # ------------------------------------------------------------------
+        "bacteroides": 5_200_000,
+        "prevotella": 3_500_000,
+        "porphyromonas": 2_400_000,
+        "parabacteroides": 5_000_000,
+        "alistipes": 3_800_000,
+        "barnesiella": 3_500_000,
+        "odoribacter": 4_000_000,
+        "butyricimonas": 4_500_000,
+        "paludibacter": 3_500_000,
+        "capnocytophaga": 2_800_000,
+        "flavobacterium": 3_500_000,
+        "chryseobacterium": 4_500_000,
+        "elizabethkingia": 4_000_000,
+        "weeksella": 2_800_000,
+        "pedobacter": 5_000_000,
+        "sphingobacterium": 5_000_000,
+        "hymenobacter": 5_000_000,
+        "maribacter": 4_000_000,
+        "zobellia": 5_000_000,
+        "tenacibaculum": 4_000_000,
+        "formosa": 4_000_000,
+        "cytophaga": 4_500_000,
+        "runella": 7_000_000,
+        # ------------------------------------------------------------------
+        # Actinobacteria / Actinomycetota
+        # ------------------------------------------------------------------
+        "mycobacterium": 4_400_000,
+        "mycolicibacterium": 6_000_000,
+        "mycolicibacter": 5_500_000,
+        "corynebacterium": 2_800_000,
+        "cutibacterium": 2_500_000,
+        "bifidobacterium": 2_200_000,
+        "actinomyces": 3_000_000,
+        "nocardia": 6_500_000,
+        "rhodococcus": 5_500_000,
+        "gordonia": 5_000_000,
+        "dietzia": 3_500_000,
+        "tsukamurella": 4_500_000,
+        "streptomyces": 8_500_000,
+        "kitasatospora": 8_500_000,
+        "micromonospora": 7_000_000,
+        "saccharopolyspora": 7_000_000,
+        "amycolatopsis": 9_000_000,
+        "nocardiopsis": 5_500_000,
+        "frankia": 7_500_000,
+        "micrococcus": 2_600_000,
+        "arthrobacter": 4_500_000,
+        "paenarthrobacter": 4_500_000,
+        "pseudarthrobacter": 4_500_000,
+        "kocuria": 2_800_000,
+        "microbacterium": 3_500_000,
+        "leifsonia": 3_500_000,
+        "curtobacterium": 3_700_000,
+        "plantibacter": 3_500_000,
+        "agromyces": 3_500_000,
+        "brevibacterium": 4_000_000,
+        "cellulomonas": 4_000_000,
+        "dermacoccus": 3_000_000,
+        "janibacter": 3_500_000,
+        "jonesia": 3_000_000,
+        "mobiluncus": 2_200_000,
+        "gardnerella": 1_700_000,
+        "collinsella": 2_000_000,
+        "egerthella": 2_000_000,
+        "slackia": 2_000_000,
+        "olsenella": 2_000_000,
+        "atopobium": 1_700_000,
+        # ------------------------------------------------------------------
+        # Mollicutes / reduced-genome bacteria
+        # ------------------------------------------------------------------
+        "mycoplasma": 800_000,
+        "ureaplasma": 750_000,
+        "acholeplasma": 1_500_000,
+        "mesoplasma": 900_000,
+        "spiroplasma": 1_300_000,
+        "phytoplasma": 700_000,
+        # ------------------------------------------------------------------
+        # Chlamydiae and related intracellular bacteria
+        # ------------------------------------------------------------------
+        "chlamydia": 1_000_000,
+        "parachlamydia": 2_400_000,
+        "simkania": 2_500_000,
+        "waddlia": 2_100_000,
+        # ------------------------------------------------------------------
+        # Cyanobacteria
+        # ------------------------------------------------------------------
+        "synechococcus": 2_700_000,
+        "prochlorococcus": 1_800_000,
+        "nostoc": 7_500_000,
+        "anabaena": 6_500_000,
+        "microcystis": 5_000_000,
+        "cyanothece": 5_000_000,
+        "fischerella": 7_000_000,
+        "calothrix": 7_000_000,
+        "gleobacter": 4_600_000,
+        "arthrospira": 6_500_000,
+        "spirulina": 6_000_000,
+        "oscillatoria": 6_500_000,
+        "planktothrix": 5_000_000,
+        "crocosphaera": 6_000_000,
+        "trichodesmium": 7_000_000,
+        # ------------------------------------------------------------------
+        # Deinococcus-Thermus and thermophiles
+        # ------------------------------------------------------------------
+        "deinococcus": 3_300_000,
+        "thermus": 2_200_000,
+        "meiothermus": 3_000_000,
+        "thermotoga": 1_900_000,
+        "petrotoga": 2_000_000,
+        "furcifer": 2_000_000,
+        "aquifex": 1_600_000,
+        "hydrogenobacter": 1_800_000,
+        # ------------------------------------------------------------------
+        # Planctomycetes / Verrucomicrobia / PVC superphylum
+        # ------------------------------------------------------------------
+        "planctomyces": 6_000_000,
+        "gemmata": 8_000_000,
+        "rhodopirellula": 7_000_000,
+        "blastopirellula": 7_000_000,
+        "pirellula": 7_000_000,
+        "akkermansia": 2_700_000,
+        "verrucomicrobium": 6_000_000,
+        "prosthecobacter": 6_000_000,
+        "chthoniobacter": 5_000_000,
+        # ------------------------------------------------------------------
+        # Acidobacteria and soil-associated groups
+        # ------------------------------------------------------------------
+        "acidobacterium": 5_000_000,
+        "granulicella": 5_000_000,
+        "terracidiphilus": 5_000_000,
+        "bryobacter": 7_000_000,
+        "edaphobacter": 7_000_000,
+        "koribacter": 6_000_000,
+        "solibacter": 9_000_000,
+        # ------------------------------------------------------------------
+        # Chloroflexi and related environmental bacteria
+        # ------------------------------------------------------------------
+        "chloroflexus": 5_000_000,
+        "roseiflexus": 5_500_000,
+        "herpetosiphon": 6_500_000,
+        "anaerolinea": 4_500_000,
+        "dehalococcoides": 1_500_000,
+        "dehalogenimonas": 1_600_000,
+        # ------------------------------------------------------------------
+        # Nitrospirae / nitrifiers / sulfur and iron bacteria
+        # ------------------------------------------------------------------
+        "nitrospira": 4_500_000,
+        "nitrobacter": 4_000_000,
+        "nitrosomonas": 3_000_000,
+        "nitrosospira": 3_500_000,
+        "nitrosococcus": 3_500_000,
+        "thiobacillus": 3_500_000,
+        "acidithiobacillus": 3_000_000,
+        "beggiatoa": 5_000_000,
+        "thiomicrospira": 2_500_000,
+        "allochromatium": 3_500_000,
+        "chromatium": 4_000_000,
+        # ------------------------------------------------------------------
+        # Desulfobacterota / sulfate reducers
+        # ------------------------------------------------------------------
+        "desulfovibrio": 3_800_000,
+        "desulfobacter": 4_000_000,
+        "desulfobulbus": 4_000_000,
+        "desulfococcus": 4_000_000,
+        "desulfotalea": 3_500_000,
+        "desulfomicrobium": 3_000_000,
+        "desulfosporosinus": 5_000_000,
+        "desulfitobacterium": 5_000_000,
+        "sulfurovum": 2_500_000,
+        # ------------------------------------------------------------------
+        # Fusobacteria
+        # ------------------------------------------------------------------
+        "fusobacterium": 2_400_000,
+        "leptotrichia": 2_300_000,
+        "streptobacillus": 1_700_000,
+        # ------------------------------------------------------------------
+        # Archaea, optional
+        # ------------------------------------------------------------------
+        "methanobrevibacter": 2_000_000,
+        "methanococcus": 1_700_000,
+        "methanocaldococcus": 1_800_000,
+        "methanosarcina": 4_500_000,
+        "methanosaeta": 3_000_000,
+        "methanothrix": 3_000_000,
+        "methanobacterium": 2_800_000,
+        "methanoculleus": 2_500_000,
+        "halobacterium": 2_600_000,
+        "haloferax": 3_900_000,
+        "halorubrum": 3_000_000,
+        "halococcus": 3_000_000,
+        "natronomonas": 3_000_000,
+        "sulfolobus": 3_000_000,
+        "saccharolobus": 3_000_000,
+        "thermococcus": 2_000_000,
+        "pyrococcus": 1_900_000,
+        "archaeoglobus": 2_200_000,
+        "thermoplasma": 1_600_000,
+        "picrophilus": 1_600_000,
     }
 
-    # Return the size if genus is known, else default
-    for key, val in sizes.items():
-        if key in g:
-            return val
-
-    return 4_000_000
+    return sizes.get(g, 4_000_000)
 
 
 def estimate_mean_read_length(
@@ -929,6 +1398,7 @@ def characterise_read(
     reference_sequence: str,
     fastq_records: Dict[str, Any],
     quality_cutoff: int,
+    min_quality: int = 15,
     fasta: bool = False,
     nanopore: bool = False
 ) -> Dict[str, Any]:
@@ -939,7 +1409,10 @@ def characterise_read(
         column: Pysam pileup column object for the position.
         reference_sequence: The full reference sequence string for the contig.
         fastq_records: Mapping of read name -> SeqRecord with quality info.
-        quality_cutoff: Minimum base quality to be considered high-quality.
+        quality_cutoff: Minimum base quality used for read trimming and
+            initial filtering.
+        min_quality: Minimum base quality required to count a base as SNV
+            support.
 
     Keyword Args:
         fasta: If True, operate in FASTA-only mode (no quality checks).
@@ -1117,8 +1590,9 @@ def characterise_read(
                     'gene': column.reference_name
                 }
 
-                # Add the quality of the base
-                if quality >= quality_cutoff:
+                # Add the quality of the base only if it meets the SNV
+                # support threshold.
+                if quality >= min_quality:
                     qualities.append(quality)
                     # record per-base support qualities, mapping qualities and
                     # strand counts for later statistical tests
@@ -1219,8 +1693,8 @@ def characterise_read(
                 else:
                     # Both SNV sequences pass quality
                     if (
-                        dir_dict[True]['qual'] >= quality_cutoff
-                        and dir_dict[False]['qual'] >= quality_cutoff
+                        dir_dict[True]['qual'] >= min_quality
+                        and dir_dict[False]['qual'] >= min_quality
                     ):
                         # Forward SNV1
                         if (
@@ -1249,7 +1723,7 @@ def characterise_read(
                             ][dir_dict[False]['qbase']] += 1
 
                     # Only the forward reads pass quality
-                    elif dir_dict[True]['qual'] >= quality_cutoff:
+                    elif dir_dict[True]['qual'] >= min_quality:
                         # Forward SNV reverse QF
                         if (
                             dir_dict[True]['qbase'] not in
@@ -1277,7 +1751,7 @@ def characterise_read(
                             ][dir_dict[False]['qbase']] += 1
 
                     # Only the reverse reads pass quality
-                    elif dir_dict[False]['qual'] >= quality_cutoff:
+                    elif dir_dict[False]['qual'] >= min_quality:
                         # Reverse SNV forward QF
                         if (
                             dir_dict[False]['qbase'] not in
@@ -1335,7 +1809,7 @@ def characterise_read(
             # SNV in forward read only
             elif not dir_dict[True]['match'] and dir_dict[False]['match']:
                 # Since only the forward read supports the SNV, quality filter
-                if dir_dict[True]['qual'] >= quality_cutoff:
+                if dir_dict[True]['qual'] >= min_quality:
                     if (
                         dir_dict[True]['qbase'] not in
                         filtered_read_dict['forward_SNV_reverse_ref']
@@ -1378,7 +1852,7 @@ def characterise_read(
             # SNV in reverse read only
             elif dir_dict[True]['match'] and not dir_dict[False]['match']:
                 # Quality filter
-                if dir_dict[False]['qual'] >= quality_cutoff:
+                if dir_dict[False]['qual'] >= min_quality:
                     if (
                         dir_dict[False]['qbase'] not in
                         filtered_read_dict['reverse_SNV_forward_ref']
@@ -1439,7 +1913,7 @@ def characterise_read(
             for direction in dir_dict:
                 # SNV supported by a single read
                 if not dir_dict[direction]['match']:
-                    if dir_dict[direction]['qual'] >= quality_cutoff:
+                    if dir_dict[direction]['qual'] >= min_quality:
                         # Forward
                         if direction:
                             if (
@@ -1483,7 +1957,7 @@ def characterise_read(
 
                 # Match to the reference sequence supported by a single read
                 else:
-                    if dir_dict[direction]['qual'] >= quality_cutoff:
+                    if dir_dict[direction]['qual'] >= min_quality:
                         # Forward
                         if direction:
                             if (
@@ -1648,6 +2122,12 @@ def determine_cutoff(
     # sensible minimum cutoff
     if k > mean_depth_per_pos:
         k = max(1, base_cutoff)
+        expected_positions = perpos_tail(k) * max_len
+
+    # Safety floor for dynamic calculation (make base_cutoff==0 more
+    # conservative)
+    if base_cutoff == 0:
+        k = max(k, MIN_DYNAMIC_CUTOFF)
         expected_positions = perpos_tail(k) * max_len
 
     # Provide two clear reporting metrics:
@@ -1951,6 +2431,42 @@ def combine_pvalues_fisher(
     return float(chi2.sf(stat, 2 * k))
 
 
+def _position_entry_passes_probabilistic_gating(
+    *,
+    position_stats: Dict[str, Any],
+    q_threshold: float = 0.05,
+    strand_p_threshold: float = 0.01,
+    pos_p_threshold: float = 0.01
+) -> bool:
+    """
+    Return True if the position has at least one alternate base that is
+    statistically supported after correction for multiple testing.
+
+    A base is considered supported if it has a BH-adjusted q-value at or
+    below ``q_threshold`` and, if strand/position bias tests are available,
+    those tests do not indicate significant bias.
+    """
+    if not position_stats:
+        return False
+
+    for stats in position_stats.values():
+        q_value = stats.get('q_value')
+        if q_value is None or q_value > q_threshold:
+            continue
+
+        strand_p = stats.get('strand_p')
+        pos_p = stats.get('pos_p')
+
+        if strand_p is not None and strand_p <= strand_p_threshold:
+            continue
+        if pos_p is not None and pos_p <= pos_p_threshold:
+            continue
+
+        return True
+
+    return False
+
+
 def find_multibase_positions(
     *,  # Enforce keyword arguments
     ref_base: str,
@@ -2020,41 +2536,53 @@ def find_multibase_positions(
                 total_coverage += count
                 snv_dict['total'] += count
 
-            # Forward and reverse reads agree on base
-            if 'congruent' in category:
-                # Congruent reference sequence
-                snv_dict['total_congruent'] += count
-                snv_dict['total_forward'] += int(count / 2)
-                snv_dict['total_reverse'] += int(count / 2)
+    # If the reference base is not observed in the pileup, then there is no
+    # allele mixture at this position. Do not call a SNV for a pure alternate
+    # allele signal.
+    if base_count and base_count.get(ref_base, 0) == 0:
+        return snv_dict, {}, total_coverage, {}
 
-                # Congruent SNVs
-                if 'SNV' in category and base != ref_base:
-                    snv_dict['total_congruent_SNV'] += count
-                    snv_dict['total_forward_SNV'] += int(count / 2)
-                    snv_dict['total_reverse_SNV'] += int(count / 2)
-                    snv_dict['total_SNV'] += count
+    # Forward and reverse reads agree on base
+    for category, base_dict in filtered_read_dict.items():
+        # Iterate through the sequence of each query base, and the
+        # corresponding count
+        for base, count in base_dict.items():
+            if 'filtered' not in category:
+                # Forward and reverse reads agree on base
+                if 'congruent' in category:
+                    # Congruent reference sequence
+                    snv_dict['total_congruent'] += count
+                    snv_dict['total_forward'] += int(count / 2)
+                    snv_dict['total_reverse'] += int(count / 2)
 
-            # SNV in forward read
-            elif category.startswith('forward_SNV'):
-                snv_dict['total_forward'] += count
-                if base != ref_base:
-                    snv_dict['total_forward_SNV'] += count
-                    snv_dict['total_SNV'] += count
+                    # Congruent SNVs
+                    if 'SNV' in category and base != ref_base:
+                        snv_dict['total_congruent_SNV'] += count
+                        snv_dict['total_forward_SNV'] += int(count / 2)
+                        snv_dict['total_reverse_SNV'] += int(count / 2)
+                        snv_dict['total_SNV'] += count
 
-            # Forward read matches reference
-            elif category.startswith('forward_ref'):
-                snv_dict['total_forward'] += count
+                # SNV in forward read
+                elif category.startswith('forward_SNV'):
+                    snv_dict['total_forward'] += count
+                    if base != ref_base:
+                        snv_dict['total_forward_SNV'] += count
+                        snv_dict['total_SNV'] += count
 
-            # SNV in reverse read
-            elif category.startswith('reverse_SNV'):
-                snv_dict['total_reverse'] += count
-                if base != ref_base:
-                    snv_dict['total_reverse_SNV'] += count
-                    snv_dict['total_SNV'] += count
+                # Forward read matches reference
+                elif category.startswith('forward_ref'):
+                    snv_dict['total_forward'] += count
 
-            # Reverse read match reference
-            elif category.startswith('reverse_ref'):
-                snv_dict['total_reverse'] += count
+                # SNV in reverse read
+                elif category.startswith('reverse_SNV'):
+                    snv_dict['total_reverse'] += count
+                    if base != ref_base:
+                        snv_dict['total_reverse_SNV'] += count
+                        snv_dict['total_SNV'] += count
+
+                # Reverse read match reference
+                elif category.startswith('reverse_ref'):
+                    snv_dict['total_reverse'] += count
 
     # Initialise a dictionary to store the summary of characterised base types
     passing_snv_dict = {
@@ -2363,6 +2891,7 @@ def read_contig(
     allele_records: Optional[Any] = None,
     fastq_records: Optional[Dict[str, Any]] = None,
     quality_cutoff: int = 20,
+    min_quality: int = 15,
     base_cutoff: Optional[int] = None,
     base_fraction_cutoff: Optional[float] = None,
     fasta: bool = False,
@@ -2384,7 +2913,10 @@ def read_contig(
         fastq_records: Mapping of read_name -> SeqRecord with quality info.
 
     Keyword Args:
-        quality_cutoff: Minimum base quality to be considered (default: 20).
+        quality_cutoff: Minimum base quality used only for read trimming and
+            earlier filtering (default: 20).
+        min_quality: Minimum base quality required to count a base as SNV
+            support (default: 15).
         base_cutoff: Absolute base-count cutoff (optional).
         base_fraction_cutoff: Fractional cutoff of coverage (optional).
         fasta: If True, operate in FASTA mode (no base qualities).
@@ -2587,6 +3119,7 @@ def read_contig(
             reference_sequence=reference_sequence,
             fastq_records=fastq_records,
             quality_cutoff=quality_cutoff,
+            min_quality=min_quality,
             fasta=fasta,
             nanopore=nanopore
         )
@@ -2672,21 +3205,13 @@ def read_contig(
                 base_support=base_support_dict.get(i, {})
             )
 
-        # If there are any SNVs called for the gene, update the
-        # multibase_position_dict and aggregate stats
+        # If there are any SNVs called for the gene, aggregate stats and
+        # record the position for downstream filtering after multiple-test
+        # correction.
         if passing_snv_dict:
             # Pysam starts counting at 0, whereas we actually want to start
             # counting at 1.
             actual_position = column.pos + 1
-
-            # Initialise the gene name in the dictionary as required
-            if column.reference_name not in multibase_position_dict:
-                multibase_position_dict[column.reference_name] = {}
-
-            # Update the dictionary with the actual position:
-            multibase_position_dict[column.reference_name].update(
-                {actual_position: passing_snv_dict}
-            )
 
             # Store entry for per-gene reporting and FDR correction
             report_entries.append({
@@ -2733,13 +3258,40 @@ def read_contig(
                 if b in pos_stats:
                     pos_stats[b]['q_value'] = test['q']
 
+    # Filter positions using probabilistic evidence. If per-base statistics are
+    # available, require at least one alternate base to be statistically
+    # supported before the position is retained.
+    valid_report_entries = []
+    for entry in report_entries:
+        position_stats = entry.get('position_stats') or {}
+        if not position_stats or _position_entry_passes_probabilistic_gating(
+            position_stats=position_stats
+        ):
+            valid_report_entries.append(entry)
+
+    # Rebuild the multibase dict only from valid positions.
+    multibase_position_dict = {}
+    for entry in valid_report_entries:
+        gene = entry['gene']
+        pos = entry['position']
+        if gene not in multibase_position_dict:
+            multibase_position_dict[gene] = {}
+        multibase_position_dict[gene][pos] = entry['passing_snv_dict']
+
     # Compute per-gene combined p-value (Fisher) and a gene-level score
     # (sum -log10(q)) p-values used for Fisher should be the unadjusted
     # position p-values; q-values are used for scoring.
-    pvals_for_gene = [t['p'] for t in all_tests] if all_tests else []
+    pvals_for_gene = [
+        test['p']
+        for entry in valid_report_entries
+        for test in entry.get('tests', [])
+    ] if valid_report_entries else []
     qvals_for_gene = [
-        t.get('q') for t in all_tests if 'q' in t
-    ] if all_tests else []
+        test.get('q')
+        for entry in valid_report_entries
+        for test in entry.get('tests', [])
+        if 'q' in test
+    ] if valid_report_entries else []
 
     # Calculate combined p-value and gene score
     combined_p = combine_pvalues_fisher(
@@ -2772,7 +3324,7 @@ def read_contig(
     # per-gene dicts returned later. (Actual file will be written once in
     # find_contamination after collecting all genes.) build output lines
     to_write = ''
-    for entry in report_entries:
+    for entry in valid_report_entries:
         pos_stats = entry.get('position_stats') or {}
         if pos_stats:
             # Choose the base with smallest p-value for summary metrics
@@ -3474,6 +4026,7 @@ def find_contamination(
     threads: int = 1,
     keep_files: bool = False,
     quality_cutoff: int = 20,
+    min_quality: int = 15,
     base_fraction_cutoff: float = 0.05,
     cgmlst_db: Optional[str] = None,
     tmpdir: Optional[str] = None,
@@ -3483,7 +4036,7 @@ def find_contamination(
     fasta: bool = False,
     error_cutoff: float = 1.0,
     use_prob_scoring: bool = False,
-    score_threshold: float = 10.0,
+    score_threshold: float = 2.0,
     max_expected_positions: float = 0.001,
     downsample_depth: Optional[int] = None,
     subreplicates: int = 1,
@@ -3513,8 +4066,10 @@ def find_contamination(
         fasta: If True, operate in FASTA-only mode.
         error_cutoff: Error cutoff percentage (default 1.0).
         debug: Enable debug logging.
-        use_prob_scoring: Use probabilistic scoring (sum -log10(q)).
-        score_threshold: Threshold for probabilistic scoring.
+        use_prob_scoring: Use probabilistic scoring by requiring supported
+            positions with statistical evidence.
+        score_threshold: Minimum number of statistically supported positions
+            required for a sample to be called contaminated.
         subreplicates: Number of independent downsample replicates to run. If
             >1, reads will be downsampled `subreplicates` times and the
             results aggregated.
@@ -4828,13 +5383,8 @@ def find_contamination(
         rmlst_gene_length = final_rmlst_len
         pysam_pass = True
 
-        # Compute sample_score from aggregated Qs
-        qs = []
-        for key, entry in pos_counter.items():
-            qs.extend(entry['qvals'])
-        sample_score = sum(
-            [-math.log10(q + 1e-300) for q in qs]
-        ) if qs else None
+        # Use the number of supported positions as the probabilistic score.
+        sample_score = float(multi_positions)
 
         # Final write to summary report
         if keep_files is False:
@@ -5464,6 +6014,7 @@ def find_contamination(
         reference_fasta_list = [rmlst_fasta] * len(gene_alleles)
         fasta_list = [fasta] * len(gene_alleles)
         quality_cutoff_list = [quality_cutoff] * len(gene_alleles)
+        min_quality_list = [min_quality] * len(gene_alleles)
         base_cutoff_list = [base_cutoff] * len(gene_alleles)
         base_fraction_list = [base_fraction_cutoff] * len(gene_alleles)
         fastq_records_list = [fastq_records] * len(gene_alleles)
@@ -5485,6 +6036,7 @@ def find_contamination(
                     reference_fasta=reference_fasta_list[i],
                     fastq_records=fastq_records_list[i],
                     quality_cutoff=quality_cutoff_list[i],
+                    min_quality=min_quality_list[i],
                     base_cutoff=base_cutoff_list[i],
                     base_fraction_cutoff=base_fraction_list[i],
                     fasta=fasta_list[i],
@@ -5620,6 +6172,7 @@ def find_contamination(
                     'reference_fasta': rmlst_fasta,
                     'fastq_records': fastq_records,
                     'quality_cutoff': quality_cutoff,
+                    'min_quality': min_quality,
                     'base_cutoff': base_cutoff,
                     'base_fraction_cutoff': base_fraction_cutoff,
                     'fasta': fasta,
@@ -5752,34 +6305,10 @@ def find_contamination(
     else:
         snp_cutoff = 10
 
-    # Compute a simple per-sample score: sum of -log10(q) across reported
-    # positions (q = adj p-value). Used as a diagnostic.
-    sample_score = None
-    qs = []
-
-    # Flatten report_write_list into lines for robust parsing. Some entries
-    # are lists of lines (parallel branch) and some may be strings.
-    all_lines: List[str] = []
-    for item in report_write_list:
-        if isinstance(item, list):
-            all_lines.extend(item)
-        elif isinstance(item, str):
-            all_lines.extend(item.splitlines(True))
-
-    for line in all_lines:
-        # Lines are tab-separated; splitting on tabs avoids breaking fields
-        # that contain commas.
-        fields = line.rstrip('\n').split('\t')
-        # AdjPValue is the 13th column (0-based index 12)
-        if len(fields) > 12:
-            q_str = fields[12]
-            if q_str != 'ND':
-                try:
-                    qs.append(float(q_str))
-                except ValueError:
-                    pass
-    if qs:
-        sample_score = sum([-math.log10(q + 1e-300) for q in qs])
+    # Compute a simple per-sample score: the number of supported
+    # multibase positions. This aligns the probabilistic model with the
+    # sample-level decision rule.
+    sample_score = float(multi_positions)
 
     # Write gene-summary TSV file
     gene_summary_file = os.path.join(
@@ -5873,10 +6402,12 @@ def write_output(
         *  # Enforce keyword-only arguments for the following params
         snp_cutoff: Number of cSNVs required to call a sample contaminated.
         pysam_pass: Whether pysam mapping completed successfully.
-        sample_score: Optional per-sample score (diagnostic).
+        sample_score: Optional per-sample score (diagnostic), now equal
+            to the number of statistically supported positions.
         use_probabilistic: If True and score_threshold supplied, decide
-        contamination based on sample_score >= score_threshold.
-        score_threshold: Threshold used when use_probabilistic is True.
+            contamination based on sample_score >= score_threshold.
+        score_threshold: Minimum number of supported positions required
+            when use_probabilistic is True.
 
     Returns:
         None
@@ -5921,7 +6452,7 @@ def write_output(
     if pysam_pass:
         # Check contamination based on probabilistic or deterministic method
         if use_probabilistic and score_threshold is not None:
-            # Probabilistic decision based on sample_score (diagnostic)
+            # Probabilistic decision based on supported-position count
             contaminated = bool(
                 sample_score is not None and sample_score >= score_threshold
             )
@@ -6119,13 +6650,7 @@ def get_version() -> str:
     Returns:
         Version string.
     """
-    try:
-        version = (
-            f'ConFindr {pkg_resources.get_distribution("confindr").version}'
-        )
-    except pkg_resources.DistributionNotFound:
-        version = 'ConFindr (Unknown version)'
-    return version
+    return f'ConFindr {__version__}'
 
 
 def _valid_downsample_depth(value: str) -> int:

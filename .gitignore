@@ -111,4 +111,5 @@ confindr_integration*
 # Certain test files
 tests/*.gz
 tests/test_samples/
-tests/*.
+tests/*.tsv
+tests/*.csv

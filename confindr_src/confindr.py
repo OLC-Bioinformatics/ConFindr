@@ -43,7 +43,8 @@ from confindr_src.methods import (
     recommend_xmx,
     write_output,
 )
-import confindr_src.methods as methods  # module import for runtime config
+
+from confindr_src import methods  # module import for runtime config
 from confindr_src.version import __version__
 
 
@@ -185,6 +186,7 @@ def confindr(
                 databases_folder=args.databases,
                 keep_files=args.keep_files,
                 quality_cutoff=args.quality_cutoff,
+                min_quality=args.min_quality,
                 base_cutoff=args.base_cutoff,
                 base_fraction_cutoff=args.base_fraction_cutoff,
                 cgmlst_db=args.cgmlst,
@@ -337,15 +339,18 @@ def main() -> None:
         '-t', '--threads',
         type=int,
         default=cpu_count,
-        help='Number of threads to run analysis with.'
+        help=(
+            'Number of threads to use for parallel analysis. Larger values '
+            'can reduce runtime but increase CPU and memory usage.'
+        )
     )
     parser.add_argument(
         '-tmp', '--tmp',
         type=str,
         help=(
-            'If your ConFindr databases are in a location you do not have '
-            'write access to, specify a temporary directory to put '
-            'genus-specific databases to.'
+            'Temporary directory for writing genus-specific database files '
+            'when the primary database folder is not writable. Useful for '
+            'read-only database mounts or restricted environments.'
         ),
     )
     parser.add_argument(
@@ -353,8 +358,9 @@ def main() -> None:
         default=False,
         action='store_true',
         help=(
-            'By default, intermediate files are deleted. Activate this '
-            'flag to keep intermediate files.'
+            'Keep intermediate files produced during analysis for debugging '
+            'or inspection. By default, these files are removed when the '
+            'run completes.'
         ),
     )
     parser.add_argument(
@@ -362,26 +368,40 @@ def main() -> None:
         type=int,
         default=20,
         help=(
-            'Base quality needed to support a multiple allele call. '
-            'Defaults to 20.'
+            'Base quality threshold used for read trimming. Defaults to 20. '
+            'High-quality SNV support is controlled by --min_quality.'
         ),
+    )
+    parser.add_argument(
+        '--min_quality',
+        type=int,
+        default=15,
+        help=(
+            'Minimum base quality required to count a base as SNV support. '
+            'This filters low-quality bases at individual positions without '
+            'discarding the read. Default is 15.'
+        )
     )
     parser.add_argument(
         '--use-prob-scoring',
         action='store_true',
         default=False,
         help=(
-            'Use probabilistic scoring (sum -log10(q)) to make sample '
-            'contamination calls instead of the default SNP-count rule.'
+            'Use probabilistic scoring by requiring statistically supported '
+            'positions rather than raw SNP counts. This mode is more '
+            'conservative and is intended for higher-confidence contamination '
+            'detection.'
         ),
     )
     parser.add_argument(
         '--score-threshold',
         type=float,
-        default=10.0,
+        default=2.0,
         help=(
-            'Score threshold for probabilistic scoring (sum -log10(q)). '
-            'Default 10.0'
+            'Minimum number of statistically supported positions required '
+            'to call a sample contaminated in probabilistic mode. '
+            'A higher value makes contamination calls more stringent. '
+            'Default is 2.0.'
         ),
     )
     parser.add_argument(
@@ -389,9 +409,10 @@ def main() -> None:
         type=int,
         default=3,
         help=(
-            'Number of bases necessary to support a multiple allele call. '
-            'Automatically increments based on gene-specific quality, '
-            'length and depth of coverage. Default is 3.'
+            'Minimum number of supporting bases required to consider an '
+            'alternate allele for SNV calling. This value is adjusted by '
+            'the pipeline based on gene-specific data quality and coverage.'
+            ' Default is 3.'
         ),
     )
     parser.add_argument(
@@ -399,8 +420,9 @@ def main() -> None:
         type=float,
         default=0.05,
         help=(
-            'Fraction of bases necessary to support a multiple allele call. '
-            'Particularly useful for very high coverage samples. '
+            'Minimum fraction of the usable pileup depth that must support '
+            'an alternate allele for it to be considered a candidate SNV. '
+            'This helps avoid low-frequency noise in high-depth samples. '
             'Default is 0.05.'
         ),
     )
@@ -409,8 +431,8 @@ def main() -> None:
         type=float,
         default=1.0,
         help=(
-            'Value to use for the calculated error cutoff when setting '
-            'the base cutoff value. Default is 1.0%%.'
+            'Error cutoff used when computing dynamic base support thresholds.'
+            ' Lower values make SNV calls more conservative. Default is 1.0%%.'
         ),
     )
     parser.add_argument(
@@ -419,8 +441,9 @@ def main() -> None:
         default=0.001,
         help=(
             'Maximum expected number of false-positive positions allowed '
-            'per gene when using dynamic cutoff (default 0.001). Set to 0 to '
-            'disable tightening.'
+            'per gene when computing a dynamic base support cutoff. '
+            'Smaller values make the cutoff stricter; set to 0 to disable '
+            'dynamic tightening entirely.'
         ),
     )
     parser.add_argument(
@@ -429,9 +452,9 @@ def main() -> None:
         default=None,
         metavar='DEPTH',
         help=(
-            'Approximate target coverage depth to downsample reads to. '
-            'Integer between 10 and 100. If not set, no downsampling will '
-            'be performed.'
+            'Approximate target coverage depth for downsampling reads before '
+            'analysis. Useful to reduce runtime or make comparisons more '
+            'consistent across samples with very high coverage.'
         ),
     )
     parser.add_argument(
@@ -441,7 +464,8 @@ def main() -> None:
         help=(
             'Number of independent downsample replicates to run. Default is 1 '
             '(no replicates). If >1, each replicate is downsampled separately '
-            'and results are aggregated by consensus.'
+            'and candidate positions are reported only when enough replicates '
+            'agree.'
         ),
     )
     parser.add_argument(
@@ -450,7 +474,7 @@ def main() -> None:
         default=None,
         help=(
             'Optional seed to make downsample replicates deterministic. '
-            'If provided, replicate i will use seed+i as its PRNG seed.'
+            'When provided, replicate i uses seed+i so results are repeatable.'
         ),
     )
     parser.add_argument(
@@ -458,9 +482,9 @@ def main() -> None:
         type=float,
         default=0.5,
         help=(
-            'Fraction (0-1) of replicates that must agree on a multibase '
-            'position for it to be reported in the final aggregated output. '
-            'Default 0.5 (majority).'
+            'Consensus fraction of replicates that must support a multibase '
+            'position before it is reported. Higher values require more '
+            'agreement across replicates. Default is 0.5 (majority).'
         ),
     )
     parser.add_argument(
@@ -486,7 +510,7 @@ def main() -> None:
         default='Illumina',
         help=(
             'Type of input data. Default is Illumina, but Nanopore is '
-            'also supported (experimental). No PacBio support yet.'
+            'also supported (experimental).'
         ),
     )
     parser.add_argument(
@@ -522,8 +546,10 @@ def main() -> None:
         type=int,
         default=3,
         help=(
-            'Multiplier for number of chunks per thread (threads * multiplier '
-            'chunks created). Default 3.'
+            'Controls how many chunks are created per thread. The total number'
+            ' of chunks is threads * multiplier. Larger values give finer '
+            'workload distribution but increase scheduling overhead. '
+            'Default is 3.'
         )
     )
     parser.add_argument(
@@ -531,8 +557,10 @@ def main() -> None:
         type=int,
         default=200000,
         help=(
-            'Maximum bases per chunk; contigs larger than this are split into '
-            'subranges (default 200000).'
+            'Maximum number of bases assigned to a single chunk. Contigs '
+            'larger than this are split into smaller subranges, improving '
+            'parallelism for large targets. Smaller values increase overhead. '
+            'Default is 200000.'
         )
     )
     parser.add_argument(
@@ -571,7 +599,6 @@ def main() -> None:
         'Welcome to %s! Beginning analysis of your samples...',
         __version__,
     )
-
     logging.debug(
         'Parsed command-line arguments: %s',
         args
