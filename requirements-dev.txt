@@ -1,6 +1,0 @@
-# Development / test dependencies
-pytest
-scipy
-numpy
-biopython
-pysam

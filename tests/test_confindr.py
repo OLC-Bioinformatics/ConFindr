@@ -26,7 +26,8 @@ from confindr_src.methods import (
     write_output,
     base_dict_to_string,
     check_acceptable_xmx,
-    load_fastq_records
+    load_fastq_records,
+    _valid_downsample_depth
 )
 
 # Ensure that the parent directory is in the system path for imports
@@ -116,8 +117,10 @@ def test_integration():
                     and 'Listeria' in genera
                 )
     # Clean up output directories
-    shutil.rmtree('confindr_integration_output')
-    shutil.rmtree('databases')
+    if os.path.exists('confindr_integration_output'):
+        shutil.rmtree('confindr_integration_output', ignore_errors=True)
+    if os.path.exists('databases'):
+        shutil.rmtree('databases', ignore_errors=True)
 
 
 def test_present_dependency():
@@ -460,6 +463,31 @@ def test_invalid_xmx_not_an_integer():
     Test invalid Xmx string that is not an integer.
     """
     assert check_acceptable_xmx(xmx_string='asdfK') is False
+
+
+def test_valid_downsample_depth_range():
+    """
+    Test that valid downsample depth values are accepted.
+    """
+    assert _valid_downsample_depth('10') == 10
+    assert _valid_downsample_depth('100') == 100
+    assert _valid_downsample_depth('50') == 50
+
+
+def test_invalid_downsample_depth_values():
+    """
+    Test that invalid downsample depth values raise argparse errors.
+    """
+    import argparse
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _valid_downsample_depth('5')
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _valid_downsample_depth('101')
+
+    with pytest.raises(argparse.ArgumentTypeError):
+        _valid_downsample_depth('not_a_number')
 
 
 # FASTQ headers can be in different formats, e.g. Casava 1.8, deposited in SRA,

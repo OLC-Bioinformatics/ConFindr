@@ -27,8 +27,17 @@ import subprocess
 import sys
 import traceback
 
+# Ensure the repository root is on sys.path when running the script directly
+_SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+_REPO_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..'))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 # Third party imports
-import coloredlogs
+try:
+    import coloredlogs
+except ImportError:  # pragma: no cover
+    coloredlogs = None
 
 # Local imports
 from confindr_src.methods import (
@@ -582,6 +591,16 @@ def main() -> None:
             'is 150'
         ),
     )
+    parser.add_argument(
+        '--max_expected_positions',
+        default=None,
+        type=float,
+        help=(
+            'Optional maximum expected positions per gene for probabilistic '
+            'scoring. If specified, samples with expected positions above '
+            'this threshold will be rejected.'
+        ),
+    )
     args = parser.parse_args()
 
     # Setup the logger
@@ -593,7 +612,10 @@ def main() -> None:
         'warning': 'WARNING'
     }.get(args.verbosity, 'INFO')
 
-    coloredlogs.install(level=level, fmt=fmt, datefmt=datefmt)
+    if coloredlogs is not None:
+        coloredlogs.install(level=level, fmt=fmt, datefmt=datefmt)
+    else:
+        logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
 
     logging.info(
         'Welcome to %s! Beginning analysis of your samples...',

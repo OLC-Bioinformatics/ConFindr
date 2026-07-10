@@ -2326,8 +2326,9 @@ def mann_whitney_u_p(
         return None
 
     # SciPy's mannwhitneyu supports 'two-sided' alternative; ensure we
-    # return a Python float.
-    return float(mannwhitneyu(x, y, alternative='two-sided').pvalue)
+    # return a Python float and guard against NaN results from tied ranks.
+    pvalue = float(mannwhitneyu(x, y, alternative='two-sided').pvalue)
+    return None if math.isnan(pvalue) else pvalue
 
 
 def fisher_two_sided_p(
@@ -3719,7 +3720,7 @@ def find_total_sequence_length(
 
 def load_fastq_records(
     *,  # Enforce keyword arguments
-    gz: str,
+    gz: Any,
     paired: bool,
     forward: bool
 ) -> Dict[str, Any]:
@@ -3727,7 +3728,7 @@ def load_fastq_records(
     Use SeqIO to load FASTQ records from file
 
     Args:
-        gz: Path to FASTQ file (can be gzipped).
+        gz: Path to FASTQ file (can be gzipped) or open file handle.
         paired: Boolean of whether reads are paired.
         forward: Boolean of whether reads are forward reads.
 
@@ -3737,21 +3738,29 @@ def load_fastq_records(
     # Initialise a dictionary to store the FASTQ records
     records = {}
 
-    # Iterate through the reads
-    for record in SeqIO.parse(gz, 'fastq'):
-        # Only update the naming scheme for paired reads
-        if paired:
-            if forward:
-                # Don't worry if the record.id already has a /1
-                if not record.id.endswith('/1'):
-                    record.id = record.id + '/1'
-            # Process reverse reads in a similar fashion to forward reads
-            else:
-                if not record.id.endswith('/2'):
-                    record.id = record.id + '/2'
-        else:
-            pass
-        records.update(SeqIO.to_dict([record]))
+    close_handle = False
+    if isinstance(gz, str) and gz.endswith('.gz'):
+        handle = gzip.open(gz, 'rt', encoding='utf-8', errors='ignore')
+        close_handle = True
+    else:
+        handle = gz
+
+    try:
+        for record in SeqIO.parse(handle, 'fastq'):
+            # Only update the naming scheme for paired reads
+            if paired:
+                if forward:
+                    # Don't worry if the record.id already has a /1
+                    if not record.id.endswith('/1'):
+                        record.id = record.id + '/1'
+                # Process reverse reads in a similar fashion to forward reads
+                else:
+                    if not record.id.endswith('/2'):
+                        record.id = record.id + '/2'
+            records.update(SeqIO.to_dict([record]))
+    finally:
+        if close_handle:
+            handle.close()
     return records
 
 

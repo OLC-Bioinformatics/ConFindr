@@ -428,6 +428,8 @@ def validate_reads(forward_in, returncmd=False, reverse_in='NA'):
         cmd = 'reformat.sh in1={} in2={} vpair'.format(forward_in, reverse_in)
     elif reverse_in == 'NA':
         cmd = 'reformat.sh in={}'.format(forward_in)
+    else:
+        cmd = 'reformat.sh in1={} in2={} vpair'.format(forward_in, reverse_in)
     out, err = run_subprocess(cmd)
     if returncmd:
         return out, err, cmd

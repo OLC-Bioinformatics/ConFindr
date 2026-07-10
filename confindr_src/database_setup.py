@@ -13,6 +13,7 @@ from typing import (
 import argparse
 import csv
 import datetime
+import json
 import logging
 import os
 import re
@@ -23,7 +24,10 @@ import sys
 # Third-party imports
 from Bio import SeqIO
 from Bio.Seq import Seq
-from rauth import OAuth1Session
+try:
+    from rauth import OAuth1Session
+except ImportError:  # pragma: no cover
+    OAuth1Session = None
 
 # Local imports
 from confindr_src.methods import (
@@ -99,7 +103,10 @@ class RmlstRest:
             if re.search('json', r.headers['content-type'], flags=0):
                 decoded = r.json()
             else:
-                decoded = r.text
+                try:
+                    decoded = json.loads(r.text)
+                except json.JSONDecodeError:
+                    decoded = r.text
 
             # Extract the URLs from the returned data
             self.loci = decoded['loci']

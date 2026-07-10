@@ -275,7 +275,7 @@ def get_potential_genes(
 
     # Read the gene report and populate the dictionary
     with open(gene_report, encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
+        reader = csv.DictReader(csvfile, delimiter='\t')
         for row in reader:
             # Extract gene name and proportion
             gene = row['Gene']

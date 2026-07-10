@@ -12,17 +12,20 @@ jobs:
       - run:
           name: Setup Environment and Run Tests
           command: |
+            # Set bash options for safety
+            set -euo pipefail
             # Install curl and gnupg
-            apt-get update && apt-get install -y curl gnupg wget
+            apt-get update && apt-get install -y curl gnupg
             # Add necessary channels for conda
             conda config --add channels bioconda
             conda config --add channels conda-forge
             # Set conda configuration options
             conda config --set always_yes yes --set changeps1 no
+            conda config --set channel_priority strict
             # Install mamba
             conda install mamba -c conda-forge
             # Create a new conda environment
-            mamba create -n confindr python==3.14 -y
+            mamba create -n confindr python=3.13 -y
             # Activate the conda environment
             source /opt/conda/etc/profile.d/conda.sh && conda activate confindr
             # Install dependencies
@@ -42,14 +45,28 @@ jobs:
             # Install confindr in editable mode
             pip install -e .
             # Download test samples with retries
-            wget --retry-connrefused --waitretry=5 --tries=6 --timeout=30 \
-              --user-agent='Mozilla/5.0 (X11; Linux x86_64)' \
-              --referer='https://figshare.com' \
-              'https://figshare.com/ndownloader/files/41228577' -O test_samples.tar.gz && \
-              [ -s test_samples.tar.gz ] || { echo "Download failed or file empty"; exit 1; } && \
-              tar -xzvf test_samples.tar.gz && \
-              mv test_samples/ tests/ && \
-              rm test_samples.tar.gz
+            /usr/bin/curl -L \
+              --silent \
+              --show-error \
+              --retry 6 \
+              --retry-delay 5 \
+              --retry-connrefused \
+              --retry-all-errors \
+              --connect-timeout 30 \
+              --fail \
+              --user-agent 'Mozilla/5.0 (X11; Linux x86_64)' \
+              --referer 'https://figshare.com' \
+              'https://figshare.com/ndownloader/files/41228577' \
+              -o test_samples.tar.gz
+
+            test -s test_samples.tar.gz || {
+              echo "Download failed or file empty"
+              exit 1
+            }
+
+            tar -xzvf test_samples.tar.gz
+            mv test_samples/ tests/
+            rm test_samples.tar.gz
             # Run tests
             python -m pytest tests/ -vvv
 workflows:

@@ -38,9 +38,10 @@ def test_write_output_creates_tsv(tmp_path):
     assert 'ContamStatus' in first_line or 'Contamination' in first_line
 
 
-def test_confindr_help_includes_prob_scoring():
+def test_confindr_help_includes_prob_scoring_and_downsampling():
     """
-    Test that the ConFindr CLI help includes options for probabilistic scoring.
+    Test that the ConFindr CLI help includes probabilistic scoring and
+    downsampling/subreplicate options.
     """
     result = subprocess.run(
         [
@@ -56,3 +57,7 @@ def test_confindr_help_includes_prob_scoring():
     assert result.returncode == 0
     assert '--use-prob-scoring' in result.stdout
     assert '--score-threshold' in result.stdout
+    assert '--downsample_depth' in result.stdout
+    assert '--subreplicates' in result.stdout
+    assert '--subreplicate-seed' in result.stdout
+    assert '--subreplicate-consensus' in result.stdout
