@@ -59,9 +59,7 @@ jobs:
               --retry-all-errors \
               --connect-timeout 30 \
               --fail \
-              --user-agent 'Mozilla/5.0 (X11; Linux x86_64)' \
-              --referer 'https://figshare.com' \
-              'https://figshare.com/ndownloader/files/41228577' \
+              'https://api.figshare.com/v2/file/download/41228577' \
               -o test_samples.tar.gz
 
             test -s test_samples.tar.gz || {
