@@ -1,8 +1,5 @@
 version: 2.1
 
-# orbs:
-#   python: circleci/python@1.5.0
-
 jobs:
   confindr:
     docker:
@@ -11,25 +8,26 @@ jobs:
       - checkout
       - run:
           name: Setup Environment and Run Tests
+          no_output_timeout: 30m
           command: |
-            # Set bash options for safety
             set -euo pipefail
-            # Install curl and gnupg
-            apt-get update && apt-get install -y curl gnupg
-            # Add necessary channels for conda
-            conda config --add channels bioconda
-            conda config --add channels conda-forge
-            # Set conda configuration options
+
+            # Install system dependencies
+            apt-get update && apt-get install -y curl
+
+            # Configure conda
             conda config --set always_yes yes --set changeps1 no
             conda config --set channel_priority strict
-            # Install mamba
-            conda install mamba -c conda-forge
-            # Create a new conda environment
-            mamba create -n confindr python=3.13 -y
-            # Activate the conda environment
-            source /opt/conda/etc/profile.d/conda.sh && conda activate confindr
-            # Install dependencies
-            mamba install -y -c bioconda -c conda-forge \
+
+            # Install mamba from conda-forge only
+            conda install -n base -c conda-forge --override-channels mamba
+
+            # Create environment in one solve
+            mamba create -n confindr -y \
+              -c conda-forge \
+              -c bioconda \
+              --override-channels \
+              python=3.12 \
               bbmap \
               biopython \
               blast \
@@ -39,11 +37,18 @@ jobs:
               psutil \
               pysam \
               pytest \
+              pytest-cov \
               rauth \
               samtools \
               scipy
+
+            # Activate environment
+            source /opt/conda/etc/profile.d/conda.sh
+            conda activate confindr
+
             # Install confindr in editable mode
             pip install -e .
+
             # Download test samples with retries
             /usr/bin/curl -L \
               --silent \
@@ -67,12 +72,14 @@ jobs:
             tar -xzvf test_samples.tar.gz
             mv test_samples/ tests/
             rm test_samples.tar.gz
+
             # Run tests
             python -m pytest tests/ -vvv
+
 workflows:
-    build_and_test:
-      jobs:
-        - confindr:
-            filters:
-              branches:
-                ignore: gh-pages
+  build_and_test:
+    jobs:
+      - confindr:
+          filters:
+            branches:
+              ignore: gh-pages
